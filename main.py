@@ -28,7 +28,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, note TEXT)''') # Added note field
     conn.commit()
     conn.close()
 
@@ -37,7 +37,7 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at 
+    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note
                  FROM orders o 
                  JOIN products p ON o.product_id = p.id 
                  WHERE o.user_id = ? 
@@ -52,12 +52,14 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for order in orders:
         status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
         message = f"رقم الطلب: {order[0]}\n"
-        message += f"المنتج: {order[1]}\n"
+        message += f"الشركة: {order[1]}\n" # Changed from المنتج to الشركة
         message += f"المبلغ: {order[2]}\n"
         message += f"الحالة: {status_text}\n"
         if order[3] == "rejected" and order[4]:
             message += f"سبب الرفض: {order[4]}\n"
         message += f"التاريخ: {order[5]}\n"
+        if order[6]:
+            message += f"ملاحظة: {order[6]}\n" # Added note display
 
         keyboard = []
         if order[3] == "pending":
@@ -123,11 +125,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.message.edit_text(
-                f"المنتجات المتوفرة في قسم {category_names[category]}:",
+                f"الشركات المتوفرة في قسم {category_names[category]}:", # Changed from المنتجات to الشركات
                 reply_markup=reply_markup
             )
         else:
-            await query.message.edit_text(f"لا توجد منتجات متوفرة في قسم {category_names[category]}")
+            await query.message.edit_text(f"لا توجد شركات متوفرة في قسم {category_names[category]}") # Changed from منتجات to شركات
 
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
@@ -227,7 +229,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         order_number = int(update.message.text)
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at 
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note
                      FROM orders o 
                      JOIN products p ON o.product_id = p.id 
                      WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
@@ -239,12 +241,14 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
             message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
-المنتج: {order[1]}
+الشركة: {order[1]} # Changed from المنتج to الشركة
 المبلغ: {order[2]}
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}
 """
+            if order[6]:
+                message += f"ملاحظة: {order[6]}\n" # Added note display
             keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(message, reply_markup=reply_markup)
@@ -301,7 +305,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
     customer_info = update.message.text
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at 
+    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note
                  FROM orders o 
                  JOIN products p ON o.product_id = p.id 
                  WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
@@ -314,13 +318,15 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
             status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
             message += f"""
 رقم الطلب: {order[0]}
-المنتج: {order[1]}
+الشركة: {order[1]} # Changed from المنتج to الشركة
 المبلغ: {order[2]}
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}
-──────────────
 """
+            if order[6]:
+                message += f"ملاحظة: {order[6]}\n" # Added note display
+            message += "──────────────\n"
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(message, reply_markup=reply_markup)
@@ -354,7 +360,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     # إرسال إشعار للمدير
     admin_message = f"""
 طلب جديد:
-المنتج: {product_name}
+الشركة: {product_name} # Changed from المنتج to الشركة
 المبلغ: {amount} ريال
 بيانات الزبون: {customer_info}
 معرف المشتري: {update.effective_user.id}
@@ -376,7 +382,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 
     conn.close()
 
-    await query.message.edit_text("تم إتمام العملية بنجاح!")
+    await query.message.edit_text("تم تسجيل طلبك مع رقم الطلب وبيانات") # Changed success message
     return ConversationHandler.END
 
 # Flask routes
@@ -388,7 +394,7 @@ def admin_panel():
     products = c.fetchall()
     c.execute('SELECT * FROM users')
     users = c.fetchall()
-    c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at 
+    c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
                  FROM orders o 
                  JOIN products p ON o.product_id = p.id 
                  ORDER BY o.created_at DESC''')
