@@ -156,11 +156,11 @@
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
-            <select name="category" required>
+            <select name="category_id" required>
                 <option value="">اختر القسم</option>
                 {% for category in categories %}
                 {% if category[3] %}
-                <option value="{{ category[2] }}">{{ category[1] }}</option>
+                <option value="{{ category[0] }}">{{ category[1] }}</option>
                 {% endif %}
                 {% endfor %}
             </select>

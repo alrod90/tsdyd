@@ -20,26 +20,17 @@ def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
 
-    # إنشاء الجداول إذا لم تكن موجودة
+    # حذف الجداول القديمة
+    c.execute('DROP TABLE IF EXISTS categories')
+    c.execute('DROP TABLE IF EXISTS products')
+    
+    # إنشاء الجداول من جديد
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                  (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
-    
-    # إعادة تهيئة الأقسام الافتراضية
-    c.execute('DELETE FROM categories')
-    conn.commit()
-    
-    default_categories = [
-        ('إنترنت', 'internet', 1),
-        ('جوال', 'mobile', 1),
-        ('خط أرضي', 'landline', 1)
-    ]
-    
-    for name, code, is_active in default_categories:
-        c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)',
-                 (name, code, is_active))
-    conn.commit()
-            c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)',
-                     (name, code, is_active))
+                 
+    c.execute('''CREATE TABLE IF NOT EXISTS products 
+                 (id INTEGER PRIMARY KEY, name TEXT, category_id INTEGER, is_active BOOLEAN DEFAULT 1,
+                  FOREIGN KEY(category_id) REFERENCES categories(id))''')
 
     # إنشاء باقي الجداول
     c.execute('''CREATE TABLE IF NOT EXISTS products 
@@ -457,12 +448,12 @@ def admin_panel():
 @app.route('/add_product', methods=['POST'])
 def add_product():
     name = request.form['name']
-    category = request.form['category']
+    category_id = request.form['category_id']
     is_active = 'is_active' in request.form
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, ?)',
-              (name, category, is_active))
+    c.execute('INSERT INTO products (name, category_id, is_active) VALUES (?, ?, ?)',
+              (name, category_id, is_active))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
