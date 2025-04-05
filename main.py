@@ -705,10 +705,16 @@ def run_bot():
 if __name__ == '__main__':
     # Initialize database
     init_db()
-
-    # Start Flask in a separate thread
-    flask_thread = Thread(target=run_flask)
-    flask_thread.start()
-
-    # Run bot in main thread
-    run_bot()
+    
+    # Check if we're running in deployment mode
+    import os
+    is_deployment = os.environ.get('DEPLOYMENT') == 'true'
+    
+    if is_deployment:
+        # Only run Flask in deployment
+        app.run(host='0.0.0.0', port=5000)
+    else:
+        # Run both Flask and bot in development
+        flask_thread = Thread(target=run_flask)
+        flask_thread.start()
+        run_bot()
