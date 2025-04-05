@@ -167,9 +167,11 @@
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
             <select name="category" required>
-                <option value="internet">إنترنت</option>
-                <option value="mobile">جوال</option>
-                <option value="landline">خط أرضي</option>
+                {% for category in categories %}
+                {% if category[3] %}
+                <option value="{{ category[2] }}">{{ category[1] }}</option>
+                {% endif %}
+                {% endfor %}
             </select>
             <label class="switch">
                 <input type="checkbox" name="is_active" checked>
@@ -301,9 +303,11 @@
                 <input type="hidden" name="product_id" id="edit_product_id">
                 <input type="text" name="name" id="edit_name" required>
                 <select name="category" id="edit_category" required>
-                    <option value="internet">إنترنت</option>
-                    <option value="mobile">جوال</option>
-                    <option value="landline">خط أرضي</option>
+                    {% for category in categories %}
+                    {% if category[3] %}
+                    <option value="{{ category[2] }}">{{ category[1] }}</option>
+                    {% endif %}
+                    {% endfor %}
                 </select>
                 <div style="margin-top: 20px;">
                     <button type="submit">حفظ التغييرات</button>
