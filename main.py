@@ -321,7 +321,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
                 if order[6]:
                     message += f"\nملاحظة: {order[6]}"
 
-                keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
+                keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await update.message.reply_text(message, reply_markup=reply_markup)
             else:
@@ -402,7 +402,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
             if order[6]:
                 message += f"ملاحظة: {order[6]}\n" # Added note display
             message += "──────────────\n"
-        keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(message, reply_markup=reply_markup)
     else:
