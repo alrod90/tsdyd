@@ -19,12 +19,12 @@ app = Flask(__name__)
 def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     # حذف الجداول القديمة
     c.execute('DROP TABLE IF EXISTS orders')
     c.execute('DROP TABLE IF EXISTS products')
     c.execute('DROP TABLE IF EXISTS users')
-    
+
     # إنشاء الجداول من جديد
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
@@ -58,7 +58,7 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
         message = f"رقم الطلب: {order[0]}\n"
         message += f"الشركة: {order[1]}\n" # Changed from المنتج to الشركة
-        message += f"المبلغ: {order[2]}\n"
+        message += f"المبلغ: {order[2]} ليرة سوري\n"
         message += f"الحالة: {status_text}\n"
         if order[3] == "rejected" and order[4]:
             message += f"سبب الرفض: {order[4]}\n"
@@ -143,7 +143,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = c.fetchone()
         balance = result[0] if result else 0
         conn.close()
-        await query.message.edit_text(f"رصيدك الحالي: {balance} ريال")
+        await query.message.edit_text(f"رصيدك الحالي: {balance} ليرة سوري")
 
     elif query.data == 'my_orders':
         keyboard = [
@@ -210,7 +210,7 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     if amount > user_balance:
-        await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance}")
+        await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
         return ConversationHandler.END
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
@@ -219,7 +219,7 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     await update.message.reply_text(
-        f"سيتم خصم {amount} ريال من رصيدك.\n"
+        f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
         f"اضغط على تأكيد لإتمام العملية.",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("تأكيد", callback_data='confirm_purchase'),
@@ -247,7 +247,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
 الشركة: {order[1]} # Changed from المنتج to الشركة
-المبلغ: {order[2]}
+المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}
@@ -324,7 +324,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
             message += f"""
 رقم الطلب: {order[0]}
 الشركة: {order[1]} # Changed from المنتج to الشركة
-المبلغ: {order[2]}
+المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}
@@ -366,7 +366,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     admin_message = f"""
 طلب جديد:
 الشركة: {product_name} # Changed from المنتج to الشركة
-المبلغ: {amount} ريال
+المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
 معرف المشتري: {update.effective_user.id}
 """
