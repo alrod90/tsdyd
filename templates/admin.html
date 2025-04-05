@@ -319,13 +319,13 @@
             content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
 
             content.innerHTML = `
-                <h3>تعديل بيانات المستخدم</h3>
+                <h3>تعديل رصيد المستخدم</h3>
                 <form action="/edit_user" method="post">
                     <input type="hidden" name="user_id" value="${telegramId}">
-                    <label>الرصيد:</label>
-                    <input type="number" name="balance" value="${balance}" step="0.01" required>
-                    <label>ملاحظات:</label>
-                    <textarea name="note" style="width: 100%; margin: 10px 0;">${note || ''}</textarea>
+                    <div style="margin: 10px 0;">
+                        <label>الرصيد:</label>
+                        <input type="number" name="balance" value="${balance}" step="0.01" required>
+                    </div>
                     <div style="margin-top: 20px;">
                         <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
                         <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
