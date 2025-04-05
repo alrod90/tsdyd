@@ -29,7 +29,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL)''')
+                 (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -510,6 +510,29 @@ def add_balance():
     c = conn.cursor()
     c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
               (amount, user_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/edit_user', methods=['POST'])
+def edit_user():
+    user_id = request.form['user_id']
+    new_balance = float(request.form['balance'])
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
+              (new_balance, user_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/toggle_user', methods=['POST'])
+def toggle_user():
+    user_id = request.form['user_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE users SET is_active = NOT is_active WHERE telegram_id = ?',
+              (user_id,))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))

@@ -200,9 +200,18 @@
                 <td>{{ user[1] }}</td>
                 <td>{{ user[2] }}</td>
                 <td>
+                    <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}')" style="margin-right: 10px;">
+                        تعديل
+                    </button>
                     <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px;">
                         إرسال إشعار
                     </button>
+                    <form action="/toggle_user" method="post" style="display: inline;">
+                        <input type="hidden" name="user_id" value="{{ user[1] }}">
+                        <button type="submit" style="background-color: {{ '#ff4444' if user[3] else '#4CAF50' }}">
+                            {{ 'تعطيل' if user[3] else 'تفعيل' }}
+                        </button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}
