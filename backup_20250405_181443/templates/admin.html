@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <title>لوحة تحكم المتجر</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            margin: 20px; 
+            text-align: right;
+            background-color: #f5f5f5;
+        }
+        .section { 
+            margin: 20px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        form { 
+            margin: 10px 0;
+            display: grid;
+            gap: 10px;
+        }
+        input, select { 
+
+    function validateRejectForm(form) {
+        var note = form.querySelector('textarea[name="rejection_note"]').value;
+        if (!note.trim()) {
+            alert('الرجاء إدخال سبب الرفض');
+            return false;
+        }
+        return true;
+    }
+
+            margin: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button, input[type="submit"] {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover, input[type="submit"]:hover {
+            background: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: right;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        .status-active {
+            color: green;
+        }
+        .status-inactive {
+            color: red;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <h1>لوحة تحكم المتجر</h1>
+
+    <div class="section">
+        <h2>إضافة منتج</h2>
+        <form action="/add_product" method="post">
+            <input type="text" name="name" placeholder="اسم المنتج" required>
+            <select name="category" required>
+                <option value="internet">إنترنت</option>
+                <option value="mobile">جوال</option>
+                <option value="landline">خط أرضي</option>
+            </select>
+            <label class="switch">
+                <input type="checkbox" name="is_active" checked>
+                <span class="slider"></span>
+            </label>
+            <span>تفعيل المنتج</span>
+            <input type="submit" value="إضافة منتج">
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>إرسال إشعار للمستخدمين</h2>
+        <form action="/send_notification" method="post">
+            <input type="text" name="message" placeholder="نص الإشعار" required>
+            <input type="submit" value="إرسال الإشعار">
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>إضافة رصيد</h2>
+        <form action="/add_balance" method="post">
+            <input type="number" name="user_id" placeholder="معرف المستخدم في تيليجرام" required>
+            <input type="number" name="amount" placeholder="المبلغ (ل.س)" step="0.01" required>
+            <input type="submit" value="إضافة رصيد">
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>المنتجات</h2>
+        <table>
+            <tr>
+                <th>الرقم</th>
+                <th>الاسم</th>
+                <th>القسم</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
+            {% for product in products %}
+            <tr>
+                <td>{{ product[0] }}</td>
+                <td>{{ product[1] }}</td>
+                <td>{{ product[2] }}</td>
+                <td class="status-{{ 'active' if product[3] else 'inactive' }}">
+                    {{ 'مفعل' if product[3] else 'غير مفعل' }}
+                </td>
+                <td>
+                    <form action="/toggle_product" method="post" style="display: inline;">
+                        <input type="hidden" name="product_id" value="{{ product[0] }}">
+                        <button type="submit">
+                            {{ 'إلغاء التفعيل' if product[4] else 'تفعيل' }}
+                        </button>
+                    </form>
+                    <button onclick="showEditForm('{{ product[0] }}', '{{ product[1] }}', '{{ product[2] }}', '{{ product[3] }}')" style="margin-right: 10px;">
+                        تعديل
+                    </button>
+                    <form action="/delete_product" method="post" style="display: inline;">
+                        <input type="hidden" name="product_id" value="{{ product[0] }}">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا المنتج؟')" style="background-color: #ff4444;">
+                            حذف
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>المستخدمين</h2>
+        <table>
+            <tr>
+                <th>الرقم</th>
+                <th>معرف تيليجرام</th>
+                <th>الرصيد (ل.س)</th>
+                <th>ملاحظات</th>
+            </tr>
+            {% for user in users %}
+            <tr>
+                <td>{{ user[0] }}</td>
+                <td>{{ user[1] }}</td>
+                <td>{{ user[2] }}</td>
+                <td>{{ user[5] if user[5] else '' }}</td>
+                <td>
+                    <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}', '{{ user[5] if user[5] else '' }}')" style="margin-right: 10px;">
+                        تعديل
+                    </button>
+                    <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px;">
+                        إرسال إشعار
+                    </button>
+                    <form action="/toggle_user" method="post" style="display: inline;">
+                        <input type="hidden" name="user_id" value="{{ user[1] }}">
+                        <button type="submit" style="background-color: {{ '#ff4444' if user[3] else '#4CAF50' }}">
+                            {{ 'تعطيل' if user[3] else 'تفعيل' }}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- نافذة تعديل المنتج -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
+        <div style="background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;">
+            <h3>تعديل المنتج</h3>
+            <form action="/edit_product" method="post">
+                <input type="hidden" name="product_id" id="edit_product_id">
+                <input type="text" name="name" id="edit_name" required>
+                <select name="category" id="edit_category" required>
+                    <option value="internet">إنترنت</option>
+                    <option value="mobile">جوال</option>
+                    <option value="landline">خط أرضي</option>
+                </select>
+                <div style="margin-top: 20px;">
+                    <button type="submit">حفظ التغييرات</button>
+                    <button type="button" onclick="hideEditForm()">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>الطلبات</h2>
+        <table>
+            <tr>
+                <th>رقم الطلب</th>
+                <th>معرف المستخدم</th>
+                <th>الشركة</th>
+                <th>المبلغ</th>
+                <th>معلومات الزبون</th>
+                <th>الحالة</th>
+                <th>التاريخ</th>
+                <th>ملاحظة</th>
+                <th>الإجراءات</th>
+            </tr>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order[0] }}</td>
+                <td>{{ order[1] }}</td>
+                <td>{{ order[2] }}</td>
+                <td>{{ order[3] }}</td>
+                <td>{{ order[4] }}</td>
+                <td>{{ order[5] }}</td>
+                <td>{{ order[6] }}</td>
+                <td>{{ order[7] }}</td>
+                <td>
+                    {% if order[5] == 'pending' %}
+                    <form action="/handle_order" method="post" style="display: inline;">
+                        <input type="hidden" name="order_id" value="{{ order[0] }}">
+                        <input type="hidden" name="action" value="accept">
+                        <button type="submit" style="background-color: #4CAF50;">قبول</button>
+                    </form>
+                    <button onclick="showRejectForm('{{ order[0] }}')" style="background-color: #f44336;">رفض</button>
+                    {% endif %}
+                    <form action="/delete_order" method="post" style="display: inline;">
+                        <input type="hidden" name="order_id" value="{{ order[0] }}">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب؟')" style="background-color: #ff9800;">حذف</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <script>
+        // تحديث الصفحة تلقائياً كل 30 ثانية
+        function autoRefresh() {
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // تحديث جدول الطلبات
+                    const currentOrders = document.querySelector('.section:last-child table');
+                    const newOrders = doc.querySelector('.section:last-child table');
+                    if (currentOrders && newOrders) {
+                        currentOrders.innerHTML = newOrders.innerHTML;
+                    }
+                    
+                    // تحديث جدول المستخدمين
+                    const currentUsers = document.querySelector('.section:nth-last-child(2) table');
+                    const newUsers = doc.querySelector('.section:nth-last-child(2) table');
+                    if (currentUsers && newUsers) {
+                        currentUsers.innerHTML = newUsers.innerHTML;
+                    }
+                });
+        }
+        
+        // تشغيل التحديث التلقائي
+        setInterval(autoRefresh, 30000);
+
+        function showEditUserForm(userId, telegramId, balance) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+            content.innerHTML = `
+                <h3>تعديل رصيد المستخدم</h3>
+                <form action="/edit_user" method="post">
+                    <input type="hidden" name="user_id" value="${telegramId}">
+                    <div style="margin: 10px 0;">
+                        <label>الرصيد:</label>
+                        <input type="number" name="balance" value="${balance}" step="0.01" required>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
+
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+
+        function showEditForm(id, name, price, category) {
+            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('edit_product_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_price').value = price;
+            document.getElementById('edit_category').value = category;
+        }
+
+        function hideEditForm() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+    function showNotificationForm(userId) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);';
+
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+            content.innerHTML = `
+                <h3>إرسال إشعار للمستخدم</h3>
+                <form action="/send_notification" method="post">
+                    <input type="hidden" name="user_id" value="${userId}">
+                    <input type="text" name="message" placeholder="نص الإشعار" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit">إرسال</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
+                    </div>
+                </form>
+            `;
+
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+    function showRejectForm(orderId) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+            content.innerHTML = `
+                <h3>رفض الطلب</h3>
+                <form action="/handle_order" method="post" onsubmit="return validateRejectForm(this);">
+                    <input type="hidden" name="order_id" value="${orderId}">
+                    <input type="hidden" name="action" value="reject">
+                    <textarea name="rejection_note" placeholder="سبب الرفض" required style="width: 100%; height: 100px;"></textarea>
+                    <textarea name="note" placeholder="ملاحظة إضافية (اختياري)" style="width: 100%; height: 100px; margin-top: 10px;"></textarea>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #f44336;">تأكيد الرفض</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
+                    </div>
+                </form>
+            `;
+
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>
