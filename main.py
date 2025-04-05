@@ -58,11 +58,11 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if order[3] == "rejected" and order[4]:
             message += f"سبب الرفض: {order[4]}\n"
         message += f"التاريخ: {order[5]}\n"
-        
+
         keyboard = []
         if order[3] == "pending":
             keyboard.append([InlineKeyboardButton("إلغاء الطلب", callback_data=f'cancel_order_{order[0]}')])
-        
+
         reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
         await update.message.reply_text(message, reply_markup=reply_markup)
         await update.message.reply_text("──────────────")
@@ -253,25 +253,25 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 async def handle_cancel_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cancel_reason = update.message.text
     order_id = context.user_data.get('canceling_order_id')
-    
+
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     # استرجاع معلومات الطلب
     c.execute('SELECT amount, user_id FROM orders WHERE id = ?', (order_id,))
     order = c.fetchone()
-    
+
     if order:
         # إعادة المبلغ للمستخدم
         c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                   (order[0], order[1]))
-        
+
         # تحديث حالة الطلب
         c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
                  ('cancelled', f'تم الإلغاء من قبل المستخدم. السبب: {cancel_reason}', order_id))
-        
+
         conn.commit()
-        
+
         # إرسال إشعار للمدير
         admin_message = f"""
 تم إلغاء الطلب من قبل المستخدم
@@ -285,11 +285,11 @@ async def handle_cancel_reason(update: Update, context: ContextTypes.DEFAULT_TYP
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(f"Error sending SMS: {e}")
-            
+
         await update.message.reply_text("تم إلغاء الطلب بنجاح وتمت إعادة المبلغ إلى رصيدك.")
     else:
         await update.message.reply_text("عذراً، لم يتم العثور على الطلب.")
-    
+
     conn.close()
     return ConversationHandler.END
 
