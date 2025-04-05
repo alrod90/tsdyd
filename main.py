@@ -205,6 +205,16 @@ def toggle_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/delete_product', methods=['POST'])
+def delete_product():
+    product_id = request.form['product_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM products WHERE id = ?', (product_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
 @app.route('/edit_product', methods=['POST'])
 def edit_product():
     product_id = request.form['product_id']
