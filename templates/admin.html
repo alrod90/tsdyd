@@ -311,7 +311,7 @@
         // تشغيل التحديث التلقائي
         setInterval(autoRefresh, 30000);
 
-        function showEditUserForm(userId, telegramId, balance) {
+        function showEditUserForm(userId, telegramId, balance, note) {
             var modal = document.createElement('div');
             modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
@@ -325,7 +325,7 @@
                     <label>الرصيد:</label>
                     <input type="number" name="balance" value="${balance}" step="0.01" required>
                     <label>ملاحظات:</label>
-                    <textarea name="note" style="width: 100%; margin: 10px 0;">${note || ''}</textarea>
+                    <textarea name="note" style="width: 100%; margin: 10px 0;">${note}</textarea>
                     <div style="margin-top: 20px;">
                         <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
                         <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
@@ -393,6 +393,14 @@
 
             modal.appendChild(content);
             document.body.appendChild(modal);
+        }
+    function validateRejectForm(form) {
+            var note = form.querySelector('textarea[name="rejection_note"]').value;
+            if (!note.trim()) {
+                alert('الرجاء إدخال سبب الرفض');
+                return false;
+            }
+            return true;
         }
     </script>
 </body>
