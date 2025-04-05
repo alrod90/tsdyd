@@ -627,14 +627,27 @@ def handle_order():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        # التحقق من وجود الطلب
-        c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
+        # التحقق من وجود الطلب وجلب معلومات المنتج
+        c.execute('''
+            SELECT o.user_id, o.amount, p.name 
+            FROM orders o 
+            JOIN products p ON o.product_id = p.id 
+            WHERE o.id = ?
+        ''', (order_id,))
         order = c.fetchone()
 
         if not order:
             if conn:
                 conn.close()
             return "الطلب غير موجود", 404
+
+        user_id = order[0]
+        amount = order[1]
+        product_name = order[2]
+
+        # تهيئة البوت
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        application = Application.builder().token(bot_token).build()
 
         if action == 'reject':
             if not rejection_note and action == 'reject':
@@ -644,13 +657,33 @@ def handle_order():
 
             # إعادة المبلغ للمستخدم
             c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                    (order[1], order[0]))
+                    (amount, user_id))
             # تحديث حالة الطلب
             c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
                     ('rejected', rejection_note, order_id))
+            
+            # إرسال إشعار الرفض
+            notification_message = f"""
+❌ تم رفض طلبك رقم {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري
+سبب الرفض: {rejection_note}
+تمت إعادة المبلغ إلى رصيدك.
+"""
+            asyncio.create_task(send_notification(None, application, notification_message, user_id, True))
+
         elif action == 'accept':
             c.execute('UPDATE orders SET status = ? WHERE id = ?', 
                     ('accepted', order_id))
+            
+            # إرسال إشعار القبول
+            notification_message = f"""
+✅ تم قبول طلبك رقم {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري
+جاري تنفيذ طلبك...
+"""
+            asyncio.create_task(send_notification(None, application, notification_message, user_id, True))
 
         conn.commit()
         conn.close()
