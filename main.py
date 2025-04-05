@@ -31,9 +31,9 @@ def init_db():
                  (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
     
     # إضافة التصنيفات الافتراضية
-    c.execute('INSERT INTO categories (name, code) VALUES (?, ?)', ('إنترنت', 'internet'))
-    c.execute('INSERT INTO categories (name, code) VALUES (?, ?)', ('جوال', 'mobile'))
-    c.execute('INSERT INTO categories (name, code) VALUES (?, ?)', ('خط أرضي', 'landline'))
+    c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)', ('إنترنت', 'internet', 1))
+    c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)', ('جوال', 'mobile', 1))
+    c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)', ('خط أرضي', 'landline', 1))
 
     # إنشاء الجداول من جديد
     c.execute('''CREATE TABLE IF NOT EXISTS products 
