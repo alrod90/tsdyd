@@ -22,16 +22,6 @@
             gap: 10px;
         }
         input, select { 
-
-    function validateRejectForm(form) {
-        var note = form.querySelector('textarea[name="rejection_note"]').value;
-        if (!note.trim()) {
-            alert('الرجاء إدخال سبب الرفض');
-            return false;
-        }
-        return true;
-    }
-
             margin: 5px;
             padding: 8px;
             border: 1px solid #ddd;
@@ -112,16 +102,16 @@
     <h1>لوحة تحكم المتجر</h1>
 
     <div class="section">
-        <h2>إدارة التصنيفات</h2>
+        <h2>إدارة الأقسام</h2>
         <form action="/add_category" method="post">
-            <input type="text" name="name" placeholder="اسم التصنيف" required>
-            <input type="text" name="code" placeholder="رمز التصنيف (بالإنجليزية)" required>
+            <input type="text" name="name" placeholder="اسم القسم" required>
+            <input type="text" name="code" placeholder="رمز القسم (بالإنجليزية)" required>
             <label class="switch">
                 <input type="checkbox" name="is_active" checked>
-                <span class="slider"></span>
+                <span class="slider round"></span>
             </label>
-            <span>تفعيل التصنيف</span>
-            <input type="submit" value="إضافة تصنيف">
+            <span>تفعيل القسم</span>
+            <input type="submit" value="إضافة قسم">
         </form>
 
         <table>
@@ -152,7 +142,7 @@
                     </button>
                     <form action="/delete_category" method="post" style="display: inline;">
                         <input type="hidden" name="category_id" value="{{ category[0] }}">
-                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا التصنيف؟')" style="background-color: #ff4444;">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا القسم؟')" style="background-color: #ff4444;">
                             حذف
                         </button>
                     </form>
@@ -189,7 +179,7 @@
                     </button>
                     <form action="/delete_category" method="post" style="display: inline;">
                         <input type="hidden" name="category_id" value="{{ category[0] }}">
-                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا التصنيف؟')" style="background-color: #ff4444;">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا القسم؟')" style="background-color: #ff4444;">
                             حذف
                         </button>
                     </form>
@@ -495,7 +485,7 @@
         content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
 
         content.innerHTML = `
-            <h3>تعديل التصنيف</h3>
+            <h3>تعديل القسم</h3>
             <form action="/edit_category" method="post">
                 <input type="hidden" name="category_id" value="${id}">
                 <input type="text" name="name" value="${name}" required>
@@ -509,6 +499,15 @@
 
         modal.appendChild(content);
         document.body.appendChild(modal);
+    }
+
+    function validateRejectForm(form) {
+        var note = form.querySelector('textarea[name="rejection_note"]').value;
+        if (!note.trim()) {
+            alert('الرجاء إدخال سبب الرفض');
+            return false;
+        }
+        return true;
     }
     </script>
 </body>
