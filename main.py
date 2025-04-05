@@ -90,7 +90,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not c.fetchone():
         c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
         conn.commit()
-    conn.close()
 
     welcome_message = f"""مرحباً بك في متجرنا!
 معرف التيليجرام الخاص بك هو: {user_id}
@@ -98,28 +97,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     await update.message.reply_text(welcome_message)
 
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
+    # الحصول على الأقسام النشطة
     c.execute('SELECT name, code FROM categories WHERE is_active = 1')
     categories = c.fetchall()
     conn.close()
 
     keyboard = []
-    row = []
-    for i, category in enumerate(categories):
-        row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
-        if (i + 1) % 3 == 0:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
+    for category in categories:
+        keyboard.append([InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}')])
     
     keyboard.append([
         InlineKeyboardButton("رصيدي", callback_data='balance'),
         InlineKeyboardButton("طلباتي", callback_data='my_orders')
     ])
+    
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('مرحباً بك في متجرنا! الرجاء اختيار القسم:', reply_markup=reply_markup)
+    await update.message.reply_text('الرجاء اختيار القسم:', reply_markup=reply_markup)
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
