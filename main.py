@@ -63,10 +63,6 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if order[3] == "rejected" and order[4]:
             message += f"سبب الرفض: {order[4]}\n"
         message += f"التاريخ: {order[5]}\n"
-        if order[6]:  # إضافة الملاحظة إذا كانت موجودة
-            message += f"ملاحظة: {order[6]}\n"
-        if order[6]:
-            message += f"ملاحظة: {order[6]}\n" # Added note display
 
         keyboard = []
         if order[3] == "pending":
@@ -339,8 +335,6 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}
 """
-            if order[6]:
-                message += f"ملاحظة: {order[6]}\n" # Added note display
             message += "──────────────\n"
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
