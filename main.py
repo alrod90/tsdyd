@@ -699,6 +699,14 @@ def run_bot():
     application.run_polling()
 
 if __name__ == '__main__':
+    # ضبط المنطقة الزمنية
+    os.environ['TZ'] = 'Asia/Damascus'
+    try:
+        import time
+        time.tzset()
+    except AttributeError:
+        pass  # للتوافق مع أنظمة Windows
+        
     # Initialize database
     init_db()
 
