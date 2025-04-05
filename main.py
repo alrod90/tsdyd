@@ -615,15 +615,18 @@ def toggle_user():
     return redirect(url_for('admin_panel'))
 
 @app.route('/handle_order', methods=['POST'])
-def handle_order():
+async def handle_order():
     conn = None
     try:
         order_id = request.form.get('order_id')
         action = request.form.get('action')
         rejection_note = request.form.get('rejection_note', '')
         
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # استخدام event loop الحالي
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
         if not order_id or not action:
             return "بيانات غير صحيحة", 400
