@@ -92,15 +92,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_message)
 
     keyboard = [
-        [InlineKeyboardButton("خدمات بطاقة العائلة", callback_data='cat_internet')],
-        [InlineKeyboardButton("خدمات بطاقة الآلية", callback_data='cat_mobile')],
-        [InlineKeyboardButton("خدمات بطاقة الفعالية", callback_data='cat_landline')],
-        [InlineKeyboardButton("تفعيل بطاقة زائر", callback_data='balance')],
-        [InlineKeyboardButton("رصيدي", callback_data='balance')],
-        [InlineKeyboardButton("طلباتي", callback_data='my_orders')]
+        [
+            InlineKeyboardButton("إنترنت", callback_data='cat_internet'),
+            InlineKeyboardButton("جوال", callback_data='cat_mobile'),
+            InlineKeyboardButton("خط أرضي", callback_data='cat_landline')
+        ],
+        [
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('Welcome To Mahrukat Services\nأهلا بكم في قائمة خدمات شركة محروقات', reply_markup=reply_markup)
+    await update.message.reply_text('مرحباً بك في متجرنا! الرجاء اختيار القسم:', reply_markup=reply_markup)
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
