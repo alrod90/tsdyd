@@ -113,6 +113,11 @@ async def main():
     
     # Initialize bot
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    if not bot_token:
+        print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
+        return
+    
+    print("جاري تشغيل البوت...")
     application = Application.builder().token(bot_token).build()
     
     # Add handlers
