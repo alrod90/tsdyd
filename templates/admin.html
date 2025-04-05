@@ -193,53 +193,20 @@
                 <th>الرقم</th>
                 <th>معرف تيليجرام</th>
                 <th>الرصيد (ل.س)</th>
-                <th>الحالة</th>
-                <th>الإجراءات</th>
             </tr>
             {% for user in users %}
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
                 <td>{{ user[2] }}</td>
-                <td class="status-{{ 'active' if user[3] else 'inactive' }}">
-                    {{ 'مفعل' if user[3] else 'معطل' }}
-                </td>
                 <td>
-                    <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}')" style="margin-right: 10px;">
-                        تعديل
-                    </button>
-                    <button onclick="showAddBalanceForm('{{ user[1] }}')" style="margin-right: 10px; background-color: #4CAF50;">
-                        إضافة رصيد
-                    </button>
-                    <form action="/toggle_user" method="post" style="display: inline;">
-                        <input type="hidden" name="user_id" value="{{ user[0] }}">
-                        <button type="submit" style="background-color: {{ 'red' if user[3] else 'green' }}">
-                            {{ 'تعطيل' if user[3] else 'تفعيل' }}
-                        </button>
-                    </form>
-                    <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px; background-color: #2196F3;">
+                    <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px;">
                         إرسال إشعار
                     </button>
                 </td>
             </tr>
             {% endfor %}
         </table>
-    </div>
-
-    <!-- نافذة تعديل المستخدم -->
-    <div id="editUserModal" class="modal">
-        <div class="modal-content">
-            <h3>تعديل بيانات المستخدم</h3>
-            <form action="/edit_user" method="post">
-                <input type="hidden" name="user_id" id="edit_user_id">
-                <input type="text" name="telegram_id" id="edit_telegram_id" placeholder="معرف تيليجرام" required>
-                <input type="number" name="balance" id="edit_balance" placeholder="الرصيد" step="0.01" required>
-                <div style="margin-top: 20px;">
-                    <button type="submit">حفظ التغييرات</button>
-                    <button type="button" onclick="hideEditUserForm()">إلغاء</button>
-                </div>
-            </form>
-        </div>
     </div>
 
     <!-- نافذة تعديل المنتج -->
@@ -362,39 +329,6 @@
             modal.appendChild(content);
             document.body.appendChild(modal);
         }
-    function showEditUserForm(id, telegram_id, balance) {
-        document.getElementById('editUserModal').style.display = 'block';
-        document.getElementById('edit_user_id').value = id;
-        document.getElementById('edit_telegram_id').value = telegram_id;
-        document.getElementById('edit_balance').value = balance;
-    }
-
-    function hideEditUserForm() {
-        document.getElementById('editUserModal').style.display = 'none';
-    }
-
-    function showAddBalanceForm(userId) {
-        var modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);';
-
-        var content = document.createElement('div');
-        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
-
-        content.innerHTML = `
-            <h3>إضافة رصيد للمستخدم</h3>
-            <form action="/add_balance" method="post">
-                <input type="hidden" name="user_id" value="${userId}">
-                <input type="number" name="amount" placeholder="المبلغ (ل.س)" step="0.01" required>
-                <div style="margin-top: 20px;">
-                    <button type="submit">إضافة</button>
-                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
-                </div>
-            </form>
-        `;
-
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-    }
     </script>
 </body>
 </html>
