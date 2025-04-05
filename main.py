@@ -21,16 +21,27 @@ def init_db():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        # إنشاء الجداول إذا لم تكن موجودة
+        # إنشاء الجداول
         c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
                      
         c.execute('''CREATE TABLE IF NOT EXISTS products 
                      (id INTEGER PRIMARY KEY, name TEXT, category_id INTEGER, is_active BOOLEAN DEFAULT 1,
                       FOREIGN KEY(category_id) REFERENCES categories(id))''')
-    
-    # إنشاء الجداول من جديد
-    c.execute('''CREATE TABLE IF NOT EXISTS categories
+                      
+        c.execute('''CREATE TABLE IF NOT EXISTS users
+                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, is_active BOOLEAN DEFAULT 1)''')
+                     
+        c.execute('''CREATE TABLE IF NOT EXISTS orders
+                     (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
+                      customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, note TEXT)''')
+        
+        conn.commit()
+    except Exception as e:
+        print(f"خطأ في إنشاء قاعدة البيانات: {e}")
+    finally:
+        conn.close()
                  (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
                  
     c.execute('''CREATE TABLE IF NOT EXISTS products 
