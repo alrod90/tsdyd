@@ -1,4 +1,3 @@
-
 import os
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for
@@ -12,7 +11,7 @@ app = Flask(__name__)
 def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     # حذف الجداول القديمة
     c.execute('DROP TABLE IF EXISTS orders')
     c.execute('DROP TABLE IF EXISTS products')
@@ -62,10 +61,10 @@ def init_db():
         ('جوال', 'mobile'),
         ('خط أرضي', 'landline')
     ]
-    
+
     for name, code in categories:
         c.execute('INSERT INTO categories (name, code) VALUES (?, ?)', (name, code))
-    
+
     # إضافة بعض المنتجات للتجربة
     products = [
         ('باقة 100 ميجا', 50000, 1),
@@ -74,7 +73,7 @@ def init_db():
         ('رصيد 5000', 5000, 2),
         ('خط منزلي', 15000, 3)
     ]
-    
+
     for name, price, category_id in products:
         c.execute('INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)',
                  (name, price, category_id))
@@ -84,7 +83,7 @@ def init_db():
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    
+
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     c.execute('INSERT OR IGNORE INTO users (telegram_id, balance) VALUES (?, ?)', 
@@ -100,7 +99,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
          InlineKeyboardButton("طلباتي", callback_data='my_orders')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await update.message.reply_text(f"مرحباً بك في متجرنا!\nمعرف التيليجرام: {user_id}")
     await update.message.reply_text("اختر القسم:", reply_markup=reply_markup)
 
@@ -174,7 +173,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         category_code = query.data[4:]
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         c.execute('''
             SELECT p.id, p.name, p.price
             FROM products p
@@ -196,6 +195,15 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("اختر المنتج:", reply_markup=reply_markup)
         return
 
+    elif query.data.startswith('buy_'):
+        context.user_data['product_id'] = int(query.data[4:])
+
+        keyboard = [[InlineKeyboardButton("إلغاء", callback_data='back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("الرجاء إدخال المبلغ المطلوب:", reply_markup=reply_markup)
+        return
+
+
 def run_flask():
     app.run(host='0.0.0.0', port=5000)
 
@@ -208,7 +216,7 @@ def run_bot():
     application = Application.builder().token(bot_token).build()
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CallbackQueryHandler(button_click))
-    
+
     print("Bot is running...")
     application.run_polling()
 
