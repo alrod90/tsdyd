@@ -20,22 +20,26 @@ def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
 
-    # حذف الجداول القديمة
-    c.execute('DROP TABLE IF EXISTS orders')
-    c.execute('DROP TABLE IF EXISTS products')
-    c.execute('DROP TABLE IF EXISTS users')
-    c.execute('DROP TABLE IF EXISTS categories')
-
-    # إنشاء جدول التصنيفات
+    # إنشاء الجداول إذا لم تكن موجودة
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                  (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
     
-    # إضافة التصنيفات الافتراضية
-    c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)', ('إنترنت', 'internet', 1))
-    c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)', ('جوال', 'mobile', 1))
-    c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)', ('خط أرضي', 'landline', 1))
+    # التحقق من وجود التصنيفات الافتراضية وإضافتها إذا لم تكن موجودة
+    c.execute('SELECT code FROM categories WHERE code IN ("internet", "mobile", "landline")')
+    existing_categories = set(row[0] for row in c.fetchall())
+    
+    default_categories = [
+        ('إنترنت', 'internet', 1),
+        ('جوال', 'mobile', 1),
+        ('خط أرضي', 'landline', 1)
+    ]
+    
+    for name, code, is_active in default_categories:
+        if code not in existing_categories:
+            c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)',
+                     (name, code, is_active))
 
-    # إنشاء الجداول من جديد
+    # إنشاء باقي الجداول
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
