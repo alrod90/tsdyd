@@ -6,7 +6,8 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, ContextTypes,
     ConversationHandler, MessageHandler, filters
 )
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
+app.secret_key = 'your_secret_key_here'  # مفتاح سري للجلسة
 import sqlite3
 from threading import Thread
 # Added for SMS functionality.  Replace with your actual gateway library.
@@ -402,10 +403,22 @@ def admin_panel():
     products = c.fetchall()
     c.execute('SELECT * FROM users')
     users = c.fetchall()
-    c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
-                 FROM orders o 
-                 JOIN products p ON o.product_id = p.id 
-                 ORDER BY o.created_at DESC''')
+    # التحقق من صلاحيات المستخدم
+    c.execute('SELECT telegram_id FROM users WHERE id = 1')  # المدير له ID = 1
+    admin_id = c.fetchone()
+    
+    if admin_id and admin_id[0]:  # إذا كان المستخدم هو المدير
+        c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     ORDER BY o.created_at DESC''')
+    else:  # إذا كان مستخدم عادي
+        user_telegram_id = session.get('user_telegram_id')
+        c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     WHERE o.user_id = ?
+                     ORDER BY o.created_at DESC''', (user_telegram_id,))
     orders = c.fetchall()
     conn.close()
     return render_template('admin.html', products=products, users=users, orders=orders)
