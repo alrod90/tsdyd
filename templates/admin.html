@@ -187,6 +187,11 @@
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
                 <td>{{ user[2] }}</td>
+                <td>
+                    <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px;">
+                        إرسال إشعار
+                    </button>
+                </td>
             </tr>
             {% endfor %}
         </table>
@@ -224,6 +229,28 @@
 
         function hideEditForm() {
             document.getElementById('editModal').style.display = 'none';
+        }
+    function showNotificationForm(userId) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);';
+            
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+            
+            content.innerHTML = `
+                <h3>إرسال إشعار للمستخدم</h3>
+                <form action="/send_notification" method="post">
+                    <input type="hidden" name="user_id" value="${userId}">
+                    <input type="text" name="message" placeholder="نص الإشعار" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit">إرسال</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
+                    </div>
+                </form>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
         }
     </script>
 </body>
