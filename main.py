@@ -216,7 +216,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at 
                      FROM orders o 
                      JOIN products p ON o.product_id = p.id 
-                     WHERE o.id = ?''', (order_number,))
+                     WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
         order = c.fetchone()
         conn.close()
 
@@ -443,13 +443,13 @@ def handle_order():
     order_id = request.form['order_id']
     action = request.form['action']
     rejection_note = request.form.get('rejection_note', '')
-    
+
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
     order = c.fetchone()
-    
+
     if action == 'reject':
         c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                   (order[1], order[0]))
@@ -457,32 +457,32 @@ def handle_order():
                  ('rejected', rejection_note, order_id))
     else:
         c.execute('UPDATE orders SET status = ? WHERE id = ?', ('accepted', order_id))
-    
+
     conn.commit()
     conn.close()
-    
+
     return redirect(url_for('admin_panel'))
 
 @app.route('/delete_order', methods=['POST'])
 def delete_order():
     order_id = request.form['order_id']
-    
+
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     c.execute('SELECT user_id, amount, status FROM orders WHERE id = ?', (order_id,))
     order = c.fetchone()
-    
+
     if order[2] != 'accepted':  # إعادة المبلغ إذا لم يكن الطلب مقبولاً
         c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                   (order[1], order[0]))
-    
+
     c.execute('DELETE FROM orders WHERE id = ?', (order_id,))
     conn.commit()
     conn.close()
-    
+
     return redirect(url_for('admin_panel'))
-    
+
     return redirect(url_for('admin_panel'))
 
 def run_flask():
