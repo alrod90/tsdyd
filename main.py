@@ -37,8 +37,7 @@ def init_db():
 
     # إنشاء الجداول إذا لم تكن موجودة
     c.execute('''CREATE TABLE IF NOT EXISTS products 
-                 (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1, 
-                  price REAL DEFAULT 0)''')
+                 (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
                   phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
@@ -451,9 +450,8 @@ def add_product():
     is_active = 'is_active' in request.form
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    price = float(request.form.get('price', 0)) if category == 'games' else 0
-    c.execute('INSERT INTO products (name, category, is_active, price) VALUES (?, ?, ?, ?)',
-              (name, category, is_active, price))
+    c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, ?)',
+              (name, category, is_active))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
