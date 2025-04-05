@@ -503,26 +503,39 @@ def add_balance():
 
 @app.route('/handle_order', methods=['POST'])
 def handle_order():
-    order_id = request.form['order_id']
-    action = request.form['action']
-    rejection_note = request.form.get('rejection_note', '')
+    try:
+        order_id = request.form['order_id']
+        action = request.form['action']
+        rejection_note = request.form.get('rejection_note', '')
 
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
 
-    c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
-    order = c.fetchone()
+        c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
+        order = c.fetchone()
 
-    if action == 'reject':
-        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                  (order[1], order[0]))
-        c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?', 
-                 ('rejected', rejection_note, order_id))
-    else:
-        c.execute('UPDATE orders SET status = ? WHERE id = ?', ('accepted', order_id))
+        if order is None:
+            conn.close()
+            return "الطلب غير موجود", 404
 
-    conn.commit()
-    conn.close()
+        if action == 'reject':
+            # إعادة المبلغ للمستخدم
+            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                    (order[1], order[0]))
+            # تحديث حالة الطلب
+            c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
+                    ('rejected', rejection_note, order_id))
+        else:
+            c.execute('UPDATE orders SET status = ? WHERE id = ?', ('accepted', order_id))
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        if conn:
+            conn.close()
+        print(f"Error in handle_order: {str(e)}")
+        return "حدث خطأ في معالجة الطلب", 500
 
     return redirect(url_for('admin_panel'))
 
