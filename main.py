@@ -32,6 +32,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
     conn.close()
 
+    welcome_message = f"""مرحباً بك في متجرنا!
+معرف التيليجرام الخاص بك هو: {user_id}
+يمكنك استخدام هذا المعرف للتواصل مع الإدارة.
+"""
+    await update.message.reply_text(welcome_message)
+
     keyboard = [
         [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
         [InlineKeyboardButton("جوال", callback_data='cat_mobile')],
@@ -137,7 +143,7 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
             continue
 
 @app.route('/send_notification', methods=['POST'])
-def send_notification_route():
+async def send_notification_route():
     message = request.form['message']
     user_id = request.form.get('user_id', None)
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -148,20 +154,18 @@ def send_notification_route():
     c = conn.cursor()
     
     if user_id:
-        # إرسال إشعار لمستخدم محدد
         try:
-            bot.send_message(chat_id=int(user_id), text=message)
-        except:
-            pass
+            await bot.send_message(chat_id=int(user_id), text=message)
+        except Exception as e:
+            print(f"Error sending message to {user_id}: {e}")
     else:
-        # إرسال إشعار لجميع المستخدمين
         c.execute('SELECT telegram_id FROM users')
         users = c.fetchall()
         for user in users:
             try:
-                bot.send_message(chat_id=user[0], text=message)
-            except:
-                continue
+                await bot.send_message(chat_id=user[0], text=message)
+            except Exception as e:
+                print(f"Error sending message to {user[0]}: {e}")
                 
     conn.close()
     return redirect(url_for('admin_panel'))
