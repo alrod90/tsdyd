@@ -41,10 +41,7 @@ def init_db():
     except Exception as e:
         print(f"خطأ في إنشاء قاعدة البيانات: {e}")
     finally:
-        conn.close()
-                 (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
-                 
-    c.execute('''CREATE TABLE IF NOT EXISTS products 
+        conn.close() 
                  (id INTEGER PRIMARY KEY, name TEXT, category_id INTEGER, is_active BOOLEAN DEFAULT 1,
                   FOREIGN KEY(category_id) REFERENCES categories(id))''')
 
