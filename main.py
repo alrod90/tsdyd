@@ -14,7 +14,7 @@ def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS products 
-                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, category TEXT)''')
+                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL)''')
     conn.commit()
@@ -44,7 +44,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT * FROM products WHERE category = ?', (category,))
+        c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category,))
         products = c.fetchall()
         conn.close()
         
@@ -80,10 +80,21 @@ def add_product():
     name = request.form['name']
     price = float(request.form['price'])
     category = request.form['category']
+    is_active = 'is_active' in request.form
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('INSERT INTO products (name, price, category) VALUES (?, ?, ?)',
-              (name, price, category))
+    c.execute('INSERT INTO products (name, price, category, is_active) VALUES (?, ?, ?, ?)',
+              (name, price, category, is_active))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/toggle_product', methods=['POST'])
+def toggle_product():
+    product_id = request.form['product_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE products SET is_active = NOT is_active WHERE id = ?', (product_id,))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))

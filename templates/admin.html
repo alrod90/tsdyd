@@ -4,10 +4,99 @@
 <head>
     <title>لوحة تحكم المتجر</title>
     <style>
-        body { font-family: Arial; margin: 20px; text-align: right; }
-        .section { margin: 20px 0; }
-        form { margin: 10px 0; }
-        input, select { margin: 5px; padding: 5px; }
+        body { 
+            font-family: Arial; 
+            margin: 20px; 
+            text-align: right;
+            background-color: #f5f5f5;
+        }
+        .section { 
+            margin: 20px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        form { 
+            margin: 10px 0;
+            display: grid;
+            gap: 10px;
+        }
+        input, select { 
+            margin: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button, input[type="submit"] {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover, input[type="submit"]:hover {
+            background: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: right;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        .status-active {
+            color: green;
+        }
+        .status-inactive {
+            color: red;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body>
@@ -17,12 +106,17 @@
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
-            <input type="number" name="price" placeholder="السعر" step="0.01" required>
+            <input type="number" name="price" placeholder="السعر (ل.س)" step="0.01" required>
             <select name="category" required>
                 <option value="internet">إنترنت</option>
                 <option value="mobile">جوال</option>
                 <option value="landline">خط أرضي</option>
             </select>
+            <label class="switch">
+                <input type="checkbox" name="is_active" checked>
+                <span class="slider"></span>
+            </label>
+            <span>تفعيل المنتج</span>
             <input type="submit" value="إضافة منتج">
         </form>
     </div>
@@ -31,21 +125,39 @@
         <h2>إضافة رصيد</h2>
         <form action="/add_balance" method="post">
             <input type="number" name="user_id" placeholder="معرف المستخدم في تيليجرام" required>
-            <input type="number" name="amount" placeholder="المبلغ" step="0.01" required>
+            <input type="number" name="amount" placeholder="المبلغ (ل.س)" step="0.01" required>
             <input type="submit" value="إضافة رصيد">
         </form>
     </div>
 
     <div class="section">
         <h2>المنتجات</h2>
-        <table border="1">
-            <tr><th>الرقم</th><th>الاسم</th><th>السعر</th><th>القسم</th></tr>
+        <table>
+            <tr>
+                <th>الرقم</th>
+                <th>الاسم</th>
+                <th>السعر (ل.س)</th>
+                <th>القسم</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
             {% for product in products %}
             <tr>
                 <td>{{ product[0] }}</td>
                 <td>{{ product[1] }}</td>
-                <td>{{ product[2] }} ريال</td>
+                <td>{{ product[2] }}</td>
                 <td>{{ product[3] }}</td>
+                <td class="status-{{ 'active' if product[4] else 'inactive' }}">
+                    {{ 'مفعل' if product[4] else 'غير مفعل' }}
+                </td>
+                <td>
+                    <form action="/toggle_product" method="post" style="display: inline;">
+                        <input type="hidden" name="product_id" value="{{ product[0] }}">
+                        <button type="submit">
+                            {{ 'إلغاء التفعيل' if product[4] else 'تفعيل' }}
+                        </button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </table>
@@ -53,13 +165,17 @@
 
     <div class="section">
         <h2>المستخدمين</h2>
-        <table border="1">
-            <tr><th>الرقم</th><th>معرف تيليجرام</th><th>الرصيد</th></tr>
+        <table>
+            <tr>
+                <th>الرقم</th>
+                <th>معرف تيليجرام</th>
+                <th>الرصيد (ل.س)</th>
+            </tr>
             {% for user in users %}
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
-                <td>{{ user[2] }} ريال</td>
+                <td>{{ user[2] }}</td>
             </tr>
             {% endfor %}
         </table>
