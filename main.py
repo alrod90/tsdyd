@@ -23,8 +23,17 @@ app = Flask(__name__)
 def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    # ضبط المنطقة الزمنية لقاعدة البيانات
+    # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
+    c.execute("""
+        CREATE TRIGGER IF NOT EXISTS update_timestamp 
+        AFTER INSERT ON orders 
+        BEGIN 
+            UPDATE orders 
+            SET created_at = datetime(datetime('now', '+3 hours')) 
+            WHERE id = NEW.id; 
+        END;
+    """)
 
     # إنشاء الجداول إذا لم تكن موجودة
     c.execute('''CREATE TABLE IF NOT EXISTS products 
@@ -35,7 +44,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, note TEXT)''')
+                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
     conn.commit()
     conn.close()
 
