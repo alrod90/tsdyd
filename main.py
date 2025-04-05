@@ -454,8 +454,7 @@ def delete_product():
     product_id = request.form['product_id']
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    # تعطيل المنتج بدلاً من حذفه
-    c.execute('UPDATE products SET is_active = 0 WHERE id = ?', (product_id,))
+    c.execute('DELETE FROM products WHERE id = ?', (product_id,))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
@@ -473,64 +472,35 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
-    try:
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        if user_id:
-            c.execute('SELECT telegram_id FROM users WHERE telegram_id = ? AND is_active = 1', (user_id,))
-        else:
-            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-        
+async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    
+    if user_id:
+        users = [(user_id,)]
+    else:
+        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
         users = c.fetchall()
+    
+    # إرسال عبر تيليجرام أولاً
+    for user in users:
+        success = False
+        retry_count = 3
         
-        if not users:
-            print("No active users found to send notification")
-            return
-            
-        for user in users:
+        while retry_count > 0 and not success:
             try:
-                # إضافة معرف الإشعار للتتبع
-                notification_id = f"notification_{user[0]}_{int(time.time())}"
-                
-                # محاولة إرسال رسالة مع إشعار صوتي وتأكيد القراءة
-                sent_message = await context.bot.send_message(
+                # محاولة إرسال رسالة مع إشعار صوتي
+                await context.bot.send_message(
                     chat_id=user[0],
-                    text=f"{message}\n\nID: {notification_id}",
+                    text=message,
                     disable_notification=False,
-                    protect_content=True,
-                    parse_mode='HTML'
+                    protect_content=True
                 )
-                
-                print(f"Notification sent successfully to user {user[0]} with ID {notification_id}")
-                
-                # تسجيل الإشعار في قاعدة البيانات
-                c.execute('''CREATE TABLE IF NOT EXISTS notifications 
-                           (id TEXT PRIMARY KEY, user_id INTEGER, message TEXT, 
-                            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, is_read BOOLEAN DEFAULT 0)''')
-                c.execute('INSERT INTO notifications (id, user_id, message) VALUES (?, ?, ?)',
-                         (notification_id, user[0], message))
-                conn.commit()
-                
-            except telegram.error.BadRequest as e:
-                print(f"BadRequest error for user {user[0]}: {str(e)}")
-                continue
-            except telegram.error.Unauthorized as e:
-                print(f"Unauthorized error for user {user[0]}: {str(e)}")
-                # تحديث حالة المستخدم إلى غير نشط
-                c.execute('UPDATE users SET is_active = 0 WHERE telegram_id = ?', (user[0],))
-                conn.commit()
-                continue
+                success = True
             except Exception as e:
-                print(f"Unexpected error sending message to {user[0]}: {str(e)}")
-                continue
-                
-    except Exception as e:
-        print(f"Error in send_notification: {str(e)}")
-    finally:
-        if 'conn' in locals():
-            conn.close()
+                print(f"Error sending Telegram message to {user[0]}: {str(e)}")
+                retry_count -= 1
+                await asyncio.sleep(1)
         
         # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
         if not success and is_important:
@@ -555,29 +525,32 @@ async def send_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     conn.close()
 
 @app.route('/send_notification', methods=['POST'])
-async def send_notification_route():
+def send_notification_route():
+    message = request.form['message']
+    user_id = request.form.get('user_id', None)
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+
+    bot = telegram.Bot(token=bot_token)
+
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+
     try:
-        message = request.form['message']
-        user_id = request.form.get('user_id')
-        
-        if not message:
-            return "Message cannot be empty", 400
-            
-        # تهيئة البوت
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        if not bot_token:
-            return "Bot token not configured", 500
-            
-        application = Application.builder().token(bot_token).build()
-        
-        # إرسال الإشعار
-        await send_notification(None, application, message, user_id if user_id else None, True)
-        
-        return redirect(url_for('admin_panel'))
-        
+        if user_id:
+            bot.send_message(chat_id=int(user_id), text=message)
+        else:
+            c.execute('SELECT telegram_id FROM users')
+            users = c.fetchall()
+            for user in users:
+                try:
+                    bot.send_message(chat_id=user[0], text=message)
+                except Exception as e:
+                    print(f"Error sending message to {user[0]}: {e}")
     except Exception as e:
-        print(f"Error in send_notification_route: {str(e)}")
-        return f"Error sending notification: {str(e)}", 500
+        print(f"Error sending notification: {e}")
+
+    conn.close()
+    return redirect(url_for('admin_panel'))
 
 @app.route('/add_balance', methods=['POST'])
 def add_balance():
@@ -615,18 +588,12 @@ def toggle_user():
     return redirect(url_for('admin_panel'))
 
 @app.route('/handle_order', methods=['POST'])
-async def handle_order():
+def handle_order():
     conn = None
     try:
         order_id = request.form.get('order_id')
         action = request.form.get('action')
         rejection_note = request.form.get('rejection_note', '')
-        
-        # استخدام event loop الحالي
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
 
         if not order_id or not action:
             return "بيانات غير صحيحة", 400
@@ -634,27 +601,14 @@ async def handle_order():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        # التحقق من وجود الطلب وجلب معلومات المنتج
-        c.execute('''
-            SELECT o.user_id, o.amount, p.name 
-            FROM orders o 
-            JOIN products p ON o.product_id = p.id 
-            WHERE o.id = ?
-        ''', (order_id,))
+        # التحقق من وجود الطلب
+        c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
         order = c.fetchone()
 
         if not order:
             if conn:
                 conn.close()
             return "الطلب غير موجود", 404
-
-        user_id = order[0]
-        amount = order[1]
-        product_name = order[2]
-
-        # تهيئة البوت
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        application = Application.builder().token(bot_token).build()
 
         if action == 'reject':
             if not rejection_note and action == 'reject':
@@ -664,34 +618,13 @@ async def handle_order():
 
             # إعادة المبلغ للمستخدم
             c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                    (amount, user_id))
+                    (order[1], order[0]))
             # تحديث حالة الطلب
             c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
                     ('rejected', rejection_note, order_id))
-            
-            # إرسال إشعار الرفض
-            notification_message = f"""
-❌ تم رفض طلبك رقم {order_id}
-الشركة: {product_name}
-المبلغ: {amount} ليرة سوري
-سبب الرفض: {rejection_note}
-تمت إعادة المبلغ إلى رصيدك.
-"""
-            asyncio.create_task(send_notification(None, application, notification_message, user_id, True))
-
         elif action == 'accept':
             c.execute('UPDATE orders SET status = ? WHERE id = ?', 
                     ('accepted', order_id))
-            
-            # إرسال إشعار القبول
-            notification_message = f"""
-✅ تم قبول طلبك رقم {order_id}
-الشركة: {product_name}
-المبلغ: {amount} ليرة سوري
-جاري تنفيذ طلبك...
-"""
-            loop.run_until_complete(send_notification(None, application, notification_message, user_id, True))
-            loop.close()
 
         conn.commit()
         conn.close()
@@ -717,8 +650,7 @@ def delete_order():
         c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                   (order[1], order[0]))
 
-    # تحديث حالة الطلب إلى معطل بدلاً من حذفه
-    c.execute('UPDATE orders SET status = ? WHERE id = ?', ('inactive', order_id))
+    c.execute('DELETE FROM orders WHERE id = ?', (order_id,))
     conn.commit()
     conn.close()
 
