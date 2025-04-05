@@ -394,7 +394,14 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 
     conn.close()
 
-    await query.message.edit_text("تم تسجيل طلبك مع رقم الطلب وبيانات") # Changed success message
+    confirmation_message = f"""
+تم تسجيل طلبك بنجاح!
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري
+بيانات الزبون: {customer_info}
+"""
+    await query.message.edit_text(confirmation_message)
     return ConversationHandler.END
 
 # Flask routes
