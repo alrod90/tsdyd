@@ -21,18 +21,11 @@ def init_db():
     c = conn.cursor()
 
     # حذف الجداول القديمة
-    c.execute('DROP TABLE IF EXISTS categories')
+    c.execute('DROP TABLE IF EXISTS orders')
     c.execute('DROP TABLE IF EXISTS products')
-    
-    # إنشاء الجداول من جديد
-    c.execute('''CREATE TABLE IF NOT EXISTS categories
-                 (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
-                 
-    c.execute('''CREATE TABLE IF NOT EXISTS products 
-                 (id INTEGER PRIMARY KEY, name TEXT, category_id INTEGER, is_active BOOLEAN DEFAULT 1,
-                  FOREIGN KEY(category_id) REFERENCES categories(id))''')
+    c.execute('DROP TABLE IF EXISTS users')
 
-    # إنشاء باقي الجداول
+    # إنشاء الجداول من جديد
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
@@ -98,44 +91,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     await update.message.reply_text(welcome_message)
 
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT name, code FROM categories WHERE is_active = 1')
-    categories = c.fetchall()
-    conn.close()
-
-    keyboard = []
-    row = []
-    for i, category in enumerate(categories):
-        row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
-        if (i + 1) % 3 == 0:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
-    
-    keyboard.append([
-        InlineKeyboardButton("رصيدي", callback_data='balance'),
-        InlineKeyboardButton("طلباتي", callback_data='my_orders')
-    ])
+    keyboard = [
+        [
+            InlineKeyboardButton("إنترنت", callback_data='cat_internet'),
+            InlineKeyboardButton("جوال", callback_data='cat_mobile'),
+            InlineKeyboardButton("خط أرضي", callback_data='cat_landline')
+        ],
+        [
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text('مرحباً بك في متجرنا! الرجاء اختيار القسم:', reply_markup=reply_markup)
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
-    # التحقق من حالة المستخدم
-    if query.data.startswith('cat_'):
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        c.execute('SELECT is_active FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        user = c.fetchone()
-        conn.close()
-
-        if not user or not user[0]:
-            await query.message.edit_text("عذراً، حسابك معطل. يرجى التواصل مع المسؤول.")
-            return
 
     if query.data.startswith('cat_'):
         category = query.data.split('_')[1]
@@ -431,8 +403,6 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 def admin_panel():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('SELECT * FROM categories')
-    categories = c.fetchall()
     c.execute('SELECT * FROM products')
     products = c.fetchall()
     c.execute('SELECT * FROM users')
@@ -448,12 +418,12 @@ def admin_panel():
 @app.route('/add_product', methods=['POST'])
 def add_product():
     name = request.form['name']
-    category_id = request.form['category_id']
+    category = request.form['category']
     is_active = 'is_active' in request.form
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('INSERT INTO products (name, category_id, is_active) VALUES (?, ?, ?)',
-              (name, category_id, is_active))
+    c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, ?)',
+              (name, category, is_active))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
@@ -613,55 +583,6 @@ def delete_order():
 
     return redirect(url_for('admin_panel'))
 
-    return redirect(url_for('admin_panel'))
-
-@app.route('/add_category', methods=['POST'])
-def add_category():
-    name = request.form['name']
-    code = request.form['code']
-    is_active = 'is_active' in request.form
-    
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)',
-              (name, code, is_active))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
-
-@app.route('/edit_category', methods=['POST'])
-def edit_category():
-    category_id = request.form['category_id']
-    name = request.form['name']
-    code = request.form['code']
-    is_active = 'is_active' in request.form
-    
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE categories SET name = ?, code = ?, is_active = ? WHERE id = ?',
-              (name, code, is_active, category_id))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
-
-@app.route('/toggle_category', methods=['POST'])
-def toggle_category():
-    category_id = request.form['category_id']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE categories SET is_active = NOT is_active WHERE id = ?', (category_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
-
-@app.route('/delete_category', methods=['POST'])
-def delete_category():
-    category_id = request.form['category_id']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('DELETE FROM categories WHERE id = ?', (category_id,))
-    conn.commit()
-    conn.close()
     return redirect(url_for('admin_panel'))
 
 @app.route('/edit_user', methods=['POST'])
