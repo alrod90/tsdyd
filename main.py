@@ -13,34 +13,6 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # مفتاح سري للجلسة
 from threading import Thread
 from functools import wraps
-
-# بيانات تسجيل الدخول
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "your_password_here"
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = None
-    if request.method == 'POST':
-        if request.form['username'] == ADMIN_USERNAME and request.form['password'] == ADMIN_PASSWORD:
-            session['logged_in'] = True
-            return redirect(url_for('admin_panel'))
-        else:
-            error = 'بيانات تسجيل الدخول غير صحيحة'
-    return render_template('login.html', error=error)
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('login'))
 # Added for SMS functionality.  Replace with your actual gateway library.
 import requests # Example using requests library. You might need a different library.
 
@@ -435,7 +407,6 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 
 # Flask routes
 @app.route('/')
-@login_required
 def admin_panel():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
