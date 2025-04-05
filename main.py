@@ -40,7 +40,7 @@ def init_db():
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                  phone_number TEXT, is_active BOOLEAN DEFAULT 1)''')
+                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -581,10 +581,11 @@ def add_balance():
 def edit_user():
     user_id = request.form['user_id']
     new_balance = float(request.form['balance'])
+    note = request.form.get('note', '')
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
-              (new_balance, user_id))
+    c.execute('UPDATE users SET balance = ?, note = ? WHERE telegram_id = ?',
+              (new_balance, note, user_id))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))

@@ -193,14 +193,16 @@
                 <th>الرقم</th>
                 <th>معرف تيليجرام</th>
                 <th>الرصيد (ل.س)</th>
+                <th>ملاحظات</th>
             </tr>
             {% for user in users %}
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
                 <td>{{ user[2] }}</td>
+                <td>{{ user[5] if user[5] else '' }}</td>
                 <td>
-                    <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}')" style="margin-right: 10px;">
+                    <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}', '{{ user[5] if user[5] else '' }}')" style="margin-right: 10px;">
                         تعديل
                     </button>
                     <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px;">
@@ -322,6 +324,8 @@
                     <input type="hidden" name="user_id" value="${telegramId}">
                     <label>الرصيد:</label>
                     <input type="number" name="balance" value="${balance}" step="0.01" required>
+                    <label>ملاحظات:</label>
+                    <textarea name="note" style="width: 100%; margin: 10px 0;">${note || ''}</textarea>
                     <div style="margin-top: 20px;">
                         <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
                         <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
