@@ -23,6 +23,8 @@ app = Flask(__name__)
 def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+    # ضبط المنطقة الزمنية لقاعدة البيانات
+    c.execute("PRAGMA timezone = '+03:00'")
 
     # إنشاء الجداول إذا لم تكن موجودة
     c.execute('''CREATE TABLE IF NOT EXISTS products 
@@ -661,6 +663,11 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
     return redirect(url_for('admin_panel'))
+
+def get_db_connection():
+    conn = sqlite3.connect('store.db')
+    conn.execute("PRAGMA timezone = '+03:00'")
+    return conn
 
 def run_flask():
     app.run(host='0.0.0.0', port=5000)
