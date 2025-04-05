@@ -27,7 +27,8 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, is_active BOOLEAN DEFAULT 1)''')
+                 (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
+                  phone_number TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -471,18 +472,57 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
+async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('SELECT telegram_id FROM users')
-    users = c.fetchall()
-    conn.close()
-
+    
+    if user_id:
+        users = [(user_id,)]
+    else:
+        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+        users = c.fetchall()
+    
+    # إرسال عبر تيليجرام أولاً
     for user in users:
-        try:
-            await context.bot.send_message(chat_id=user[0], text=message)
-        except:
-            continue
+        success = False
+        retry_count = 3
+        
+        while retry_count > 0 and not success:
+            try:
+                # محاولة إرسال رسالة مع إشعار صوتي
+                await context.bot.send_message(
+                    chat_id=user[0],
+                    text=message,
+                    disable_notification=False,
+                    protect_content=True
+                )
+                success = True
+            except Exception as e:
+                print(f"Error sending Telegram message to {user[0]}: {str(e)}")
+                retry_count -= 1
+                await asyncio.sleep(1)
+        
+        # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
+        if not success and is_important:
+            try:
+                # استرجاع رقم الهاتف من قاعدة البيانات
+                c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user[0],))
+                phone_result = c.fetchone()
+                
+                if phone_result and phone_result[0]:
+                    # إرسال SMS عبر خدمة SMS
+                    response = requests.post(
+                        "YOUR_SMS_GATEWAY_URL",
+                        data={
+                            "to": phone_result[0],
+                            "message": f"إشعار مهم: {message}"
+                        }
+                    )
+                    response.raise_for_status()
+            except Exception as e:
+                print(f"Error sending SMS to {user[0]}: {str(e)}")
+    
+    conn.close()
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
