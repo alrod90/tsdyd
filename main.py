@@ -24,6 +24,16 @@ def init_db():
     c.execute('DROP TABLE IF EXISTS orders')
     c.execute('DROP TABLE IF EXISTS products')
     c.execute('DROP TABLE IF EXISTS users')
+    c.execute('DROP TABLE IF EXISTS categories')
+
+    # إنشاء جدول التصنيفات
+    c.execute('''CREATE TABLE IF NOT EXISTS categories
+                 (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
+    
+    # إضافة التصنيفات الافتراضية
+    c.execute('INSERT INTO categories (name, code) VALUES (?, ?)', ('إنترنت', 'internet'))
+    c.execute('INSERT INTO categories (name, code) VALUES (?, ?)', ('جوال', 'mobile'))
+    c.execute('INSERT INTO categories (name, code) VALUES (?, ?)', ('خط أرضي', 'landline'))
 
     # إنشاء الجداول من جديد
     c.execute('''CREATE TABLE IF NOT EXISTS products 
@@ -108,6 +118,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
+    # التحقق من حالة المستخدم
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT is_active FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    user = c.fetchone()
+    conn.close()
+
+    if not user or not user[0]:
+        await query.message.edit_text("عذراً، حسابك معطل. يرجى التواصل مع المسؤول.")
+        return
 
     if query.data.startswith('cat_'):
         category = query.data.split('_')[1]
@@ -403,6 +424,8 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 def admin_panel():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+    c.execute('SELECT * FROM categories')
+    categories = c.fetchall()
     c.execute('SELECT * FROM products')
     products = c.fetchall()
     c.execute('SELECT * FROM users')
@@ -583,6 +606,55 @@ def delete_order():
 
     return redirect(url_for('admin_panel'))
 
+    return redirect(url_for('admin_panel'))
+
+@app.route('/add_category', methods=['POST'])
+def add_category():
+    name = request.form['name']
+    code = request.form['code']
+    is_active = 'is_active' in request.form
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)',
+              (name, code, is_active))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/edit_category', methods=['POST'])
+def edit_category():
+    category_id = request.form['category_id']
+    name = request.form['name']
+    code = request.form['code']
+    is_active = 'is_active' in request.form
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE categories SET name = ?, code = ?, is_active = ? WHERE id = ?',
+              (name, code, is_active, category_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/toggle_category', methods=['POST'])
+def toggle_category():
+    category_id = request.form['category_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE categories SET is_active = NOT is_active WHERE id = ?', (category_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/delete_category', methods=['POST'])
+def delete_category():
+    category_id = request.form['category_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM categories WHERE id = ?', (category_id,))
+    conn.commit()
+    conn.close()
     return redirect(url_for('admin_panel'))
 
 @app.route('/edit_user', methods=['POST'])

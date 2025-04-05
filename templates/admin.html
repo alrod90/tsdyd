@@ -112,6 +112,57 @@
     <h1>لوحة تحكم المتجر</h1>
 
     <div class="section">
+        <h2>إدارة التصنيفات</h2>
+        <form action="/add_category" method="post">
+            <input type="text" name="name" placeholder="اسم التصنيف" required>
+            <input type="text" name="code" placeholder="رمز التصنيف (بالإنجليزية)" required>
+            <label class="switch">
+                <input type="checkbox" name="is_active" checked>
+                <span class="slider"></span>
+            </label>
+            <span>تفعيل التصنيف</span>
+            <input type="submit" value="إضافة تصنيف">
+        </form>
+
+        <table>
+            <tr>
+                <th>الرقم</th>
+                <th>الاسم</th>
+                <th>الرمز</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
+            {% for category in categories %}
+            <tr>
+                <td>{{ category[0] }}</td>
+                <td>{{ category[1] }}</td>
+                <td>{{ category[2] }}</td>
+                <td class="status-{{ 'active' if category[3] else 'inactive' }}">
+                    {{ 'مفعل' if category[3] else 'غير مفعل' }}
+                </td>
+                <td>
+                    <form action="/toggle_category" method="post" style="display: inline;">
+                        <input type="hidden" name="category_id" value="{{ category[0] }}">
+                        <button type="submit">
+                            {{ 'إلغاء التفعيل' if category[3] else 'تفعيل' }}
+                        </button>
+                    </form>
+                    <button onclick="showEditCategoryForm('{{ category[0] }}', '{{ category[1] }}', '{{ category[2] }}')" style="margin-right: 10px;">
+                        تعديل
+                    </button>
+                    <form action="/delete_category" method="post" style="display: inline;">
+                        <input type="hidden" name="category_id" value="{{ category[0] }}">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا التصنيف؟')" style="background-color: #ff4444;">
+                            حذف
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="section">
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
@@ -387,6 +438,29 @@
                 <input type="number" name="amount" placeholder="المبلغ (ل.س)" step="0.01" required>
                 <div style="margin-top: 20px;">
                     <button type="submit">إضافة</button>
+                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
+                </div>
+            </form>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    }
+    function showEditCategoryForm(id, name, code) {
+        var modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);';
+
+        var content = document.createElement('div');
+        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+        content.innerHTML = `
+            <h3>تعديل التصنيف</h3>
+            <form action="/edit_category" method="post">
+                <input type="hidden" name="category_id" value="${id}">
+                <input type="text" name="name" value="${name}" required>
+                <input type="text" name="code" value="${code}" required>
+                <div style="margin-top: 20px;">
+                    <button type="submit">حفظ التغييرات</button>
                     <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
                 </div>
             </form>
