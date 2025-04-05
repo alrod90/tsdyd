@@ -454,7 +454,8 @@ def delete_product():
     product_id = request.form['product_id']
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('DELETE FROM products WHERE id = ?', (product_id,))
+    # تعطيل المنتج بدلاً من حذفه
+    c.execute('UPDATE products SET is_active = 0 WHERE id = ?', (product_id,))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
@@ -709,7 +710,8 @@ def delete_order():
         c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                   (order[1], order[0]))
 
-    c.execute('DELETE FROM orders WHERE id = ?', (order_id,))
+    # تحديث حالة الطلب إلى معطل بدلاً من حذفه
+    c.execute('UPDATE orders SET status = ? WHERE id = ?', ('inactive', order_id))
     conn.commit()
     conn.close()
 
