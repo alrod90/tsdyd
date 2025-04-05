@@ -20,12 +20,7 @@ def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
 
-    # حذف الجداول القديمة
-    c.execute('DROP TABLE IF EXISTS orders')
-    c.execute('DROP TABLE IF EXISTS products')
-    c.execute('DROP TABLE IF EXISTS users')
-
-    # إنشاء الجداول من جديد
+    # إنشاء الجداول إذا لم تكن موجودة
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
