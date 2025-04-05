@@ -234,31 +234,39 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         order_number = int(update.message.text)
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note
-                     FROM orders o 
-                     JOIN products p ON o.product_id = p.id 
-                     WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
-        order = c.fetchone()
-        conn.close()
+        try:
+            c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note
+                         FROM orders o 
+                         JOIN products p ON o.product_id = p.id 
+                         WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
+            order = c.fetchone()
 
-        if order:
-            status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
-            message = f"""
+            if order:
+                status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+                message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
-الشركة: {order[1]} # Changed from المنتج to الشركة
+الشركة: {order[1]}
 المبلغ: {order[2]} ليرة سوري
-الحالة: {status_text}
+الحالة: {status_text}"""
+
+                if order[3] == "rejected" and order[7]:  # إضافة سبب الرفض
+                    message += f"\nسبب الرفض: {order[7]}"
+
+                message += f"""
 بيانات الزبون: {order[4]}
-التاريخ: {order[5]}
-"""
-            if order[6]:
-                message += f"ملاحظة: {order[6]}\n" # Added note display
-            keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(message, reply_markup=reply_markup)
-        else:
-            await update.message.reply_text("لم يتم العثور على الطلب")
+التاريخ: {order[5]}"""
+
+                if order[6]:
+                    message += f"\nملاحظة: {order[6]}"
+
+                keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await update.message.reply_text(message, reply_markup=reply_markup)
+            else:
+                await update.message.reply_text("لم يتم العثور على الطلب")
+        finally:
+            conn.close()
     except ValueError:
         await update.message.reply_text("الرجاء إدخال رقم صحيح")
     return ConversationHandler.END
