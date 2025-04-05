@@ -22,7 +22,7 @@ def init_db():
     # حذف الجدول القديم إذا كان موجوداً
     c.execute('DROP TABLE IF EXISTS products')
     c.execute('''CREATE TABLE IF NOT EXISTS products 
-                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, category TEXT, is_active BOOLEAN DEFAULT 1)''')
+                 (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL)''')
     conn.commit()
@@ -219,13 +219,12 @@ def admin_panel():
 @app.route('/add_product', methods=['POST'])
 def add_product():
     name = request.form['name']
-    price = float(request.form['price'])
     category = request.form['category']
     is_active = 'is_active' in request.form
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('INSERT INTO products (name, price, category, is_active) VALUES (?, ?, ?, ?)',
-              (name, price, category, is_active))
+    c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, ?)',
+              (name, category, is_active))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
@@ -254,12 +253,11 @@ def delete_product():
 def edit_product():
     product_id = request.form['product_id']
     name = request.form['name']
-    price = float(request.form['price'])
     category = request.form['category']
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('UPDATE products SET name = ?, price = ?, category = ? WHERE id = ?',
-              (name, price, category, product_id))
+    c.execute('UPDATE products SET name = ?, category = ? WHERE id = ?',
+              (name, category, product_id))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))

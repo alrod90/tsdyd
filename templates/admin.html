@@ -106,7 +106,6 @@
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
-            <input type="number" name="price" placeholder="السعر (ل.س)" step="0.01" required>
             <select name="category" required>
                 <option value="internet">إنترنت</option>
                 <option value="mobile">جوال</option>
@@ -144,7 +143,6 @@
             <tr>
                 <th>الرقم</th>
                 <th>الاسم</th>
-                <th>السعر (ل.س)</th>
                 <th>القسم</th>
                 <th>الحالة</th>
                 <th>الإجراءات</th>
@@ -154,9 +152,8 @@
                 <td>{{ product[0] }}</td>
                 <td>{{ product[1] }}</td>
                 <td>{{ product[2] }}</td>
-                <td>{{ product[3] }}</td>
-                <td class="status-{{ 'active' if product[4] else 'inactive' }}">
-                    {{ 'مفعل' if product[4] else 'غير مفعل' }}
+                <td class="status-{{ 'active' if product[3] else 'inactive' }}">
+                    {{ 'مفعل' if product[3] else 'غير مفعل' }}
                 </td>
                 <td>
                     <form action="/toggle_product" method="post" style="display: inline;">
@@ -210,7 +207,6 @@
             <form action="/edit_product" method="post">
                 <input type="hidden" name="product_id" id="edit_product_id">
                 <input type="text" name="name" id="edit_name" required>
-                <input type="number" name="price" id="edit_price" step="0.01" required>
                 <select name="category" id="edit_category" required>
                     <option value="internet">إنترنت</option>
                     <option value="mobile">جوال</option>
