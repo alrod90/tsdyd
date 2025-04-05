@@ -120,15 +120,16 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     # التحقق من حالة المستخدم
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT is_active FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    user = c.fetchone()
-    conn.close()
+    if query.data.startswith('cat_'):
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT is_active FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        user = c.fetchone()
+        conn.close()
 
-    if not user or not user[0]:
-        await query.message.edit_text("عذراً، حسابك معطل. يرجى التواصل مع المسؤول.")
-        return
+        if not user or not user[0]:
+            await query.message.edit_text("عذراً، حسابك معطل. يرجى التواصل مع المسؤول.")
+            return
 
     if query.data.startswith('cat_'):
         category = query.data.split('_')[1]
