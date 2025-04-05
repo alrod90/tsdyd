@@ -25,6 +25,9 @@ def init_db():
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS orders
+                 (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
+                  customer_info TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     conn.close()
 
@@ -171,9 +174,12 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     amount = context.user_data['amount']
     customer_info = context.user_data['customer_info']
 
-    # خصم المبلغ من رصيد المستخدم
+    # خصم المبلغ من رصيد المستخدم وإنشاء الطلب
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
               (amount, update.effective_user.id))
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info) VALUES (?, ?, ?, ?)',
+              (update.effective_user.id, context.user_data['product_id'], amount, customer_info))
+    order_id = c.lastrowid
     conn.commit()
 
     # إرسال إشعار للمدير
@@ -213,8 +219,13 @@ def admin_panel():
     products = c.fetchall()
     c.execute('SELECT * FROM users')
     users = c.fetchall()
+    c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at 
+                 FROM orders o 
+                 JOIN products p ON o.product_id = p.id 
+                 ORDER BY o.created_at DESC''')
+    orders = c.fetchall()
     conn.close()
-    return render_template('admin.html', products=products, users=users)
+    return render_template('admin.html', products=products, users=users, orders=orders)
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
@@ -313,6 +324,32 @@ def add_balance():
               (amount, user_id))
     conn.commit()
     conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/handle_order', methods=['POST'])
+def handle_order():
+    order_id = request.form['order_id']
+    action = request.form['action']
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    
+    # جلب معلومات الطلب
+    c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
+    order = c.fetchone()
+    
+    if action == 'reject':
+        # إعادة المبلغ للمستخدم
+        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                  (order[1], order[0]))
+        
+    # تحديث حالة الطلب
+    status = 'accepted' if action == 'accept' else 'rejected'
+    c.execute('UPDATE orders SET status = ? WHERE id = ?', (status, order_id))
+    
+    conn.commit()
+    conn.close()
+    
     return redirect(url_for('admin_panel'))
 
 def run_flask():

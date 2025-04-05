@@ -220,6 +220,47 @@
         </div>
     </div>
 
+    <div class="section">
+        <h2>الطلبات</h2>
+        <table>
+            <tr>
+                <th>رقم الطلب</th>
+                <th>معرف المستخدم</th>
+                <th>المنتج</th>
+                <th>المبلغ</th>
+                <th>معلومات الزبون</th>
+                <th>الحالة</th>
+                <th>التاريخ</th>
+                <th>الإجراءات</th>
+            </tr>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order[0] }}</td>
+                <td>{{ order[1] }}</td>
+                <td>{{ order[2] }}</td>
+                <td>{{ order[3] }}</td>
+                <td>{{ order[4] }}</td>
+                <td>{{ order[5] }}</td>
+                <td>{{ order[6] }}</td>
+                <td>
+                    {% if order[5] == 'pending' %}
+                    <form action="/handle_order" method="post" style="display: inline;">
+                        <input type="hidden" name="order_id" value="{{ order[0] }}">
+                        <input type="hidden" name="action" value="accept">
+                        <button type="submit" style="background-color: #4CAF50;">قبول</button>
+                    </form>
+                    <form action="/handle_order" method="post" style="display: inline;">
+                        <input type="hidden" name="order_id" value="{{ order[0] }}">
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit" style="background-color: #f44336;">رفض</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
     <script>
         function showEditForm(id, name, price, category) {
             document.getElementById('editModal').style.display = 'block';
