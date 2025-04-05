@@ -222,14 +222,23 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return "WAITING_CANCEL_REASON"
 
     elif query.data == 'back':
-        keyboard = [
-            [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
-            [InlineKeyboardButton("جوال", callback_data='cat_mobile')],
-            [InlineKeyboardButton("خط أرضي", callback_data='cat_landline')],
-            [InlineKeyboardButton("رصيدي", callback_data='balance')]
-        ]
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name, code FROM categories WHERE is_active = 1')
+        categories = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for category in categories:
+            keyboard.append([InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}')])
+        
+        keyboard.append([
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ])
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text('اختر القسم:', reply_markup=reply_markup)
+        await query.message.edit_text('الرجاء اختيار القسم:', reply_markup=reply_markup)
 
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
