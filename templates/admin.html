@@ -285,6 +285,86 @@
     </div>
 
     <script>
+        // دوال التعديل والتحقق
+        function validateRejectForm(form) {
+            var note = form.querySelector('textarea[name="rejection_note"]');
+            if (!note || !note.value.trim()) {
+                alert('الرجاء إدخال سبب الرفض');
+                return false;
+            }
+            return true;
+        }
+
+        function showEditUserForm(userId, telegramId, balance, note) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+            
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+            
+            content.innerHTML = `
+                <h3>تعديل المستخدم</h3>
+                <form action="/edit_user" method="post">
+                    <input type="hidden" name="user_id" value="${telegramId}">
+                    <div style="margin: 10px 0;">
+                        <label>معرف تيليجرام:</label>
+                        <input type="text" value="${telegramId}" disabled>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>الرصيد:</label>
+                        <input type="number" name="balance" value="${balance}" step="0.01" required>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>ملاحظات:</label>
+                        <textarea name="note" style="width: 100%; height: 100px;">${note || ''}</textarea>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ</button>
+                        <button type="button" onclick="this.closest('.modal').remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
+            
+            modal.appendChild(content);
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+
+        function showEditForm(id, name, category) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+            
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+            
+            content.innerHTML = `
+                <h3>تعديل المنتج</h3>
+                <form action="/edit_product" method="post">
+                    <input type="hidden" name="product_id" value="${id}">
+                    <div style="margin: 10px 0;">
+                        <label>الاسم:</label>
+                        <input type="text" name="name" value="${name}" required>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>القسم:</label>
+                        <select name="category" required>
+                            <option value="internet" ${category === 'internet' ? 'selected' : ''}>إنترنت</option>
+                            <option value="mobile" ${category === 'mobile' ? 'selected' : ''}>جوال</option>
+                            <option value="landline" ${category === 'landline' ? 'selected' : ''}>خط أرضي</option>
+                        </select>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ</button>
+                        <button type="button" onclick="this.closest('.modal').remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
+            
+            modal.appendChild(content);
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+
         // تحديث الصفحة تلقائياً كل 30 ثانية
         function autoRefresh() {
             fetch(window.location.href)
