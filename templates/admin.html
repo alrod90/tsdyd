@@ -138,6 +138,43 @@
                 <td>{{ category[1] }}</td>
                 <td>{{ category[2] }}</td>
                 <td class="status-{{ 'active' if category[3] else 'inactive' }}">
+                    {{ 'مفعل' if category[3] else 'معطل' }}
+                </td>
+                <td>
+                    <form action="/toggle_category" method="post" style="display: inline;">
+                        <input type="hidden" name="category_id" value="{{ category[0] }}">
+                        <button type="submit">
+                            {{ 'تعطيل' if category[3] else 'تفعيل' }}
+                        </button>
+                    </form>
+                    <button onclick="showEditCategoryForm('{{ category[0] }}', '{{ category[1] }}', '{{ category[2] }}')" style="margin-right: 10px;">
+                        تعديل
+                    </button>
+                    <form action="/delete_category" method="post" style="display: inline;">
+                        <input type="hidden" name="category_id" value="{{ category[0] }}">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا التصنيف؟')" style="background-color: #ff4444;">
+                            حذف
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <table>
+            <tr>
+                <th>الرقم</th>
+                <th>الاسم</th>
+                <th>الرمز</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
+            {% for category in categories %}
+            <tr>
+                <td>{{ category[0] }}</td>
+                <td>{{ category[1] }}</td>
+                <td>{{ category[2] }}</td>
+                <td class="status-{{ 'active' if category[3] else 'inactive' }}">
                     {{ 'مفعل' if category[3] else 'غير مفعل' }}
                 </td>
                 <td>
