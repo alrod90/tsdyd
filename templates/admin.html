@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Store Admin Panel</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .section { margin: 20px 0; }
+        form { margin: 10px 0; }
+        input, select { margin: 5px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Store Admin Panel</h1>
+    
+    <div class="section">
+        <h2>Add Product</h2>
+        <form action="/add_product" method="post">
+            <input type="text" name="name" placeholder="Product Name" required>
+            <input type="number" name="price" placeholder="Price" step="0.01" required>
+            <select name="category" required>
+                <option value="internet">Internet</option>
+                <option value="mobile">Mobile</option>
+                <option value="landline">Landline</option>
+            </select>
+            <input type="submit" value="Add Product">
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>Add Balance</h2>
+        <form action="/add_balance" method="post">
+            <input type="number" name="user_id" placeholder="Telegram User ID" required>
+            <input type="number" name="amount" placeholder="Amount" step="0.01" required>
+            <input type="submit" value="Add Balance">
+        </form>
+    </div>
+
+    <div class="section">
+        <h2>Products</h2>
+        <table border="1">
+            <tr><th>ID</th><th>Name</th><th>Price</th><th>Category</th></tr>
+            {% for product in products %}
+            <tr>
+                <td>{{ product[0] }}</td>
+                <td>{{ product[1] }}</td>
+                <td>${{ product[2] }}</td>
+                <td>{{ product[3] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Users</h2>
+        <table border="1">
+            <tr><th>ID</th><th>Telegram ID</th><th>Balance</th></tr>
+            {% for user in users %}
+            <tr>
+                <td>{{ user[0] }}</td>
+                <td>{{ user[1] }}</td>
+                <td>${{ user[2] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>
