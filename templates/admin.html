@@ -327,6 +327,44 @@
 
             var content = document.createElement('div');
             content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+            
+            content.innerHTML = `
+                <h3>تعديل المستخدم</h3>
+                <form action="/edit_user" method="post">
+                    <input type="hidden" name="user_id" value="${telegramId}">
+                    <div style="margin: 10px 0;">
+                        <label>معرف تيليجرام:</label>
+                        <input type="text" value="${telegramId}" disabled>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>الرصيد:</label>
+                        <input type="number" name="balance" value="${balance}" step="0.01" required>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>ملاحظات:</label>
+                        <textarea name="note" style="width: 100%; height: 100px;">${note || ''}</textarea>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ</button>
+                        <button type="button" onclick="this.closest('.modal').remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
+            
+            modal.appendChild(content);
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+
+        function validateRejectForm(form) {
+            var note = form.querySelector('textarea[name="rejection_note"]');
+            if (!note || !note.value.trim()) {
+                alert('الرجاء إدخال سبب الرفض');
+                return false;
+            }
+            return true;
+        }
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
 
             content.innerHTML = `
                 <h3>تعديل بيانات المستخدم</h3>
