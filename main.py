@@ -8,12 +8,15 @@ from telegram.ext import (
 )
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
-from threading import Thread
-import requests # Example using requests library. You might need a different library.
-import time
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # مفتاح سري للجلسة
+from threading import Thread
+# Added for SMS functionality.  Replace with your actual gateway library.
+import requests # Example using requests library. You might need a different library.
+
+# Initialize Flask app
+app = Flask(__name__)
 
 # Database setup
 def init_db():
@@ -406,7 +409,7 @@ def admin_panel():
     # التحقق من صلاحيات المستخدم
     c.execute('SELECT telegram_id FROM users WHERE id = 1')  # المدير له ID = 1
     admin_id = c.fetchone()
-
+    
     if admin_id and admin_id[0]:  # إذا كان المستخدم هو المدير
         c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
                      FROM orders o 
@@ -470,27 +473,26 @@ def edit_product():
     return redirect(url_for('admin_panel'))
 
 async def send_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
-    success = False
     try:
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-
+        
         if user_id:
             c.execute('SELECT telegram_id FROM users WHERE telegram_id = ? AND is_active = 1', (user_id,))
         else:
             c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-
+        
         users = c.fetchall()
-
+        
         if not users:
             print("No active users found to send notification")
             return
-
+            
         for user in users:
             try:
                 # إضافة معرف الإشعار للتتبع
                 notification_id = f"notification_{user[0]}_{int(time.time())}"
-
+                
                 # محاولة إرسال رسالة مع إشعار صوتي وتأكيد القراءة
                 sent_message = await context.bot.send_message(
                     chat_id=user[0],
@@ -499,10 +501,9 @@ async def send_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                     protect_content=True,
                     parse_mode='HTML'
                 )
-
+                
                 print(f"Notification sent successfully to user {user[0]} with ID {notification_id}")
-                success = True
-
+                
                 # تسجيل الإشعار في قاعدة البيانات
                 c.execute('''CREATE TABLE IF NOT EXISTS notifications 
                            (id TEXT PRIMARY KEY, user_id INTEGER, message TEXT, 
@@ -510,7 +511,7 @@ async def send_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                 c.execute('INSERT INTO notifications (id, user_id, message) VALUES (?, ?, ?)',
                          (notification_id, user[0], message))
                 conn.commit()
-
+                
             except telegram.error.BadRequest as e:
                 print(f"BadRequest error for user {user[0]}: {str(e)}")
                 continue
@@ -523,20 +524,20 @@ async def send_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             except Exception as e:
                 print(f"Unexpected error sending message to {user[0]}: {str(e)}")
                 continue
-
+                
     except Exception as e:
         print(f"Error in send_notification: {str(e)}")
     finally:
         if 'conn' in locals():
             conn.close()
-
+        
         # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
         if not success and is_important:
             try:
                 # استرجاع رقم الهاتف من قاعدة البيانات
                 c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user[0],))
                 phone_result = c.fetchone()
-
+                
                 if phone_result and phone_result[0]:
                     # إرسال SMS عبر خدمة SMS
                     response = requests.post(
@@ -549,29 +550,30 @@ async def send_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, 
                     response.raise_for_status()
             except Exception as e:
                 print(f"Error sending SMS to {user[0]}: {str(e)}")
-
+    
+    conn.close()
 
 @app.route('/send_notification', methods=['POST'])
 async def send_notification_route():
     try:
         message = request.form['message']
         user_id = request.form.get('user_id')
-
+        
         if not message:
             return "Message cannot be empty", 400
-
+            
         # تهيئة البوت
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         if not bot_token:
             return "Bot token not configured", 500
-
+            
         application = Application.builder().token(bot_token).build()
-
+        
         # إرسال الإشعار
         await send_notification(None, application, message, user_id if user_id else None, True)
-
+        
         return redirect(url_for('admin_panel'))
-
+        
     except Exception as e:
         print(f"Error in send_notification_route: {str(e)}")
         return f"Error sending notification: {str(e)}", 500
@@ -612,7 +614,7 @@ def toggle_user():
     return redirect(url_for('admin_panel'))
 
 @app.route('/handle_order', methods=['POST'])
-async def handle_order():
+def handle_order():
     conn = None
     try:
         order_id = request.form.get('order_id')
@@ -659,7 +661,7 @@ async def handle_order():
             # تحديث حالة الطلب
             c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
                     ('rejected', rejection_note, order_id))
-
+            
             # إرسال إشعار الرفض
             notification_message = f"""
 ❌ تم رفض طلبك رقم {order_id}
@@ -668,21 +670,12 @@ async def handle_order():
 سبب الرفض: {rejection_note}
 تمت إعادة المبلغ إلى رصيدك.
 """
-            try:
-                # إرسال رسالة مباشرة عبر Telegram
-                context = ContextTypes.DEFAULT_TYPE()
-                context._application = application
-                asyncio.run(application.bot.send_message(
-                    chat_id=user_id,
-                    text=notification_message
-                ))
-            except Exception as e:
-                print(f"Error sending notification: {e}")
+            asyncio.create_task(send_notification(None, application, notification_message, user_id, True))
 
         elif action == 'accept':
             c.execute('UPDATE orders SET status = ? WHERE id = ?', 
                     ('accepted', order_id))
-
+            
             # إرسال إشعار القبول
             notification_message = f"""
 ✅ تم قبول طلبك رقم {order_id}
@@ -690,16 +683,7 @@ async def handle_order():
 المبلغ: {amount} ليرة سوري
 جاري تنفيذ طلبك...
 """
-            try:
-                # إرسال رسالة مباشرة عبر Telegram
-                context = ContextTypes.DEFAULT_TYPE()
-                context._application = application
-                asyncio.run(application.bot.send_message(
-                    chat_id=user_id,
-                    text=notification_message
-                ))
-            except Exception as e:
-                print(f"Error sending notification: {e}")
+            asyncio.create_task(send_notification(None, application, notification_message, user_id, True))
 
         conn.commit()
         conn.close()
@@ -760,7 +744,7 @@ def run_bot():
             "WAITING_ORDER_NUMBER": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number)],
             "WAITING_SEARCH_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_info)],
             "WAITING_CANCEL_REASON": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_cancel_reason)]
-                },
+        },
         fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
     )
 
