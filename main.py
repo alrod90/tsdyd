@@ -38,21 +38,9 @@ def init_db():
     # إنشاء الجداول إذا لم تكن موجودة
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
-    
-    # إنشاء جدول المستخدمين إذا لم يكن موجوداً
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                  phone_number TEXT, is_active BOOLEAN DEFAULT 1)''')
-    
-    # التحقق من وجود العمود note وإضافته بأمان إذا لم يكن موجوداً
-    try:
-        c.execute("PRAGMA table_info(users)")
-        columns = [column[1] for column in c.fetchall()]
-        if 'note' not in columns:
-            c.execute('ALTER TABLE users ADD COLUMN note TEXT DEFAULT NULL')
-    except Exception as e:
-        print(f"خطأ في إضافة عمود الملاحظات: {e}")
-        
+                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
