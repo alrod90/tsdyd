@@ -49,19 +49,23 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("لا يوجد لديك طلبات.")
         return
 
-    message = "طلباتك:\n\n"
     for order in orders:
         status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
-        message += f"رقم الطلب: {order[0]}\n"
+        message = f"رقم الطلب: {order[0]}\n"
         message += f"المنتج: {order[1]}\n"
         message += f"المبلغ: {order[2]}\n"
         message += f"الحالة: {status_text}\n"
         if order[3] == "rejected" and order[4]:
             message += f"سبب الرفض: {order[4]}\n"
         message += f"التاريخ: {order[5]}\n"
-        message += "──────────────\n"
-
-    await update.message.reply_text(message)
+        
+        keyboard = []
+        if order[3] == "pending":
+            keyboard.append([InlineKeyboardButton("إلغاء الطلب", callback_data=f'cancel_order_{order[0]}')])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
+        await update.message.reply_text(message, reply_markup=reply_markup)
+        await update.message.reply_text("──────────────")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
@@ -146,6 +150,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'search_customer_info':
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_SEARCH_CUSTOMER_INFO"
+
+    elif query.data.startswith('cancel_order_'):
+        order_id = int(query.data.split('_')[2])
+        await query.message.edit_text("الرجاء إدخال سبب الإلغاء:")
+        context.user_data['canceling_order_id'] = order_id
+        return "WAITING_CANCEL_REASON"
 
     elif query.data == 'back':
         keyboard = [
@@ -238,6 +248,49 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
             await update.message.reply_text("لم يتم العثور على الطلب")
     except ValueError:
         await update.message.reply_text("الرجاء إدخال رقم صحيح")
+    return ConversationHandler.END
+
+async def handle_cancel_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cancel_reason = update.message.text
+    order_id = context.user_data.get('canceling_order_id')
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    
+    # استرجاع معلومات الطلب
+    c.execute('SELECT amount, user_id FROM orders WHERE id = ?', (order_id,))
+    order = c.fetchone()
+    
+    if order:
+        # إعادة المبلغ للمستخدم
+        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                  (order[0], order[1]))
+        
+        # تحديث حالة الطلب
+        c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
+                 ('cancelled', f'تم الإلغاء من قبل المستخدم. السبب: {cancel_reason}', order_id))
+        
+        conn.commit()
+        
+        # إرسال إشعار للمدير
+        admin_message = f"""
+تم إلغاء الطلب من قبل المستخدم
+رقم الطلب: {order_id}
+سبب الإلغاء: {cancel_reason}
+"""
+        try:
+            response = requests.post("YOUR_SMS_GATEWAY_URL", 
+                                  data={"to": "+963938074766", 
+                                       "message": admin_message})
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending SMS: {e}")
+            
+        await update.message.reply_text("تم إلغاء الطلب بنجاح وتمت إعادة المبلغ إلى رصيدك.")
+    else:
+        await update.message.reply_text("عذراً، لم يتم العثور على الطلب.")
+    
+    conn.close()
     return ConversationHandler.END
 
 async def handle_search_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -510,7 +563,8 @@ def run_bot():
             "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
             "WAITING_CONFIRMATION": [CallbackQueryHandler(handle_purchase_confirmation)],
             "WAITING_ORDER_NUMBER": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number)],
-            "WAITING_SEARCH_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_info)]
+            "WAITING_SEARCH_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_info)],
+            "WAITING_CANCEL_REASON": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_cancel_reason)]
         },
         fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
     )
