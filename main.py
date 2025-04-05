@@ -24,7 +24,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                  (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
     
-    # إضافة الأقسام الافتراضية
+    # إعادة تهيئة الأقسام الافتراضية
     c.execute('DELETE FROM categories')
     conn.commit()
     
@@ -35,7 +35,9 @@ def init_db():
     ]
     
     for name, code, is_active in default_categories:
-        if code not in existing_categories:
+        c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)',
+                 (name, code, is_active))
+    conn.commit()
             c.execute('INSERT INTO categories (name, code, is_active) VALUES (?, ?, ?)',
                      (name, code, is_active))
 
