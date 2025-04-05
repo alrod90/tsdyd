@@ -18,6 +18,8 @@ app = Flask(__name__)
 def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+    # حذف الجدول القديم إذا كان موجوداً
+    c.execute('DROP TABLE IF EXISTS products')
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, price REAL, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
