@@ -15,8 +15,8 @@ from threading import Thread
 from functools import wraps
 
 # بيانات تسجيل الدخول
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "your_password_here"
+ADMIN_USERNAME = "nourrod"
+ADMIN_PASSWORD = "0956479749"
 
 def login_required(f):
     @wraps(f)
