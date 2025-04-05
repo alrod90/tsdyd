@@ -17,12 +17,17 @@ app = Flask(__name__)
 
 # Database setup
 def init_db():
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-
-    # حذف الجداول القديمة
-    c.execute('DROP TABLE IF EXISTS categories')
-    c.execute('DROP TABLE IF EXISTS products')
+    try:
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # إنشاء الجداول إذا لم تكن موجودة
+        c.execute('''CREATE TABLE IF NOT EXISTS categories
+                     (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
+                     
+        c.execute('''CREATE TABLE IF NOT EXISTS products 
+                     (id INTEGER PRIMARY KEY, name TEXT, category_id INTEGER, is_active BOOLEAN DEFAULT 1,
+                      FOREIGN KEY(category_id) REFERENCES categories(id))''')
     
     # إنشاء الجداول من جديد
     c.execute('''CREATE TABLE IF NOT EXISTS categories
@@ -225,8 +230,13 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     return "WAITING_AMOUNT"
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    amount = float(update.message.text)
-    context.user_data['amount'] = amount
+    try:
+        amount = float(update.message.text)
+        if amount <= 0:
+            await update.message.reply_text("الرجاء إدخال مبلغ صحيح أكبر من الصفر")
+            return ConversationHandler.END
+            
+        context.user_data['amount'] = amount
 
     # التحقق من الرصيد
     conn = sqlite3.connect('store.db')
@@ -490,11 +500,15 @@ def edit_product():
     return redirect(url_for('admin_panel'))
 
 async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT telegram_id FROM users')
-    users = c.fetchall()
-    conn.close()
+    try:
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+        users = c.fetchall()
+        conn.close()
+        
+        sent_count = 0
+        failed_count = 0
 
     for user in users:
         try:
@@ -692,14 +706,21 @@ def run_flask():
     app.run(host='0.0.0.0', port=5000)
 
 def run_bot():
-    # Initialize bot
-    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    if not bot_token:
-        print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
-        return
+    try:
+        # Initialize bot
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
+            return
 
-    print("جاري تشغيل البوت...")
-    application = Application.builder().token(bot_token).build()
+        print("جاري تشغيل البوت...")
+        application = Application.builder().token(bot_token).build()
+        
+        # إضافة معالج للأخطاء
+        async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            print(f'حدث خطأ: {context.error}')
+            
+        application.add_error_handler(error_handler)
 
     # Add handlers
     application.add_handler(CommandHandler("start", start))
