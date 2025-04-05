@@ -22,16 +22,6 @@
             gap: 10px;
         }
         input, select { 
-
-    function validateRejectForm(form) {
-        var note = form.querySelector('textarea[name="rejection_note"]').value;
-        if (!note.trim()) {
-            alert('الرجاء إدخال سبب الرفض');
-            return false;
-        }
-        return true;
-    }
-
             margin: 5px;
             padding: 8px;
             border: 1px solid #ddd;
@@ -200,7 +190,7 @@
                 <td>{{ user[1] }}</td>
                 <td>{{ user[2] }}</td>
                 <td>
-                    <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}')" style="margin-right: 10px;">
+                    <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[2] }}')" style="margin-right: 10px;">
                         تعديل
                     </button>
                     <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px;">
@@ -282,65 +272,8 @@
     </div>
 
     <script>
-        function showEditUserForm(userId, telegramId, balance) {
-            var modal = document.createElement('div');
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
-
-            var content = document.createElement('div');
-            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
-
-            content.innerHTML = `
-                <h3>تعديل بيانات المستخدم</h3>
-                <form action="/edit_user" method="post">
-                    <input type="hidden" name="user_id" value="${telegramId}">
-                    <label>الرصيد:</label>
-                    <input type="number" name="balance" value="${balance}" step="0.01" required>
-                    <div style="margin-top: 20px;">
-                        <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
-                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
-                    </div>
-                </form>
-            `;
-
-            modal.appendChild(content);
-            document.body.appendChild(modal);
-        }
-
-        function showEditForm(id, name, price, category) {
-            document.getElementById('editModal').style.display = 'block';
-            document.getElementById('edit_product_id').value = id;
-            document.getElementById('edit_name').value = name;
-            document.getElementById('edit_price').value = price;
-            document.getElementById('edit_category').value = category;
-        }
-
-        function hideEditForm() {
-            document.getElementById('editModal').style.display = 'none';
-        }
-    function showNotificationForm(userId) {
-            var modal = document.createElement('div');
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);';
-
-            var content = document.createElement('div');
-            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
-
-            content.innerHTML = `
-                <h3>إرسال إشعار للمستخدم</h3>
-                <form action="/send_notification" method="post">
-                    <input type="hidden" name="user_id" value="${userId}">
-                    <input type="text" name="message" placeholder="نص الإشعار" required>
-                    <div style="margin-top: 20px;">
-                        <button type="submit">إرسال</button>
-                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
-                    </div>
-                </form>
-            `;
-
-            modal.appendChild(content);
-            document.body.appendChild(modal);
-        }
     function validateRejectForm(form) {
-        var rejectionNote = form.querySelector('input[name="rejection_note"]').value;
+        var rejectionNote = form.querySelector('textarea[name="rejection_note"]').value;
         if (!rejectionNote.trim()) {
             alert('الرجاء إدخال سبب الرفض');
             return false;
@@ -386,6 +319,38 @@
                     <textarea name="rejection_note" placeholder="سبب الرفض" required style="width: 100%; height: 100px;"></textarea>
                     <div style="margin-top: 20px;">
                         <button type="submit" style="background-color: #f44336;">تأكيد الرفض</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
+                    </div>
+                </form>
+            `;
+
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+        function showEditForm(id, name, category, isActive) {
+            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('edit_product_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_category').value = category;
+        }
+
+        function hideEditForm() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+    function showNotificationForm(userId) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);';
+
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+            content.innerHTML = `
+                <h3>إرسال إشعار للمستخدم</h3>
+                <form action="/send_notification" method="post">
+                    <input type="hidden" name="user_id" value="${userId}">
+                    <input type="text" name="message" placeholder="نص الإشعار" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit">إرسال</button>
                         <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
                     </div>
                 </form>

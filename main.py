@@ -668,9 +668,16 @@ async def handle_order():
 سبب الرفض: {rejection_note}
 تمت إعادة المبلغ إلى رصيدك.
 """
-            # إرسال الإشعار في خلفية التطبيق
-            thread = Thread(target=lambda: asyncio.run(send_notification(None, application, notification_message, user_id, True)))
-            thread.start()
+            try:
+                # إرسال رسالة مباشرة عبر Telegram
+                context = ContextTypes.DEFAULT_TYPE()
+                context._application = application
+                asyncio.run(application.bot.send_message(
+                    chat_id=user_id,
+                    text=notification_message
+                ))
+            except Exception as e:
+                print(f"Error sending notification: {e}")
 
         elif action == 'accept':
             c.execute('UPDATE orders SET status = ? WHERE id = ?', 
@@ -683,9 +690,16 @@ async def handle_order():
 المبلغ: {amount} ليرة سوري
 جاري تنفيذ طلبك...
 """
-            # إرسال الإشعار في خلفية التطبيق
-            thread = Thread(target=lambda: asyncio.run(send_notification(None, application, notification_message, user_id, True)))
-            thread.start()
+            try:
+                # إرسال رسالة مباشرة عبر Telegram
+                context = ContextTypes.DEFAULT_TYPE()
+                context._application = application
+                asyncio.run(application.bot.send_message(
+                    chat_id=user_id,
+                    text=notification_message
+                ))
+            except Exception as e:
+                print(f"Error sending notification: {e}")
 
         conn.commit()
         conn.close()
