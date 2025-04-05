@@ -614,7 +614,7 @@ def toggle_user():
     return redirect(url_for('admin_panel'))
 
 @app.route('/handle_order', methods=['POST'])
-def handle_order():
+async def handle_order():
     conn = None
     try:
         order_id = request.form.get('order_id')

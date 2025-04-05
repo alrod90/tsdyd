@@ -339,6 +339,38 @@
             modal.appendChild(content);
             document.body.appendChild(modal);
         }
+    function validateRejectForm(form) {
+        var rejectionNote = form.querySelector('input[name="rejection_note"]').value;
+        if (!rejectionNote.trim()) {
+            alert('الرجاء إدخال سبب الرفض');
+            return false;
+        }
+        return true;
+    }
+
+    function showEditUserForm(userId, currentBalance) {
+        var modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+
+        var content = document.createElement('div');
+        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+        content.innerHTML = `
+            <h3>تعديل رصيد المستخدم</h3>
+            <form action="/edit_user" method="post">
+                <input type="hidden" name="user_id" value="${userId}">
+                <input type="number" name="balance" value="${currentBalance}" step="0.01" required>
+                <div style="margin-top: 20px;">
+                    <button type="submit">حفظ</button>
+                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
+                </div>
+            </form>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    }
+
     function showRejectForm(orderId) {
             var modal = document.createElement('div');
             modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
