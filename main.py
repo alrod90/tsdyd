@@ -63,6 +63,8 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if order[3] == "rejected" and order[4]:
             message += f"سبب الرفض: {order[4]}\n"
         message += f"التاريخ: {order[5]}\n"
+        if order[6]:  # إضافة الملاحظة إذا كانت موجودة
+            message += f"ملاحظة: {order[6]}\n"
         if order[6]:
             message += f"ملاحظة: {order[6]}\n" # Added note display
 
@@ -624,12 +626,14 @@ def handle_order():
                     conn.close()
                 return "يجب إدخال سبب الرفض", 400
 
+            note = request.form.get('note', '')  # الحصول على الملاحظة الإضافية
+            
             # إعادة المبلغ للمستخدم
             c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                     (order[1], order[0]))
-            # تحديث حالة الطلب
-            c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
-                    ('rejected', rejection_note, order_id))
+            # تحديث حالة الطلب مع الملاحظة
+            c.execute('UPDATE orders SET status = ?, rejection_note = ?, note = ? WHERE id = ?',
+                    ('rejected', rejection_note, note, order_id))
         elif action == 'accept':
             c.execute('UPDATE orders SET status = ? WHERE id = ?', 
                     ('accepted', order_id))
