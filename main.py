@@ -472,35 +472,64 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    
-    if user_id:
-        users = [(user_id,)]
-    else:
-        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-        users = c.fetchall()
-    
-    # إرسال عبر تيليجرام أولاً
-    for user in users:
-        success = False
-        retry_count = 3
+async def send_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
+    try:
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
         
-        while retry_count > 0 and not success:
+        if user_id:
+            c.execute('SELECT telegram_id FROM users WHERE telegram_id = ? AND is_active = 1', (user_id,))
+        else:
+            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+        
+        users = c.fetchall()
+        
+        if not users:
+            print("No active users found to send notification")
+            return
+            
+        for user in users:
             try:
-                # محاولة إرسال رسالة مع إشعار صوتي
-                await context.bot.send_message(
+                # إضافة معرف الإشعار للتتبع
+                notification_id = f"notification_{user[0]}_{int(time.time())}"
+                
+                # محاولة إرسال رسالة مع إشعار صوتي وتأكيد القراءة
+                sent_message = await context.bot.send_message(
                     chat_id=user[0],
-                    text=message,
+                    text=f"{message}\n\nID: {notification_id}",
                     disable_notification=False,
-                    protect_content=True
+                    protect_content=True,
+                    parse_mode='HTML'
                 )
-                success = True
+                
+                print(f"Notification sent successfully to user {user[0]} with ID {notification_id}")
+                
+                # تسجيل الإشعار في قاعدة البيانات
+                c.execute('''CREATE TABLE IF NOT EXISTS notifications 
+                           (id TEXT PRIMARY KEY, user_id INTEGER, message TEXT, 
+                            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, is_read BOOLEAN DEFAULT 0)''')
+                c.execute('INSERT INTO notifications (id, user_id, message) VALUES (?, ?, ?)',
+                         (notification_id, user[0], message))
+                conn.commit()
+                
+            except telegram.error.BadRequest as e:
+                print(f"BadRequest error for user {user[0]}: {str(e)}")
+                continue
+            except telegram.error.Unauthorized as e:
+                print(f"Unauthorized error for user {user[0]}: {str(e)}")
+                # تحديث حالة المستخدم إلى غير نشط
+                c.execute('UPDATE users SET is_active = 0 WHERE telegram_id = ?', (user[0],))
+                conn.commit()
+                continue
             except Exception as e:
-                print(f"Error sending Telegram message to {user[0]}: {str(e)}")
-                retry_count -= 1
-                await asyncio.sleep(1)
+                print(f"Unexpected error sending message to {user[0]}: {str(e)}")
+                continue
+                
+    except Exception as e:
+        print(f"Error in send_notification: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
         
         # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
         if not success and is_important:
@@ -525,32 +554,29 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
     conn.close()
 
 @app.route('/send_notification', methods=['POST'])
-def send_notification_route():
-    message = request.form['message']
-    user_id = request.form.get('user_id', None)
-    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-
-    bot = telegram.Bot(token=bot_token)
-
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-
+async def send_notification_route():
     try:
-        if user_id:
-            bot.send_message(chat_id=int(user_id), text=message)
-        else:
-            c.execute('SELECT telegram_id FROM users')
-            users = c.fetchall()
-            for user in users:
-                try:
-                    bot.send_message(chat_id=user[0], text=message)
-                except Exception as e:
-                    print(f"Error sending message to {user[0]}: {e}")
+        message = request.form['message']
+        user_id = request.form.get('user_id')
+        
+        if not message:
+            return "Message cannot be empty", 400
+            
+        # تهيئة البوت
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            return "Bot token not configured", 500
+            
+        application = Application.builder().token(bot_token).build()
+        
+        # إرسال الإشعار
+        await send_notification(None, application, message, user_id if user_id else None, True)
+        
+        return redirect(url_for('admin_panel'))
+        
     except Exception as e:
-        print(f"Error sending notification: {e}")
-
-    conn.close()
-    return redirect(url_for('admin_panel'))
+        print(f"Error in send_notification_route: {str(e)}")
+        return f"Error sending notification: {str(e)}", 500
 
 @app.route('/add_balance', methods=['POST'])
 def add_balance():
