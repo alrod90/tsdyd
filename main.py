@@ -116,15 +116,29 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
 
         context.user_data['product_name'] = product_name
-        await query.message.edit_text("الرجاء إدخال المبلغ:")
-        return "WAITING_AMOUNT"
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_CUSTOMER_INFO"
 
 async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    amount = update.message.text
-    context.user_data['amount'] = amount
-
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
+    await update.message.reply_text("الرجاء إدخال المبلغ:")
+    return "WAITING_AMOUNT"
+
+async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    amount = float(update.message.text)
+    context.user_data['amount'] = amount
+
+    # التحقق من الرصيد
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    user_balance = c.fetchone()[0]
+    conn.close()
+
+    if amount > user_balance:
+        await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance}")
+        return ConversationHandler.END
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
@@ -323,7 +337,8 @@ def run_bot():
     conv_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(button_click)],
         states={
-            "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
+            "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
+            "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
             "WAITING_CONFIRMATION": [CallbackQueryHandler(handle_purchase_confirmation)]
         },
         fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
