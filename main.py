@@ -1,4 +1,3 @@
-
 import os
 import telegram
 import asyncio
@@ -10,6 +9,8 @@ from telegram.ext import (
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 from threading import Thread
+# Added for SMS functionality.  Replace with your actual gateway library.
+import requests # Example using requests library. You might need a different library.
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -57,7 +58,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+
     if query.data.startswith('cat_'):
         category = query.data.split('_')[1]
         category_names = {
@@ -70,12 +71,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category,))
         products = c.fetchall()
         conn.close()
-        
+
         if products:
             keyboard = []
             for product in products:
-                keyboard.append([InlineKeyboardButton(f"{product[1]} - {product[2]} ريال", 
-                                                    callback_data=f'buy_{product[0]}')])
+                keyboard.append([InlineKeyboardButton(f"{product[1]}", 
+                                                    callback_data=f'buy_{product[0]}')]) #removed price
             keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.message.edit_text(
@@ -84,7 +85,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         else:
             await query.message.edit_text(f"لا توجد منتجات متوفرة في قسم {category_names[category]}")
-    
+
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
@@ -93,7 +94,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         balance = result[0] if result else 0
         conn.close()
         await query.message.edit_text(f"رصيدك الحالي: {balance} ريال")
-    
+
     elif query.data == 'back':
         keyboard = [
             [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
@@ -103,31 +104,35 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text('اختر القسم:', reply_markup=reply_markup)
-    
+
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
-        await query.message.edit_text("الرجاء إدخال بيانات الزبون (الاسم، رقم الهاتف):")
-        return "WAITING_CUSTOMER_INFO"
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
+        product_name = c.fetchone()[0]
+        conn.close()
+
+        context.user_data['product_name'] = product_name
+        await query.message.edit_text("الرجاء إدخال المبلغ:")
+        return "WAITING_AMOUNT"
 
 async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    amount = update.message.text
+    context.user_data['amount'] = amount
+
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
-    
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('SELECT name, price FROM products WHERE id = ?', (context.user_data['product_id'],))
-    product = c.fetchone()
-    c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    user_balance = c.fetchone()[0]
+    c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
+    product_name = c.fetchone()[0]
     conn.close()
-    
-    if user_balance < product[1]:
-        await update.message.reply_text("عذراً، رصيدك غير كافي لإتمام العملية.")
-        return ConversationHandler.END
-    
+
     await update.message.reply_text(
-        f"سيتم خصم {product[1]} ريال من رصيدك.\n"
+        f"سيتم خصم {amount} ريال من رصيدك.\n"
         f"اضغط على تأكيد لإتمام العملية.",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("تأكيد", callback_data='confirm_purchase'),
@@ -136,38 +141,52 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     )
     return "WAITING_CONFIRMATION"
 
+
 async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+
     if query.data == 'cancel_purchase':
         await query.message.edit_text("تم إلغاء العملية.")
         return ConversationHandler.END
-    
+
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('SELECT name, price FROM products WHERE id = ?', (context.user_data['product_id'],))
-    product = c.fetchone()
-    
+    c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
+    product_name = c.fetchone()[0]
+    amount = context.user_data['amount']
+    customer_info = context.user_data['customer_info']
+
     # خصم المبلغ من رصيد المستخدم
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
-              (product[1], update.effective_user.id))
+              (amount, update.effective_user.id))
     conn.commit()
-    
+
     # إرسال إشعار للمدير
     admin_message = f"""
 طلب جديد:
-المنتج: {product[0]}
-السعر: {product[1]} ريال
-بيانات الزبون: {context.user_data['customer_info']}
+المنتج: {product_name}
+المبلغ: {amount} ريال
+بيانات الزبون: {customer_info}
 معرف المشتري: {update.effective_user.id}
 """
+    #Send SMS -  Replace with your SMS gateway API call
+    try:
+        #Example using requests - replace with your actual API call and credentials
+        response = requests.post("YOUR_SMS_GATEWAY_URL", data={"to": "+96393807466", "message": admin_message})
+        response.raise_for_status() # Raise an exception for bad status codes
+        print("SMS sent successfully!")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending SMS: {e}")
+
+
     c.execute('SELECT telegram_id FROM users WHERE id = 1')  # افتراض أن المدير له ID = 1
     admin_id = c.fetchone()[0]
     await context.bot.send_message(chat_id=admin_id, text=admin_message)
-    
+
     conn.close()
-    
+
     await query.message.edit_text("تم إتمام العملية بنجاح!")
     return ConversationHandler.END
 
@@ -237,7 +256,7 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
     c.execute('SELECT telegram_id FROM users')
     users = c.fetchall()
     conn.close()
-    
+
     for user in users:
         try:
             await context.bot.send_message(chat_id=user[0], text=message)
@@ -249,12 +268,12 @@ def send_notification_route():
     message = request.form['message']
     user_id = request.form.get('user_id', None)
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    
+
     bot = telegram.Bot(token=bot_token)
-    
+
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     try:
         if user_id:
             bot.send_message(chat_id=int(user_id), text=message)
@@ -268,7 +287,7 @@ def send_notification_route():
                     print(f"Error sending message to {user[0]}: {e}")
     except Exception as e:
         print(f"Error sending notification: {e}")
-    
+
     conn.close()
     return redirect(url_for('admin_panel'))
 
@@ -293,35 +312,35 @@ def run_bot():
     if not bot_token:
         print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
         return
-    
+
     print("جاري تشغيل البوت...")
     application = Application.builder().token(bot_token).build()
-    
+
     # Add handlers
     application.add_handler(CommandHandler("start", start))
-    
+
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(button_click)],
         states={
-            "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
+            "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
             "WAITING_CONFIRMATION": [CallbackQueryHandler(handle_purchase_confirmation)]
         },
         fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
     )
-    
+
     application.add_handler(conv_handler)
-    
+
     # Run bot
     application.run_polling()
 
 if __name__ == '__main__':
     # Initialize database
     init_db()
-    
+
     # Start Flask in a separate thread
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
-    
+
     # Run bot in main thread
     run_bot()
