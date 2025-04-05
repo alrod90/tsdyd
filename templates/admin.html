@@ -194,6 +194,7 @@
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
             <select name="category" required>
+                <option value="">اختر القسم</option>
                 {% for category in categories %}
                 {% if category[3] %}
                 <option value="{{ category[2] }}">{{ category[1] }}</option>
