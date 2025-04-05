@@ -249,12 +249,12 @@
                         <input type="hidden" name="action" value="accept">
                         <button type="submit" style="background-color: #4CAF50;">قبول</button>
                     </form>
-                    <form action="/handle_order" method="post" style="display: inline;">
-                        <input type="hidden" name="order_id" value="{{ order[0] }}">
-                        <input type="hidden" name="action" value="reject">
-                        <button type="submit" style="background-color: #f44336;">رفض</button>
-                    </form>
+                    <button onclick="showRejectForm('{{ order[0] }}')" style="background-color: #f44336;">رفض</button>
                     {% endif %}
+                    <form action="/delete_order" method="post" style="display: inline;">
+                        <input type="hidden" name="order_id" value="{{ order[0] }}">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب؟')" style="background-color: #ff9800;">حذف</button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}
@@ -287,6 +287,29 @@
                     <input type="text" name="message" placeholder="نص الإشعار" required>
                     <div style="margin-top: 20px;">
                         <button type="submit">إرسال</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
+                    </div>
+                </form>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+    function showRejectForm(orderId) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);';
+            
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+            
+            content.innerHTML = `
+                <h3>رفض الطلب</h3>
+                <form action="/handle_order" method="post">
+                    <input type="hidden" name="order_id" value="${orderId}">
+                    <input type="hidden" name="action" value="reject">
+                    <textarea name="rejection_note" placeholder="سبب الرفض" required style="width: 100%; height: 100px;"></textarea>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #f44336;">تأكيد الرفض</button>
                         <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
                     </div>
                 </form>

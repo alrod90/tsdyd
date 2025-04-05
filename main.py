@@ -27,11 +27,42 @@ def init_db():
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
-                  customer_info TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+                  customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     conn.close()
 
 # Telegram bot commands
+async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at 
+                 FROM orders o 
+                 JOIN products p ON o.product_id = p.id 
+                 WHERE o.user_id = ? 
+                 ORDER BY o.created_at DESC''', (user_id,))
+    orders = c.fetchall()
+    conn.close()
+
+    if not orders:
+        await update.message.reply_text("لا يوجد لديك طلبات.")
+        return
+
+    message = "طلباتك:\n\n"
+    for order in orders:
+        status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+        message += f"رقم الطلب: {order[0]}\n"
+        message += f"المنتج: {order[1]}\n"
+        message += f"المبلغ: {order[2]}\n"
+        message += f"الحالة: {status_text}\n"
+        if order[3] == "rejected" and order[4]:
+            message += f"سبب الرفض: {order[4]}\n"
+        message += f"التاريخ: {order[5]}\n"
+        message += "──────────────\n"
+
+    await update.message.reply_text(message)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
     user_id = update.effective_user.id
@@ -330,25 +361,46 @@ def add_balance():
 def handle_order():
     order_id = request.form['order_id']
     action = request.form['action']
+    rejection_note = request.form.get('rejection_note', '')
     
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     
-    # جلب معلومات الطلب
     c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
     order = c.fetchone()
     
     if action == 'reject':
-        # إعادة المبلغ للمستخدم
         c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                   (order[1], order[0]))
-        
-    # تحديث حالة الطلب
-    status = 'accepted' if action == 'accept' else 'rejected'
-    c.execute('UPDATE orders SET status = ? WHERE id = ?', (status, order_id))
+        c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?', 
+                 ('rejected', rejection_note, order_id))
+    else:
+        c.execute('UPDATE orders SET status = ? WHERE id = ?', ('accepted', order_id))
     
     conn.commit()
     conn.close()
+    
+    return redirect(url_for('admin_panel'))
+
+@app.route('/delete_order', methods=['POST'])
+def delete_order():
+    order_id = request.form['order_id']
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    
+    c.execute('SELECT user_id, amount, status FROM orders WHERE id = ?', (order_id,))
+    order = c.fetchone()
+    
+    if order[2] != 'accepted':  # إعادة المبلغ إذا لم يكن الطلب مقبولاً
+        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                  (order[1], order[0]))
+    
+    c.execute('DELETE FROM orders WHERE id = ?', (order_id,))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('admin_panel'))
     
     return redirect(url_for('admin_panel'))
 
@@ -367,6 +419,7 @@ def run_bot():
 
     # Add handlers
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("orders", orders))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
