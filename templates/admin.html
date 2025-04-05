@@ -1,50 +1,50 @@
 
 <!DOCTYPE html>
-<html>
+<html dir="rtl" lang="ar">
 <head>
-    <title>Store Admin Panel</title>
+    <title>لوحة تحكم المتجر</title>
     <style>
-        body { font-family: Arial; margin: 20px; }
+        body { font-family: Arial; margin: 20px; text-align: right; }
         .section { margin: 20px 0; }
         form { margin: 10px 0; }
         input, select { margin: 5px; padding: 5px; }
     </style>
 </head>
 <body>
-    <h1>Store Admin Panel</h1>
+    <h1>لوحة تحكم المتجر</h1>
     
     <div class="section">
-        <h2>Add Product</h2>
+        <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
-            <input type="text" name="name" placeholder="Product Name" required>
-            <input type="number" name="price" placeholder="Price" step="0.01" required>
+            <input type="text" name="name" placeholder="اسم المنتج" required>
+            <input type="number" name="price" placeholder="السعر" step="0.01" required>
             <select name="category" required>
-                <option value="internet">Internet</option>
-                <option value="mobile">Mobile</option>
-                <option value="landline">Landline</option>
+                <option value="internet">إنترنت</option>
+                <option value="mobile">جوال</option>
+                <option value="landline">خط أرضي</option>
             </select>
-            <input type="submit" value="Add Product">
+            <input type="submit" value="إضافة منتج">
         </form>
     </div>
 
     <div class="section">
-        <h2>Add Balance</h2>
+        <h2>إضافة رصيد</h2>
         <form action="/add_balance" method="post">
-            <input type="number" name="user_id" placeholder="Telegram User ID" required>
-            <input type="number" name="amount" placeholder="Amount" step="0.01" required>
-            <input type="submit" value="Add Balance">
+            <input type="number" name="user_id" placeholder="معرف المستخدم في تيليجرام" required>
+            <input type="number" name="amount" placeholder="المبلغ" step="0.01" required>
+            <input type="submit" value="إضافة رصيد">
         </form>
     </div>
 
     <div class="section">
-        <h2>Products</h2>
+        <h2>المنتجات</h2>
         <table border="1">
-            <tr><th>ID</th><th>Name</th><th>Price</th><th>Category</th></tr>
+            <tr><th>الرقم</th><th>الاسم</th><th>السعر</th><th>القسم</th></tr>
             {% for product in products %}
             <tr>
                 <td>{{ product[0] }}</td>
                 <td>{{ product[1] }}</td>
-                <td>${{ product[2] }}</td>
+                <td>{{ product[2] }} ريال</td>
                 <td>{{ product[3] }}</td>
             </tr>
             {% endfor %}
@@ -52,14 +52,14 @@
     </div>
 
     <div class="section">
-        <h2>Users</h2>
+        <h2>المستخدمين</h2>
         <table border="1">
-            <tr><th>ID</th><th>Telegram ID</th><th>Balance</th></tr>
+            <tr><th>الرقم</th><th>معرف تيليجرام</th><th>الرصيد</th></tr>
             {% for user in users %}
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
-                <td>${{ user[2] }}</td>
+                <td>{{ user[2] }} ريال</td>
             </tr>
             {% endfor %}
         </table>

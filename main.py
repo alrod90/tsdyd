@@ -23,13 +23,13 @@ def init_db():
 # Telegram bot commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("Internet", callback_data='cat_internet')],
-        [InlineKeyboardButton("Mobile", callback_data='cat_mobile')],
-        [InlineKeyboardButton("Landline", callback_data='cat_landline')],
-        [InlineKeyboardButton("My Balance", callback_data='balance')]
+        [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
+        [InlineKeyboardButton("جوال", callback_data='cat_mobile')],
+        [InlineKeyboardButton("خط أرضي", callback_data='cat_landline')],
+        [InlineKeyboardButton("رصيدي", callback_data='balance')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('Welcome to our store! Please select a category:', reply_markup=reply_markup)
+    await update.message.reply_text('مرحباً بك في متجرنا! الرجاء اختيار القسم:', reply_markup=reply_markup)
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -37,6 +37,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data.startswith('cat_'):
         category = query.data.split('_')[1]
+        category_names = {
+            'internet': 'إنترنت',
+            'mobile': 'جوال',
+            'landline': 'خط أرضي'
+        }
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('SELECT * FROM products WHERE category = ?', (category,))
@@ -44,10 +49,10 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         
         if products:
-            product_list = '\n'.join([f"{p[1]}: ${p[2]}" for p in products])
-            await query.message.edit_text(f"Products in {category}:\n{product_list}")
+            product_list = '\n'.join([f"{p[1]}: {p[2]} ريال" for p in products])
+            await query.message.edit_text(f"المنتجات في قسم {category_names[category]}:\n{product_list}")
         else:
-            await query.message.edit_text(f"No products available in {category}")
+            await query.message.edit_text(f"لا توجد منتجات متوفرة في قسم {category_names[category]}")
     
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
@@ -56,7 +61,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = c.fetchone()
         balance = result[0] if result else 0
         conn.close()
-        await query.message.edit_text(f"Your current balance: ${balance}")
+        await query.message.edit_text(f"رصيدك الحالي: {balance} ريال")
 
 # Flask routes for admin panel
 @app.route('/')
