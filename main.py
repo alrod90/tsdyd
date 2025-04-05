@@ -4,7 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
-import threading
+from threading import Thread
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -63,7 +63,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         await query.message.edit_text(f"رصيدك الحالي: {balance} ريال")
 
-# Flask routes for admin panel
+# Flask routes
 @app.route('/')
 def admin_panel():
     conn = sqlite3.connect('store.db')
@@ -103,14 +103,7 @@ def add_balance():
 def run_flask():
     app.run(host='0.0.0.0', port=5000)
 
-async def main():
-    # Initialize database
-    init_db()
-    
-    # Start Flask in a separate thread
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
-    
+def run_bot():
     # Initialize bot
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
     if not bot_token:
@@ -125,8 +118,15 @@ async def main():
     application.add_handler(CallbackQueryHandler(button_click))
     
     # Run bot
-    await application.run_polling()
+    application.run_polling()
 
 if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+    # Initialize database
+    init_db()
+    
+    # Start Flask in a separate thread
+    flask_thread = Thread(target=run_flask)
+    flask_thread.start()
+    
+    # Run bot in main thread
+    run_bot()
