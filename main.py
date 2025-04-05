@@ -579,15 +579,19 @@ def add_balance():
 
 @app.route('/edit_user', methods=['POST'])
 def edit_user():
-    user_id = request.form['user_id']
-    new_balance = float(request.form['balance'])
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
-              (new_balance, user_id))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
+    try:
+        user_id = request.form['user_id']
+        new_balance = float(request.form['balance'])
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
+                  (new_balance, user_id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in edit_user: {str(e)}")
+        return "حدث خطأ في تحديث الرصيد", 500
 
 @app.route('/toggle_user', methods=['POST'])
 def toggle_user():
