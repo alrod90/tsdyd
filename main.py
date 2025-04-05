@@ -621,6 +621,9 @@ def handle_order():
         order_id = request.form.get('order_id')
         action = request.form.get('action')
         rejection_note = request.form.get('rejection_note', '')
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
         if not order_id or not action:
             return "بيانات غير صحيحة", 400
@@ -684,7 +687,8 @@ def handle_order():
 المبلغ: {amount} ليرة سوري
 جاري تنفيذ طلبك...
 """
-            asyncio.create_task(send_notification(None, application, notification_message, user_id, True))
+            loop.run_until_complete(send_notification(None, application, notification_message, user_id, True))
+            loop.close()
 
         conn.commit()
         conn.close()
