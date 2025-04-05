@@ -127,12 +127,25 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
             continue
 
 @app.route('/send_notification', methods=['POST'])
-async def send_notification_route():
+def send_notification_route():
     message = request.form['message']
-    # إنشاء تطبيق مؤقت للإرسال
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    application = Application.builder().token(bot_token).build()
-    await send_notification(application, message)
+    # استخدام Bot مباشرة بدلاً من Application
+    from telegram import Bot
+    bot = Bot(token=bot_token)
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT telegram_id FROM users')
+    users = c.fetchall()
+    conn.close()
+    
+    for user in users:
+        try:
+            bot.send_message(chat_id=user[0], text=message)
+        except:
+            continue
+            
     return redirect(url_for('admin_panel'))
 
 @app.route('/add_balance', methods=['POST'])
