@@ -711,10 +711,12 @@ if __name__ == '__main__':
     is_deployment = os.environ.get('DEPLOYMENT') == 'true'
     
     if is_deployment:
-        # Only run Flask in deployment
+        # Only run Flask in deployment with production settings
+        app.config['TEMPLATES_AUTO_RELOAD'] = True
         app.run(host='0.0.0.0', port=5000)
     else:
         # Run both Flask and bot in development
+        app.config['TEMPLATES_AUTO_RELOAD'] = True
         flask_thread = Thread(target=run_flask)
         flask_thread.start()
         run_bot()
