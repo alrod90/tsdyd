@@ -22,6 +22,16 @@ def init_db():
 
 # Telegram bot commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
+    user_id = update.effective_user.id
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM users WHERE telegram_id = ?', (user_id,))
+    if not c.fetchone():
+        c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
+        conn.commit()
+    conn.close()
+
     keyboard = [
         [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
         [InlineKeyboardButton("جوال", callback_data='cat_mobile')],
