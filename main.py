@@ -84,7 +84,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
     conn.close()
 
-    welcome_message = f"""مرحباً بك في متجرنا!
+    welcome_message = f"""مرحبا بك في نظام تسديد الفواتير
 معرف التيليجرام الخاص بك هو: {user_id}
 يمكنك استخدام هذا المعرف للتواصل مع الإدارة.
 """
