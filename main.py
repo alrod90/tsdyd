@@ -85,11 +85,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_message)
 
     keyboard = [
-        [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
-        [InlineKeyboardButton("جوال", callback_data='cat_mobile')],
-        [InlineKeyboardButton("خط أرضي", callback_data='cat_landline')],
-        [InlineKeyboardButton("رصيدي", callback_data='balance')],
-        [InlineKeyboardButton("طلباتي", callback_data='my_orders')]
+        [
+            InlineKeyboardButton("إنترنت", callback_data='cat_internet'),
+            InlineKeyboardButton("جوال", callback_data='cat_mobile'),
+            InlineKeyboardButton("خط أرضي", callback_data='cat_landline')
+        ],
+        [
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text('مرحباً بك في متجرنا! الرجاء اختيار القسم:', reply_markup=reply_markup)
