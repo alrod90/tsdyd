@@ -143,19 +143,19 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
             continue
 
 @app.route('/send_notification', methods=['POST'])
-async def send_notification_route():
+def send_notification_route():
     message = request.form['message']
     user_id = request.form.get('user_id', None)
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    from telegram import Bot
-    bot = Bot(token=bot_token)
+    
+    application = Application.builder().token(bot_token).build()
     
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     
     if user_id:
         try:
-            await bot.send_message(chat_id=int(user_id), text=message)
+            application.bot.send_message(chat_id=int(user_id), text=message)
         except Exception as e:
             print(f"Error sending message to {user_id}: {e}")
     else:
@@ -163,7 +163,7 @@ async def send_notification_route():
         users = c.fetchall()
         for user in users:
             try:
-                await bot.send_message(chat_id=user[0], text=message)
+                application.bot.send_message(chat_id=user[0], text=message)
             except Exception as e:
                 print(f"Error sending message to {user[0]}: {e}")
                 
