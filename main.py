@@ -13,11 +13,10 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # مفتاح سري للجلسة
 from threading import Thread
 from functools import wraps
-from flask import session, redirect, url_for, render_template, request
 
 # بيانات تسجيل الدخول
-ADMIN_USERNAME = "nourrod"
-ADMIN_PASSWORD = "0956479749"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "your_password_here"
 
 def login_required(f):
     @wraps(f)
@@ -29,9 +28,6 @@ def login_required(f):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if 'logged_in' in session:
-        return redirect(url_for('admin_panel'))
-    
     error = None
     if request.method == 'POST':
         if request.form['username'] == ADMIN_USERNAME and request.form['password'] == ADMIN_PASSWORD:
@@ -40,10 +36,6 @@ def login():
         else:
             error = 'بيانات تسجيل الدخول غير صحيحة'
     return render_template('login.html', error=error)
-
-@app.route('/')
-def index():
-    return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
