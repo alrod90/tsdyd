@@ -1,59 +1,73 @@
 import os
-import telegram
-import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, ContextTypes,
-    ConversationHandler, MessageHandler, filters
-)
-from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
+from flask import Flask, render_template, request, redirect, url_for
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 from threading import Thread
-# Added for SMS functionality.  Replace with your actual gateway library.
-import requests # Example using requests library. You might need a different library.
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Database setup
+# تهيئة قاعدة البيانات
 def init_db():
-    try:
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        # إنشاء الجداول
-        c.execute('''CREATE TABLE IF NOT EXISTS categories
-                     (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
-                     
-        c.execute('''CREATE TABLE IF NOT EXISTS products 
-                     (id INTEGER PRIMARY KEY, name TEXT, category_id INTEGER, is_active BOOLEAN DEFAULT 1,
-                      FOREIGN KEY(category_id) REFERENCES categories(id))''')
-                      
-        c.execute('''CREATE TABLE IF NOT EXISTS users
-                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, is_active BOOLEAN DEFAULT 1)''')
-                     
-        c.execute('''CREATE TABLE IF NOT EXISTS orders
-                     (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
-                      customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, note TEXT)''')
-        
-        conn.commit()
-    except Exception as e:
-        print(f"خطأ في إنشاء قاعدة البيانات: {e}")
-    finally:
-        conn.close() 
-                 (id INTEGER PRIMARY KEY, name TEXT, category_id INTEGER, is_active BOOLEAN DEFAULT 1,
-                  FOREIGN KEY(category_id) REFERENCES categories(id))''')
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
 
-    # إنشاء باقي الجداول
-    c.execute('''CREATE TABLE IF NOT EXISTS products 
-                 (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, is_active BOOLEAN DEFAULT 1)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS orders
-                 (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
-                  customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, note TEXT)''')
+    # إنشاء جداول قاعدة البيانات
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            code TEXT UNIQUE NOT NULL,
+            is_active BOOLEAN DEFAULT 1
+        )
+    ''')
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            category_id INTEGER,
+            price REAL DEFAULT 0,
+            is_active BOOLEAN DEFAULT 1,
+            FOREIGN KEY (category_id) REFERENCES categories (id)
+        )
+    ''')
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            telegram_id INTEGER UNIQUE NOT NULL,
+            balance REAL DEFAULT 0,
+            is_active BOOLEAN DEFAULT 1
+        )
+    ''')
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER,
+            product_id INTEGER,
+            amount REAL,
+            customer_info TEXT,
+            status TEXT DEFAULT 'pending',
+            rejection_note TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            note TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (telegram_id),
+            FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+    ''')
+
+    # إضافة الأقسام الافتراضية إذا لم تكن موجودة
+    default_categories = [
+        ('إنترنت', 'internet'),
+        ('جوال', 'mobile'),
+        ('خط أرضي', 'landline')
+    ]
+
+    for name, code in default_categories:
+        c.execute('INSERT OR IGNORE INTO categories (name, code) VALUES (?, ?)', (name, code))
+
     conn.commit()
     conn.close()
 
@@ -169,11 +183,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.message.edit_text(
-                f"الشركات المتوفرة في قسم {category_names[category]}:", # Changed from المنتجات to الشركات
+                f"الشركات المتوفرة في قسم {category_name}:", # Changed from المنتجات to الشركات
                 reply_markup=reply_markup
             )
         else:
-            await query.message.edit_text(f"لا توجد شركات متوفرة في قسم {category_names[category]}") # Changed from منتجات to شركات
+            await query.message.edit_text(f"لا توجد شركات متوفرة في قسم {category_name}") # Changed from منتجات to شركات
 
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
@@ -247,31 +261,34 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['amount'] = amount
 
     # التحقق من الرصيد
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    user_balance = c.fetchone()[0]
-    conn.close()
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        user_balance = c.fetchone()[0]
+        conn.close()
 
-    if amount > user_balance:
-        await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
+        if amount > user_balance:
+            await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
+            return ConversationHandler.END
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
+        product_name = c.fetchone()[0]
+        conn.close()
+
+        await update.message.reply_text(
+            f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
+            f"اضغط على تأكيد لإتمام العملية.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("تأكيد", callback_data='confirm_purchase'),
+                InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')
+            ]])
+        )
+        return "WAITING_CONFIRMATION"
+
+    except ValueError:
+        await update.message.reply_text("الرجاء إدخال مبلغ صحيح")
         return ConversationHandler.END
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
-    product_name = c.fetchone()[0]
-    conn.close()
-
-    await update.message.reply_text(
-        f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
-        f"اضغط على تأكيد لإتمام العملية.",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("تأكيد", callback_data='confirm_purchase'),
-            InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')
-        ]])
-    )
-    return "WAITING_CONFIRMATION"
-
 
 async def handle_search_order_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -343,6 +360,7 @@ async def handle_cancel_reason(update: Update, context: ContextTypes.DEFAULT_TYP
 رقم الطلب: {order_id}
 سبب الإلغاء: {cancel_reason}
 """
+        # Replace with your actual SMS gateway API call
         try:
             response = requests.post("YOUR_SMS_GATEWAY_URL", 
                                   data={"to": "+963938074766", 
@@ -375,7 +393,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
             status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
             message += f"""
 رقم الطلب: {order[0]}
-الشركة: {order[1]} # Changed from المنتج to الشركة
+الشركة: {order[1]} 
 المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
@@ -417,7 +435,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     # إرسال إشعار للمدير
     admin_message = f"""
 طلب جديد:
-الشركة: {product_name} # Changed from المنتج to الشركة
+الشركة: {product_name} 
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
 معرف المشتري: {update.effective_user.id}
@@ -465,11 +483,12 @@ def admin_panel():
 def add_product():
     name = request.form['name']
     category_id = request.form['category_id']
+    price = float(request.form['price'])
     is_active = 'is_active' in request.form
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('INSERT INTO products (name, category_id, is_active) VALUES (?, ?, ?)',
-              (name, category_id, is_active))
+    c.execute('INSERT INTO products (name, category_id, price, is_active) VALUES (?, ?, ?, ?)',
+              (name, category_id, price, is_active))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
@@ -499,10 +518,11 @@ def edit_product():
     product_id = request.form['product_id']
     name = request.form['name']
     category = request.form['category']
+    price = float(request.form['price'])
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('UPDATE products SET name = ?, category = ? WHERE id = ?',
-              (name, category, product_id))
+    c.execute('UPDATE products SET name = ?, category_id = ?, price = ? WHERE id = ?',
+              (name, category, price, product_id))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
@@ -518,11 +538,17 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
         sent_count = 0
         failed_count = 0
 
-    for user in users:
-        try:
-            await context.bot.send_message(chat_id=user[0], text=message)
-        except:
-            continue
+        for user in users:
+            try:
+                await context.bot.send_message(chat_id=user[0], text=message)
+                sent_count +=1
+            except Exception as e:
+                failed_count += 1
+                print(f"Error sending message to {user[0]}: {e}")
+        print(f"Sent {sent_count} messages, Failed to send {failed_count} messages.")
+    except Exception as e:
+        print(f"Error sending notification: {e}")
+
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
@@ -633,7 +659,6 @@ def delete_order():
 
     return redirect(url_for('admin_panel'))
 
-    return redirect(url_for('admin_panel'))
 
 @app.route('/add_category', methods=['POST'])
 def add_category():
@@ -730,28 +755,31 @@ def run_bot():
             
         application.add_error_handler(error_handler)
 
-    # Add handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("orders", orders))
+        # Add handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("orders", orders))
 
-    # إضافة ConversationHandler للتعامل مع عملية الشراء
-    conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(button_click)],
-        states={
-            "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
-            "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
-            "WAITING_CONFIRMATION": [CallbackQueryHandler(handle_purchase_confirmation)],
-            "WAITING_ORDER_NUMBER": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number)],
-            "WAITING_SEARCH_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_info)],
-            "WAITING_CANCEL_REASON": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_cancel_reason)]
-        },
-        fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
-    )
+        # إضافة ConversationHandler للتعامل مع عملية الشراء
+        conv_handler = ConversationHandler(
+            entry_points=[CallbackQueryHandler(button_click)],
+            states={
+                "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
+                "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
+                "WAITING_CONFIRMATION": [CallbackQueryHandler(handle_purchase_confirmation)],
+                "WAITING_ORDER_NUMBER": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number)],
+                "WAITING_SEARCH_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_info)],
+                "WAITING_CANCEL_REASON": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_cancel_reason)]
+            },
+            fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
+        )
 
-    application.add_handler(conv_handler)
+        application.add_handler(conv_handler)
 
-    # Run bot
-    application.run_polling()
+        # Run bot
+        application.run_polling()
+
+    except Exception as e:
+        print(f"Error running bot: {e}")
 
 if __name__ == '__main__':
     # Initialize database
