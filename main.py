@@ -503,41 +503,52 @@ def add_balance():
 
 @app.route('/handle_order', methods=['POST'])
 def handle_order():
+    conn = None
     try:
-        order_id = request.form['order_id']
-        action = request.form['action']
+        order_id = request.form.get('order_id')
+        action = request.form.get('action')
         rejection_note = request.form.get('rejection_note', '')
+
+        if not order_id or not action:
+            return "بيانات غير صحيحة", 400
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
+        # التحقق من وجود الطلب
         c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
         order = c.fetchone()
 
-        if order is None:
-            conn.close()
+        if not order:
+            if conn:
+                conn.close()
             return "الطلب غير موجود", 404
 
         if action == 'reject':
+            if not rejection_note and action == 'reject':
+                if conn:
+                    conn.close()
+                return "يجب إدخال سبب الرفض", 400
+
             # إعادة المبلغ للمستخدم
             c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                     (order[1], order[0]))
             # تحديث حالة الطلب
             c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
                     ('rejected', rejection_note, order_id))
-        else:
-            c.execute('UPDATE orders SET status = ? WHERE id = ?', ('accepted', order_id))
+        elif action == 'accept':
+            c.execute('UPDATE orders SET status = ? WHERE id = ?', 
+                    ('accepted', order_id))
 
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
+
     except Exception as e:
+        print(f"Error in handle_order: {str(e)}")
         if conn:
             conn.close()
-        print(f"Error in handle_order: {str(e)}")
-        return "حدث خطأ في معالجة الطلب", 500
-
-    return redirect(url_for('admin_panel'))
+        return f"حدث خطأ في معالجة الطلب: {str(e)}", 500
 
 @app.route('/delete_order', methods=['POST'])
 def delete_order():
