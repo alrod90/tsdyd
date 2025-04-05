@@ -84,7 +84,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
         [InlineKeyboardButton("جوال", callback_data='cat_mobile')],
         [InlineKeyboardButton("خط أرضي", callback_data='cat_landline')],
-        [InlineKeyboardButton("رصيدي", callback_data='balance')]
+        [InlineKeyboardButton("رصيدي", callback_data='balance')],
+        [InlineKeyboardButton("طلباتي", callback_data='my_orders')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text('مرحباً بك في متجرنا! الرجاء اختيار القسم:', reply_markup=reply_markup)
@@ -128,6 +129,23 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         balance = result[0] if result else 0
         conn.close()
         await query.message.edit_text(f"رصيدك الحالي: {balance} ريال")
+
+    elif query.data == 'my_orders':
+        keyboard = [
+            [InlineKeyboardButton("البحث برقم الطلب", callback_data='search_order_number')],
+            [InlineKeyboardButton("البحث ببيانات الزبون", callback_data='search_customer_info')],
+            [InlineKeyboardButton("رجوع", callback_data='back')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
+
+    elif query.data == 'search_order_number':
+        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
+        return "WAITING_ORDER_NUMBER"
+
+    elif query.data == 'search_customer_info':
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_SEARCH_CUSTOMER_INFO"
 
     elif query.data == 'back':
         keyboard = [
@@ -189,6 +207,69 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return "WAITING_CONFIRMATION"
 
+
+async def handle_search_order_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        order_number = int(update.message.text)
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at 
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     WHERE o.id = ?''', (order_number,))
+        order = c.fetchone()
+        conn.close()
+
+        if order:
+            status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+            message = f"""
+تفاصيل الطلب:
+رقم الطلب: {order[0]}
+المنتج: {order[1]}
+المبلغ: {order[2]}
+الحالة: {status_text}
+بيانات الزبون: {order[4]}
+التاريخ: {order[5]}
+"""
+            keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(message, reply_markup=reply_markup)
+        else:
+            await update.message.reply_text("لم يتم العثور على الطلب")
+    except ValueError:
+        await update.message.reply_text("الرجاء إدخال رقم صحيح")
+    return ConversationHandler.END
+
+async def handle_search_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    customer_info = update.message.text
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at 
+                 FROM orders o 
+                 JOIN products p ON o.product_id = p.id 
+                 WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
+    orders = c.fetchall()
+    conn.close()
+
+    if orders:
+        message = "الطلبات المطابقة:\n\n"
+        for order in orders:
+            status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+            message += f"""
+رقم الطلب: {order[0]}
+المنتج: {order[1]}
+المبلغ: {order[2]}
+الحالة: {status_text}
+بيانات الزبون: {order[4]}
+التاريخ: {order[5]}
+──────────────
+"""
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(message, reply_markup=reply_markup)
+    else:
+        await update.message.reply_text("لم يتم العثور على طلبات مطابقة")
+    return ConversationHandler.END
 
 async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -427,7 +508,9 @@ def run_bot():
         states={
             "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
             "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
-            "WAITING_CONFIRMATION": [CallbackQueryHandler(handle_purchase_confirmation)]
+            "WAITING_CONFIRMATION": [CallbackQueryHandler(handle_purchase_confirmation)],
+            "WAITING_ORDER_NUMBER": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number)],
+            "WAITING_SEARCH_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_info)]
         },
         fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
     )
