@@ -255,8 +255,6 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}"""
 
-                if order[6]:
-                    message += f"\nملاحظة: {order[6]}"
 
                 keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -413,7 +411,7 @@ def admin_panel():
     # التحقق من صلاحيات المستخدم
     c.execute('SELECT telegram_id FROM users WHERE id = 1')  # المدير له ID = 1
     admin_id = c.fetchone()
-    
+
     if admin_id and admin_id[0]:  # إذا كان المستخدم هو المدير
         c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
                      FROM orders o 
@@ -479,18 +477,18 @@ def edit_product():
 async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     if user_id:
         users = [(user_id,)]
     else:
         c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
         users = c.fetchall()
-    
+
     # إرسال عبر تيليجرام أولاً
     for user in users:
         success = False
         retry_count = 3
-        
+
         while retry_count > 0 and not success:
             try:
                 # محاولة إرسال رسالة مع إشعار صوتي
@@ -505,14 +503,14 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
                 print(f"Error sending Telegram message to {user[0]}: {str(e)}")
                 retry_count -= 1
                 await asyncio.sleep(1)
-        
+
         # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
         if not success and is_important:
             try:
                 # استرجاع رقم الهاتف من قاعدة البيانات
                 c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user[0],))
                 phone_result = c.fetchone()
-                
+
                 if phone_result and phone_result[0]:
                     # إرسال SMS عبر خدمة SMS
                     response = requests.post(
@@ -525,7 +523,7 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
                     response.raise_for_status()
             except Exception as e:
                 print(f"Error sending SMS to {user[0]}: {str(e)}")
-    
+
     conn.close()
 
 @app.route('/send_notification', methods=['POST'])
@@ -621,7 +619,7 @@ def handle_order():
                 return "يجب إدخال سبب الرفض", 400
 
             note = request.form.get('note', '')  # الحصول على الملاحظة الإضافية
-            
+
             # إعادة المبلغ للمستخدم
             c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                     (order[1], order[0]))
@@ -703,11 +701,11 @@ def run_bot():
 if __name__ == '__main__':
     # Initialize database
     init_db()
-    
+
     # Check if we're running in deployment mode
     import os
     is_deployment = os.environ.get('DEPLOYMENT') == 'true'
-    
+
     if is_deployment:
         # Only run Flask in deployment with production settings
         app.config['TEMPLATES_AUTO_RELOAD'] = True
