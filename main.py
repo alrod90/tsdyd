@@ -394,7 +394,7 @@ def admin_panel():
     products = c.fetchall()
     c.execute('SELECT * FROM users')
     users = c.fetchall()
-    c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
+    c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at
                  FROM orders o 
                  JOIN products p ON o.product_id = p.id 
                  ORDER BY o.created_at DESC''')
