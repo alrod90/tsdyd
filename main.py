@@ -126,6 +126,15 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
         except:
             continue
 
+@app.route('/send_notification', methods=['POST'])
+async def send_notification_route():
+    message = request.form['message']
+    # إنشاء تطبيق مؤقت للإرسال
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    application = Application.builder().token(bot_token).build()
+    await send_notification(application, message)
+    return redirect(url_for('admin_panel'))
+
 @app.route('/add_balance', methods=['POST'])
 def add_balance():
     user_id = int(request.form['user_id'])
