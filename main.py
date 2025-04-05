@@ -581,11 +581,10 @@ def add_balance():
 def edit_user():
     user_id = request.form['user_id']
     new_balance = float(request.form['balance'])
-    note = request.form.get('note', '')
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('UPDATE users SET balance = ?, note = ? WHERE telegram_id = ?',
-              (new_balance, note, user_id))
+    c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
+              (new_balance, user_id))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
