@@ -157,6 +157,9 @@
                             {{ 'إلغاء التفعيل' if product[4] else 'تفعيل' }}
                         </button>
                     </form>
+                    <button onclick="showEditForm('{{ product[0] }}', '{{ product[1] }}', '{{ product[2] }}', '{{ product[3] }}')" style="margin-right: 10px;">
+                        تعديل
+                    </button>
                 </td>
             </tr>
             {% endfor %}
@@ -180,5 +183,40 @@
             {% endfor %}
         </table>
     </div>
+
+    <!-- نافذة تعديل المنتج -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
+        <div style="background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;">
+            <h3>تعديل المنتج</h3>
+            <form action="/edit_product" method="post">
+                <input type="hidden" name="product_id" id="edit_product_id">
+                <input type="text" name="name" id="edit_name" required>
+                <input type="number" name="price" id="edit_price" step="0.01" required>
+                <select name="category" id="edit_category" required>
+                    <option value="internet">إنترنت</option>
+                    <option value="mobile">جوال</option>
+                    <option value="landline">خط أرضي</option>
+                </select>
+                <div style="margin-top: 20px;">
+                    <button type="submit">حفظ التغييرات</button>
+                    <button type="button" onclick="hideEditForm()">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showEditForm(id, name, price, category) {
+            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('edit_product_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_price').value = price;
+            document.getElementById('edit_category').value = category;
+        }
+
+        function hideEditForm() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

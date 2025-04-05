@@ -99,6 +99,33 @@ def toggle_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/edit_product', methods=['POST'])
+def edit_product():
+    product_id = request.form['product_id']
+    name = request.form['name']
+    price = float(request.form['price'])
+    category = request.form['category']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE products SET name = ?, price = ?, category = ? WHERE id = ?',
+              (name, price, category, product_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str):
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT telegram_id FROM users')
+    users = c.fetchall()
+    conn.close()
+    
+    for user in users:
+        try:
+            await context.bot.send_message(chat_id=user[0], text=message)
+        except:
+            continue
+
 @app.route('/add_balance', methods=['POST'])
 def add_balance():
     user_id = int(request.form['user_id'])
