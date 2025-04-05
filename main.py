@@ -24,9 +24,9 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                  (id INTEGER PRIMARY KEY, name TEXT, code TEXT, is_active BOOLEAN DEFAULT 1)''')
     
-    # التحقق من وجود التصنيفات الافتراضية وإضافتها إذا لم تكن موجودة
-    c.execute('SELECT code FROM categories WHERE code IN ("internet", "mobile", "landline")')
-    existing_categories = set(row[0] for row in c.fetchall())
+    # إضافة الأقسام الافتراضية
+    c.execute('DELETE FROM categories')
+    conn.commit()
     
     default_categories = [
         ('إنترنت', 'internet', 1),
