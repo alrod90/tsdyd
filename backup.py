@@ -8,23 +8,35 @@ import shutil
 def sync_from_deployed():
     """تحديث قاعدة البيانات المحلية من النسخة المنشورة"""
     try:
-        # التأكد من إغلاق أي اتصالات مفتوحة مع قاعدة البيانات
-        import sqlite3
+        # إغلاق أي اتصالات مفتوحة
         try:
             conn = sqlite3.connect('store.db')
             conn.close()
         except:
             pass
-            
-        # نسخ قاعدة البيانات من النسخة المنشورة
+
+        # حفظ نسخة احتياطية من قاعدة البيانات الحالية
         if os.path.exists('store.db'):
-            # عمل نسخة احتياطية من النسخة المحلية
             backup_time = datetime.now().strftime("%Y%m%d_%H%M%S")
             os.makedirs('local_backups', exist_ok=True)
             shutil.copy2('store.db', f'local_backups/store_backup_{backup_time}.db')
+            print(f"تم حفظ نسخة احتياطية: store_backup_{backup_time}.db")
+
+        # البحث عن أحدث نسخة في مجلد النسخ الاحتياطية
+        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+        if not backup_folders:
+            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
             
-        shutil.copy2('backup_20250405_181443/store.db', 'store.db')
-        print("تم تحديث قاعدة البيانات المحلية بنجاح")
+        latest_backup = max(backup_folders)
+        deployed_db = f'{latest_backup}/store.db'
+        
+        if not os.path.exists(deployed_db):
+            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+            
+        # نسخ قاعدة البيانات المنشورة
+        shutil.copy2(deployed_db, 'store.db')
+        print(f"تم تحديث قاعدة البيانات المحلية من: {deployed_db}")
+        
     except Exception as e:
         print(f"حدث خطأ أثناء التحديث: {str(e)}")
 
