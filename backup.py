@@ -35,7 +35,26 @@ def sync_from_deployed():
             
         # نسخ قاعدة البيانات المنشورة
         shutil.copy2(deployed_db, 'store.db')
-        print(f"تم تحديث قاعدة البيانات المحلية من: {deployed_db}")
+        
+        # نقل البيانات من النسخة المنشورة إلى النسخة المحلية
+        deployed_conn = sqlite3.connect(deployed_db)
+        local_conn = sqlite3.connect('store.db')
+        
+        # نقل بيانات المنتجات
+        deployed_conn.execute("ATTACH DATABASE 'store.db' AS local")
+        deployed_conn.execute("INSERT OR REPLACE INTO local.products SELECT * FROM products")
+        
+        # نقل بيانات المستخدمين
+        deployed_conn.execute("INSERT OR REPLACE INTO local.users SELECT * FROM users")
+        
+        # نقل بيانات الطلبات
+        deployed_conn.execute("INSERT OR REPLACE INTO local.orders SELECT * FROM orders")
+        
+        deployed_conn.commit()
+        deployed_conn.close()
+        local_conn.close()
+        
+        print(f"تم نقل جميع البيانات من النسخة المنشورة: {deployed_db}")
         
     except Exception as e:
         print(f"حدث خطأ أثناء التحديث: {str(e)}")
