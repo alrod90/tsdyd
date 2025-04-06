@@ -26,10 +26,16 @@ def sync_deployed_db():
         return  # تجاهل المزامنة في بيئة النشر
         
     try:
-        backup_db = 'backup_20250405_181443/store.db'
+        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+        if not backup_folders:
+            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
+            
+        latest_backup = max(backup_folders)
+        backup_db = f'{latest_backup}/store.db'
+        
         if os.path.exists(backup_db):
             shutil.copy2(backup_db, 'store.db')
-            print("تم تحديث قاعدة البيانات من النسخة المنشورة")
+            print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {backup_db}")
     except Exception as e:
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
