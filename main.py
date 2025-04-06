@@ -184,7 +184,13 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text(f"رصيدك الحالي: {balance} ليرة سوري")
 
     elif query.data == 'my_orders':
-        await orders(update, context)
+        keyboard = [
+            [InlineKeyboardButton("البحث برقم الطلب", callback_data='search_order_number')],
+            [InlineKeyboardButton("البحث ببيانات الزبون", callback_data='search_customer_info')],
+            [InlineKeyboardButton("رجوع", callback_data='back')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
 
     elif query.data.startswith('cancel_order_'):
         order_id = int(query.data.split('_')[2])
