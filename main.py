@@ -310,11 +310,26 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         order_number = int(update.message.text)
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # التحقق من صلاحيات المدير
+        c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (update.effective_user.id,))
+        is_admin = c.fetchone() is not None
+        
         try:
-            c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note
-                         FROM orders o 
-                         JOIN products p ON o.product_id = p.id 
-                         WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
+            if is_admin:
+                # المدير يمكنه البحث في جميع الطلبات
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
+                            FROM orders o 
+                            JOIN products p ON o.product_id = p.id 
+                            JOIN users u ON o.user_id = u.telegram_id
+                            WHERE o.id = ?''', (order_number,))
+            else:
+                # المستخدم العادي يبحث في طلباته فقط
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
+                            FROM orders o 
+                            JOIN products p ON o.product_id = p.id 
+                            JOIN users u ON o.user_id = u.telegram_id
+                            WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
             order = c.fetchone()
 
             if order:
@@ -392,10 +407,25 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
     customer_info = update.message.text
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note
-                 FROM orders o 
-                 JOIN products p ON o.product_id = p.id 
-                 WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
+    
+    # التحقق من صلاحيات المدير
+    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (update.effective_user.id,))
+    is_admin = c.fetchone() is not None
+    
+    if is_admin:
+        # المدير يمكنه البحث في جميع الطلبات
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, u.telegram_id
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
+                     WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
+    else:
+        # المستخدم العادي يبحث في طلباته فقط
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, u.telegram_id
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
+                     WHERE o.customer_info LIKE ? AND o.user_id = ?''', ('%' + customer_info + '%', update.effective_user.id))
     orders = c.fetchall()
     conn.close()
 
