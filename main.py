@@ -8,6 +8,7 @@ from telegram.ext import (
 )
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
+import shutil
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # مفتاح سري للجلسة
@@ -31,7 +32,7 @@ def sync_deployed_db():
                 conn.close()
             except:
                 pass
-                
+
             shutil.copy2(deployed_db, 'store.db')
             print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
         else:
@@ -701,10 +702,10 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
 def get_db_connection():
-    db_path = 'backup_20250406_114149/store.db'
-    if not os.path.exists(db_path):
+    deployed_db = 'backup_20250406_114149/store.db'
+    if not os.path.exists(deployed_db):
         raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(deployed_db)
     conn.execute("PRAGMA timezone = '+03:00'")
     return conn
 
@@ -752,7 +753,7 @@ if __name__ == '__main__':
         time.tzset()
     except AttributeError:
         pass  # للتوافق مع أنظمة Windows
-        
+
     # Initialize database
     init_db()
 
