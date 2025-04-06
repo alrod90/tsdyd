@@ -6,8 +6,14 @@ from datetime import datetime
 import shutil
 
 def sync_from_deployed():
-    """تحديث قاعدة البيانات المحلية من النسخة المنشورة"""
+    """مزامنة البيانات بين النسخة المحلية والمنشورة"""
     try:
+        import sqlite3
+        import json
+        import os
+        from datetime import datetime
+        import shutil
+
         # إغلاق أي اتصالات مفتوحة
         try:
             conn = sqlite3.connect('store.db')
@@ -80,5 +86,23 @@ def create_backup():
     
     print(f"تم إنشاء النسخة الاحتياطية في المجلد: {backup_dir}")
 
+def auto_sync():
+    """مزامنة تلقائية كل دقيقة"""
+    while True:
+        try:
+            sync_from_deployed()
+            time.sleep(60)  # انتظار دقيقة واحدة
+        except Exception as e:
+            print(f"خطأ في المزامنة التلقائية: {str(e)}")
+            time.sleep(60)  # انتظار دقيقة واحدة في حالة الخطأ
+
 if __name__ == "__main__":
+    import threading
+    import time
+    
+    # بدء المزامنة التلقائية في خلفية البرنامج
+    sync_thread = threading.Thread(target=auto_sync, daemon=True)
+    sync_thread.start()
+    
+    # إنشاء النسخة الاحتياطية
     create_backup()

@@ -34,7 +34,8 @@ def sync_deployed_db():
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
 def init_db():
-    sync_deployed_db()  # مزامنة قاعدة البيانات قبل التهيئة
+    from backup import sync_from_deployed
+    sync_from_deployed()  # مزامنة قاعدة البيانات قبل التهيئة
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
