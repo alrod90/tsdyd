@@ -107,6 +107,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("خط أرضي", callback_data='cat_landline')
         ],
         [
+            InlineKeyboardButton("البنوك", callback_data='cat_banks')
+        ],
+        [
             InlineKeyboardButton("رصيدي", callback_data='balance'),
             InlineKeyboardButton("طلباتي", callback_data='my_orders')
         ]
@@ -123,7 +126,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         category_names = {
             'internet': 'إنترنت',
             'mobile': 'جوال',
-            'landline': 'خط أرضي'
+            'landline': 'خط أرضي',
+            'banks': 'البنوك'
         }
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
