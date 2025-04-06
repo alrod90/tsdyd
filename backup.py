@@ -5,6 +5,15 @@ import os
 from datetime import datetime
 import shutil
 
+def sync_from_deployed():
+    """تحديث قاعدة البيانات المحلية من النسخة المنشورة"""
+    try:
+        # نسخ قاعدة البيانات من النسخة المنشورة
+        shutil.copy2('backup_20250405_181443/store.db', 'store.db')
+        print("تم تحديث قاعدة البيانات المحلية بنجاح")
+    except Exception as e:
+        print(f"حدث خطأ أثناء التحديث: {str(e)}")
+
 def create_backup():
     # إنشاء مجلد للنسخ الاحتياطي
     backup_dir = "backup_" + datetime.now().strftime("%Y%m%d_%H%M%S")
