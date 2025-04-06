@@ -21,11 +21,31 @@ import requests # Example using requests library. You might need a different lib
 app = Flask(__name__)
 
 # Database setup
+def sync_deployed_db():
+    """مزامنة قاعدة البيانات من النسخة المنشورة"""
+    try:
+        deployed_db = 'backup_20250406_114149/store.db'
+        if os.path.exists(deployed_db):
+            # إغلاق أي اتصالات مفتوحة
+            try:
+                conn = sqlite3.connect('store.db')
+                conn.close()
+            except:
+                pass
 
+            shutil.copy2(deployed_db, 'store.db')
+            print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
+        else:
+            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+    except Exception as e:
+        print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
 def init_db():
-    """تهيئة قاعدة البيانات المحلية"""
-    conn = sqlite3.connect('store.db')
+    deployed_db = 'backup_20250406_114149/store.db'
+    if not os.path.exists(deployed_db):
+        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+
+    conn = sqlite3.connect(deployed_db)
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
@@ -70,7 +90,7 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     for order in orders:
-        status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
+        status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
         message = f"رقم الطلب: {order[0]}\n"
         message += f"الشركة: {order[1]}\n" # Changed from المنتج to الشركة
         message += f"المبلغ: {order[2]} ليرة سوري\n"
@@ -192,6 +212,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
 
+    elif query.data == 'search_order_number':
+        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
+        return "WAITING_ORDER_NUMBER"
+
+    elif query.data == 'search_customer_info':
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_SEARCH_CUSTOMER_INFO"
+
     elif query.data.startswith('cancel_order_'):
         order_id = int(query.data.split('_')[2])
         await query.message.edit_text("الرجاء إدخال سبب الإلغاء:")
@@ -272,7 +300,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
             order = c.fetchone()
 
             if order:
-                status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
+                status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
                 message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
@@ -356,7 +384,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
     if orders:
         message = "الطلبات المطابقة:\n\n"
         for order in orders:
-            status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
+            status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
             message += f"""
 رقم الطلب: {order[0]}
 الشركة: {order[1]} # Changed from المنتج to الشركة
@@ -699,7 +727,10 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
 def get_db_connection():
-    conn = sqlite3.connect('store.db')
+    deployed_db = 'backup_20250406_114149/store.db'
+    if not os.path.exists(deployed_db):
+        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+    conn = sqlite3.connect(deployed_db)
     conn.execute("PRAGMA timezone = '+03:00'")
     return conn
 
@@ -716,7 +747,7 @@ def run_bot():
     print("جاري تشغيل البوت...")
     application = Application.builder().token(bot_token).build()
 
-
+    
     # Add handlers
     application.add_handler(CommandHandler("orders", orders))
     application.add_handler(CommandHandler("admin", admin_panel_command))
