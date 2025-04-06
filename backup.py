@@ -87,14 +87,14 @@ def create_backup():
     print(f"تم إنشاء النسخة الاحتياطية في المجلد: {backup_dir}")
 
 def auto_sync():
-    """مزامنة تلقائية كل دقيقة"""
+    """مزامنة تلقائية كل 30 ثانية"""
     while True:
         try:
             sync_from_deployed()
-            time.sleep(60)  # انتظار دقيقة واحدة
+            time.sleep(30)  # انتظار 30 ثانية
         except Exception as e:
             print(f"خطأ في المزامنة التلقائية: {str(e)}")
-            time.sleep(60)  # انتظار دقيقة واحدة في حالة الخطأ
+            time.sleep(30)  # انتظار 30 ثانية في حالة الخطأ
 
 if __name__ == "__main__":
     import threading
