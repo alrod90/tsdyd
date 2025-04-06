@@ -748,9 +748,14 @@ def run_bot():
     application = Application.builder().token(bot_token).build()
 
     # Add handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("orders", orders))
+    application.add_handler(CommandHandler("admin", admin_panel_command))
+    application.add_handler(CallbackQueryHandler(button_click))
+
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(button_click)],
+        entry_points=[CallbackQueryHandler(button_click, pattern='^(buy_|search_|cancel_|confirm_)')],
         states={
             "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
             "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
