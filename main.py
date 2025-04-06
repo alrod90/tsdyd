@@ -41,7 +41,11 @@ def sync_deployed_db():
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
 def init_db():
-    conn = get_db_connection()
+    deployed_db = 'backup_20250406_114149/store.db'
+    if not os.path.exists(deployed_db):
+        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+    
+    conn = sqlite3.connect(deployed_db)
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
