@@ -34,7 +34,7 @@ def sync_deployed_db():
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
 def init_db():
-    conn = sqlite3.connect('store.db')
+    conn = get_db_connection()
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
@@ -695,7 +695,17 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
 def get_db_connection():
-    conn = sqlite3.connect('store.db')
+    backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+    if not backup_folders:
+        raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
+        
+    latest_backup = max(backup_folders)
+    db_path = f'{latest_backup}/store.db'
+    
+    if not os.path.exists(db_path):
+        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+    
+    conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA timezone = '+03:00'")
     return conn
 
