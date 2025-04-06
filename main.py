@@ -701,7 +701,10 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
 def get_db_connection():
-    conn = sqlite3.connect('store.db')
+    db_path = 'backup_20250406_114149/store.db'
+    if not os.path.exists(db_path):
+        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+    conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA timezone = '+03:00'")
     return conn
 
