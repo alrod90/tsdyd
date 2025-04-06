@@ -21,31 +21,10 @@ import requests # Example using requests library. You might need a different lib
 app = Flask(__name__)
 
 # Database setup
-def sync_deployed_db():
-    """مزامنة قاعدة البيانات من النسخة المنشورة"""
-    try:
-        deployed_db = 'backup_20250406_114149/store.db'
-        if os.path.exists(deployed_db):
-            # إغلاق أي اتصالات مفتوحة
-            try:
-                conn = sqlite3.connect('store.db')
-                conn.close()
-            except:
-                pass
 
-            shutil.copy2(deployed_db, 'store.db')
-            print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
-        else:
-            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-    except Exception as e:
-        print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
 def init_db():
-    deployed_db = 'backup_20250406_114149/store.db'
-    if not os.path.exists(deployed_db):
-        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-
-    conn = sqlite3.connect(deployed_db)
+    conn = sqlite3.connect('store.db')
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
@@ -727,10 +706,7 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
 def get_db_connection():
-    deployed_db = 'backup_20250406_114149/store.db'
-    if not os.path.exists(deployed_db):
-        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-    conn = sqlite3.connect(deployed_db)
+    conn = sqlite3.connect('store.db')
     conn.execute("PRAGMA timezone = '+03:00'")
     return conn
 
