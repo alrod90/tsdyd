@@ -107,6 +107,27 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(message, reply_markup=reply_markup)
         await update.message.reply_text("──────────────")
 
+async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    
+    # التحقق من صلاحيات المدير
+    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (user_id,))
+    is_admin = c.fetchone() is not None
+    
+    if not is_admin:
+        await update.message.reply_text("عذراً، هذا الأمر متاح فقط للمدير")
+        return
+        
+    keyboard = [
+        [InlineKeyboardButton("إدارة المنتجات", callback_data='manage_products')],
+        [InlineKeyboardButton("إدارة المستخدمين", callback_data='manage_users')],
+        [InlineKeyboardButton("إدارة الطلبات", callback_data='manage_orders')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
     user_id = update.effective_user.id
@@ -729,6 +750,7 @@ def run_bot():
     # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("orders", orders))
+    application.add_handler(CommandHandler("admin", admin_panel_command))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
