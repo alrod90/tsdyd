@@ -348,6 +348,10 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}"""
 
+                # إضافة معرف التيليجرام فقط للمدير
+                if is_admin:
+                    message += f"\nمعرف التيليجرام لمقدم الطلب: {order[8]}"
+
 
                 keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
