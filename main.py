@@ -77,23 +77,41 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note
-                 FROM orders o 
-                 JOIN products p ON o.product_id = p.id 
-                 WHERE o.user_id = ? 
-                 ORDER BY o.created_at DESC''', (user_id,))
+    
+    # التحقق من صلاحيات المدير
+    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (user_id,))
+    is_admin = c.fetchone() is not None
+    
+    if is_admin:
+        # المدير يمكنه رؤية جميع الطلبات
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note, u.telegram_id
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
+                     ORDER BY o.created_at DESC''')
+    else:
+        # المستخدم العادي يرى طلباته فقط
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note, u.telegram_id
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
+                     WHERE o.user_id = ? 
+                     ORDER BY o.created_at DESC''', (user_id,))
+    
     orders = c.fetchall()
     conn.close()
 
     if not orders:
-        await update.message.reply_text("لا يوجد لديك طلبات.")
+        await update.message.reply_text("لا يوجد طلبات.")
         return
 
     for order in orders:
         status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
         message = f"رقم الطلب: {order[0]}\n"
-        message += f"الشركة: {order[1]}\n" # Changed from المنتج to الشركة
+        message += f"الشركة: {order[1]}\n"
         message += f"المبلغ: {order[2]} ليرة سوري\n"
+        if user_id == 1:  # إذا كان المستخدم هو المدير
+            message += f"معرف المستخدم: {order[7]}\n"
         message += f"الحالة: {status_text}\n"
         if order[3] == "rejected" and order[4]:
             message += f"سبب الرفض: {order[4]}\n"
