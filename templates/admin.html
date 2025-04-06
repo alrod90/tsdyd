@@ -115,12 +115,10 @@
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
-            <input type="number" name="price" placeholder="السعر" step="0.01" id="priceField" style="display: none;">
-            <select name="category" required onchange="togglePriceField(this.value)">
+            <select name="category" required>
                 <option value="internet">إنترنت</option>
                 <option value="mobile">جوال</option>
                 <option value="landline">خط أرضي</option>
-                <option value="games">شحن العاب</option>
             </select>
             <label class="switch">
                 <input type="checkbox" name="is_active" checked>
@@ -155,7 +153,6 @@
                 <th>الرقم</th>
                 <th>الاسم</th>
                 <th>القسم</th>
-                <th>السعر</th>
                 <th>الحالة</th>
                 <th>الإجراءات</th>
             </tr>
@@ -287,18 +284,6 @@
     </div>
 
     <script>
-        function togglePriceField(category) {
-            const priceField = document.getElementById('priceField');
-            if (category === 'games') {
-                priceField.style.display = 'block';
-                priceField.required = true;
-            } else {
-                priceField.style.display = 'none';
-                priceField.required = false;
-                priceField.value = '';
-            }
-        }
-        
         // تحديث الصفحة تلقائياً كل 30 ثانية
         function autoRefresh() {
             fetch(window.location.href)
