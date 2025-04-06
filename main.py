@@ -90,7 +90,7 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     for order in orders:
-        status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+        status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
         message = f"رقم الطلب: {order[0]}\n"
         message += f"الشركة: {order[1]}\n" # Changed from المنتج to الشركة
         message += f"المبلغ: {order[2]} ليرة سوري\n"
@@ -300,7 +300,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
             order = c.fetchone()
 
             if order:
-                status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+                status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
                 message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
@@ -384,7 +384,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
     if orders:
         message = "الطلبات المطابقة:\n\n"
         for order in orders:
-            status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+            status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
             message += f"""
 رقم الطلب: {order[0]}
 الشركة: {order[1]} # Changed from المنتج to الشركة
@@ -746,6 +746,7 @@ def run_bot():
 
     print("جاري تشغيل البوت...")
     application = Application.builder().token(bot_token).build()
+
 
     
     # Add handlers
