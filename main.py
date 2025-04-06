@@ -695,17 +695,7 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
 def get_db_connection():
-    backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
-    if not backup_folders:
-        raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
-        
-    latest_backup = max(backup_folders)
-    db_path = f'{latest_backup}/store.db'
-    
-    if not os.path.exists(db_path):
-        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-    
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect('backup_20250406_114149/store.db')
     conn.execute("PRAGMA timezone = '+03:00'")
     return conn
 
