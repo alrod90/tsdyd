@@ -44,7 +44,7 @@ def init_db():
     deployed_db = 'backup_20250406_114149/store.db'
     if not os.path.exists(deployed_db):
         raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-    
+
     conn = sqlite3.connect(deployed_db)
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
@@ -90,7 +90,7 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     for order in orders:
-        status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+        status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
         message = f"رقم الطلب: {order[0]}\n"
         message += f"الشركة: {order[1]}\n" # Changed from المنتج to الشركة
         message += f"المبلغ: {order[2]} ليرة سوري\n"
@@ -111,15 +111,15 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     # التحقق من صلاحيات المدير
     c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (user_id,))
     is_admin = c.fetchone() is not None
-    
+
     if not is_admin:
         await update.message.reply_text("عذراً، هذا الأمر متاح فقط للمدير")
         return
-        
+
     keyboard = [
         [InlineKeyboardButton("إدارة المنتجات", callback_data='manage_products')],
         [InlineKeyboardButton("إدارة المستخدمين", callback_data='manage_users')],
@@ -300,7 +300,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
             order = c.fetchone()
 
             if order:
-                status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+                status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
                 message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
@@ -384,7 +384,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
     if orders:
         message = "الطلبات المطابقة:\n\n"
         for order in orders:
-            status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+            status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
             message += f"""
 رقم الطلب: {order[0]}
 الشركة: {order[1]} # Changed from المنتج to الشركة
@@ -747,14 +747,17 @@ def run_bot():
     print("جاري تشغيل البوت...")
     application = Application.builder().token(bot_token).build()
 
+
     # Add handlers
-    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("orders", orders))
     application.add_handler(CommandHandler("admin", admin_panel_command))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(button_click)],
+        entry_points=[
+            CommandHandler("start", start),
+            CallbackQueryHandler(button_click)
+        ],
         states={
             "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
             "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
