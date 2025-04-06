@@ -39,12 +39,31 @@ def sync_from_deployed():
         if not os.path.exists(deployed_db):
             raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
             
-        # نسخ قاعدة البيانات المنشورة
-        shutil.copy2(deployed_db, 'store.db')
-        
-        # نقل البيانات من النسخة المنشورة إلى النسخة المحلية
+        # فتح الاتصال بقواعد البيانات
         deployed_conn = sqlite3.connect(deployed_db)
         local_conn = sqlite3.connect('store.db')
+        
+        # دمج المنتجات الجديدة
+        deployed_conn.execute("ATTACH DATABASE 'store.db' AS local")
+        deployed_conn.execute("""
+            INSERT OR IGNORE INTO local.products 
+            SELECT * FROM products 
+            WHERE id NOT IN (SELECT id FROM local.products)
+        """)
+        
+        # دمج المستخدمين الجدد
+        deployed_conn.execute("""
+            INSERT OR IGNORE INTO local.users 
+            SELECT * FROM users 
+            WHERE telegram_id NOT IN (SELECT telegram_id FROM local.users)
+        """)
+        
+        # دمج الطلبات الجديدة
+        deployed_conn.execute("""
+            INSERT OR IGNORE INTO local.orders 
+            SELECT * FROM orders 
+            WHERE id NOT IN (SELECT id FROM local.orders)
+        """)
         
         # نقل بيانات المنتجات
         deployed_conn.execute("ATTACH DATABASE 'store.db' AS local")
