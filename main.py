@@ -20,7 +20,21 @@ import requests # Example using requests library. You might need a different lib
 app = Flask(__name__)
 
 # Database setup
+def sync_deployed_db():
+    """مزامنة قاعدة البيانات من النسخة المنشورة"""
+    if os.environ.get('REPLIT_DEPLOYMENT') == '1':
+        return  # تجاهل المزامنة في بيئة النشر
+        
+    try:
+        backup_db = 'backup_20250405_181443/store.db'
+        if os.path.exists(backup_db):
+            shutil.copy2(backup_db, 'store.db')
+            print("تم تحديث قاعدة البيانات من النسخة المنشورة")
+    except Exception as e:
+        print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
+
 def init_db():
+    sync_deployed_db()  # مزامنة قاعدة البيانات قبل التهيئة
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
