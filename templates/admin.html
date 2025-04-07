@@ -276,6 +276,7 @@
                 <td>{{ order[6] }}</td>
                 <td>{{ order[7] }}</td>
                 <td>
+                    <button onclick="showEditAmountForm('{{ order[0] }}', '{{ order[3] }}')" style="background-color: #FF9800; margin-right: 5px;">تعديل المبلغ</button>
                     {% if order[5] == 'pending' %}
                     <form action="/handle_order" method="post" style="display: inline;">
                         <input type="hidden" name="order_id" value="{{ order[0] }}">
@@ -455,6 +456,44 @@
             rejectionNoteDiv.style.display = 'none';
             rejectionNoteTextarea.required = false;
         }
+    }
+
+    function showEditAmountForm(orderId, currentAmount) {
+        var modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+
+        var content = document.createElement('div');
+        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+        content.innerHTML = `
+            <h3>تعديل مبلغ الطلب</h3>
+            <form action="/edit_order_amount" method="post" onsubmit="return validateAmount(this);">
+                <input type="hidden" name="order_id" value="${orderId}">
+                <div style="margin: 10px 0;">
+                    <label>المبلغ الحالي: ${currentAmount}</label>
+                </div>
+                <div style="margin: 10px 0;">
+                    <label>المبلغ الجديد:</label>
+                    <input type="number" name="new_amount" value="${currentAmount}" step="0.01" required>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                </div>
+            </form>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    }
+
+    function validateAmount(form) {
+        var amount = parseFloat(form.new_amount.value);
+        if (amount <= 0) {
+            alert('يجب أن يكون المبلغ أكبر من صفر');
+            return false;
+        }
+        return true;
     }
 
     function validateStatusChange(form) {

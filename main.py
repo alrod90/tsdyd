@@ -810,6 +810,58 @@ def handle_order():
             conn.close()
         return f"حدث خطأ في معالجة الطلب: {str(e)}", 500
 
+@app.route('/edit_order_amount', methods=['POST'])
+def edit_order_amount():
+    try:
+        order_id = request.form['order_id']
+        new_amount = float(request.form['new_amount'])
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # استرجاع معلومات الطلب الحالية
+        c.execute('SELECT amount, user_id, status FROM orders WHERE id = ?', (order_id,))
+        current_order = c.fetchone()
+        
+        if not current_order:
+            conn.close()
+            return "الطلب غير موجود", 404
+            
+        current_amount = current_order[0]
+        user_id = current_order[1]
+        status = current_order[2]
+        
+        # إذا كان الطلب مقبولاً أو قيد المعالجة، نتعامل مع الرصيد
+        if status != 'rejected':
+            amount_diff = new_amount - current_amount
+            
+            if amount_diff > 0:  # إذا كان المبلغ الجديد أكبر
+                # التحقق من الرصيد
+                c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+                user_balance = c.fetchone()[0]
+                
+                if user_balance < amount_diff:
+                    conn.close()
+                    return "رصيد المستخدم غير كافي للتعديل", 400
+                    
+                # خصم الفرق من رصيد المستخدم
+                c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
+                         (amount_diff, user_id))
+            elif amount_diff < 0:  # إذا كان المبلغ الجديد أقل
+                # إعادة الفرق لرصيد المستخدم
+                c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                         (-amount_diff, user_id))
+        
+        # تحديث مبلغ الطلب
+        c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+        
+    except Exception as e:
+        print(f"Error in edit_order_amount: {str(e)}")
+        return f"حدث خطأ في تعديل مبلغ الطلب: {str(e)}", 500
+
 @app.route('/delete_order', methods=['POST'])
 def delete_order():
     order_id = request.form['order_id']
