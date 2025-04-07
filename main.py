@@ -783,6 +783,18 @@ def change_order_status():
         c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
                  (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
 
+        # إرسال إشعار للمستخدم
+        status_text = "قيد المعالجة" if new_status == "pending" else "تمت العملية بنجاح" if new_status == "accepted" else "مرفوض"
+        notification_message = f"تم تغيير حالة الطلب رقم {order_id} إلى: {status_text}"
+        if new_status == "rejected" and rejection_note:
+            notification_message += f"\nسبب الرفض: {rejection_note}"
+        if note:
+            notification_message += f"\nملاحظة: {note}"
+
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
@@ -886,6 +898,14 @@ def edit_order_amount():
 
         # تحديث مبلغ الطلب
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
+
+        # إرسال إشعار للمستخدم
+        notification_message = f"تم تعديل مبلغ الطلب رقم {order_id}\nالمبلغ الجديد: {new_amount} ليرة سوري"
+        
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
