@@ -1030,33 +1030,16 @@ def edit_order_amount():
         print(f"Error in edit_order_amount: {str(e)}")
         return f"حدث خطأ في تعديل مبلغ الطلب: {str(e)}", 500
 
-@app.route('/delete_order', methods=['POST'])
-def delete_order():
-    order_id = request.form['order_id']
-
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-
-    c.execute('SELECT user_id, amount, status FROM orders WHERE id = ?', (order_id,))
-    order = c.fetchone()
-
-    if order[2] != 'accepted':  # إعادة المبلغ إذا لم يكن الطلب مقبولاً
-        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                  (order[1], order[0]))
-
-    c.execute('DELETE FROM orders WHERE id = ?', (order_id,))
-    conn.commit()
-    conn.close()
-
-    return redirect(url_for('admin_panel'))
-
-    return redirect(url_for('admin_panel'))
+# تم إزالة وظيفة حذف الطلبات لمنع حذف أي طلب
 
 def get_db_connection():
+    """إنشاء اتصال بقاعدة البيانات المنشورة فقط"""
     deployed_db = 'backup_20250407_094844/store.db'
     if not os.path.exists(deployed_db):
         raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-    conn = sqlite3.connect(deployed_db)
+    # نسخ قاعدة البيانات المنشورة إلى الملف الرئيسي
+    shutil.copy2(deployed_db, 'store.db')
+    conn = sqlite3.connect('store.db')
     conn.execute("PRAGMA timezone = '+03:00'")
     return conn
 
