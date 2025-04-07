@@ -363,7 +363,6 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
                     message += f"\nسبب الرفض: {order[7]}"
 
                 if order[6]:  # إضافة الملاحظة إذا وجدت
-                    message += f"\nملاحظة: {order[6]}"ت
                     message += f"\nملاحظة: {order[6]}"
 
                 # إضافة معرف التيليجرام فقط للمدير
