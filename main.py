@@ -24,23 +24,28 @@ app = Flask(__name__)
 def sync_deployed_db():
     """مزامنة قاعدة البيانات من النسخة المنشورة"""
     try:
-        deployed_db = 'store.db'
-        if os.path.exists(deployed_db):
-            return
+        # البحث عن أحدث نسخة احتياطية
+        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+        if not backup_folders:
+            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
+            
+        latest_backup = max(backup_folders)
+        backup_db = f'{latest_backup}/store.db'
         
-        backup_db = 'backup_20250407_094844/store.db'
-        if os.path.exists(backup_db):
-            # إغلاق أي اتصالات مفتوحة
-            try:
-                conn = sqlite3.connect('store.db')
-                conn.close()
-            except:
-                pass
+        if not os.path.exists(backup_db):
+            raise Exception("لم يتم العثور على قاعدة البيانات في النسخة الاحتياطية")
+            
+        # إغلاق أي اتصالات مفتوحة
+        try:
+            conn = sqlite3.connect('store.db')
+            conn.close()
+        except:
+            pass
 
-            shutil.copy2(deployed_db, 'store.db')
-            print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
-        else:
-            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+        # نسخ قاعدة البيانات من النسخة الاحتياطية
+        shutil.copy2(backup_db, 'store.db')
+        print(f"تم تحديث قاعدة البيانات من النسخة الاحتياطية: {backup_db}")
+        
     except Exception as e:
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
@@ -1104,6 +1109,9 @@ def run_bot():
 if __name__ == '__main__':
     # ضبط المنطقة الزمنية
     os.environ['TZ'] = 'Asia/Damascus'
+    
+    # مزامنة قاعدة البيانات من النسخة المنشورة
+    sync_deployed_db()
     try:
         import time
         time.tzset()
