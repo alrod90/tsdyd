@@ -467,7 +467,7 @@
 
         content.innerHTML = `
             <h3>تعديل مبلغ الطلب</h3>
-            <form action="/edit_order_amount" method="post" onsubmit="return validateAmount(this);">
+            <form action="edit_order_amount" method="post" onsubmit="return validateAmount(this);">
                 <input type="hidden" name="order_id" value="${orderId}">
                 <div style="margin: 10px 0;">
                     <label>المبلغ الحالي: ${currentAmount}</label>
