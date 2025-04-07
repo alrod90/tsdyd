@@ -8,6 +8,7 @@ from telegram.ext import (
 )
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
+import shutil
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # مفتاح سري للجلسة
@@ -22,20 +23,29 @@ app = Flask(__name__)
 # Database setup
 def sync_deployed_db():
     """مزامنة قاعدة البيانات من النسخة المنشورة"""
-    if os.environ.get('REPLIT_DEPLOYMENT') == '1':
-        return  # تجاهل المزامنة في بيئة النشر
-        
     try:
-        backup_db = 'backup_20250405_181443/store.db'
-        if os.path.exists(backup_db):
-            shutil.copy2(backup_db, 'store.db')
-            print("تم تحديث قاعدة البيانات من النسخة المنشورة")
+        deployed_db = 'backup_20250406_114149/store.db'
+        if os.path.exists(deployed_db):
+            # إغلاق أي اتصالات مفتوحة
+            try:
+                conn = sqlite3.connect('store.db')
+                conn.close()
+            except:
+                pass
+
+            shutil.copy2(deployed_db, 'store.db')
+            print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
+        else:
+            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
     except Exception as e:
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
 def init_db():
-    sync_deployed_db()  # مزامنة قاعدة البيانات قبل التهيئة
-    conn = sqlite3.connect('store.db')
+    deployed_db = 'backup_20250406_114149/store.db'
+    if not os.path.exists(deployed_db):
+        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+
+    conn = sqlite3.connect(deployed_db)
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
@@ -67,23 +77,43 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note
-                 FROM orders o 
-                 JOIN products p ON o.product_id = p.id 
-                 WHERE o.user_id = ? 
-                 ORDER BY o.created_at DESC''', (user_id,))
+
+    # التحقق من صلاحيات المدير
+    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (user_id,))
+    is_admin = c.fetchone() is not None
+
+    if is_admin:
+        # المدير يمكنه رؤية جميع الطلبات
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note, u.telegram_id
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
+                     ORDER BY o.created_at DESC''')
+    else:
+        # المستخدم العادي يرى طلباته فقط
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note, u.telegram_id
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
+                     WHERE o.user_id = ? 
+                     ORDER BY o.created_at DESC''', (user_id,))
+
     orders = c.fetchall()
     conn.close()
 
     if not orders:
-        await update.message.reply_text("لا يوجد لديك طلبات.")
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("لا يوجد لديك طلبات.", reply_markup=reply_markup)
         return
 
     for order in orders:
-        status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+        status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
         message = f"رقم الطلب: {order[0]}\n"
-        message += f"الشركة: {order[1]}\n" # Changed from المنتج to الشركة
+        message += f"الشركة: {order[1]}\n"
         message += f"المبلغ: {order[2]} ليرة سوري\n"
+        if user_id == 1:  # إذا كان المستخدم هو المدير
+            message += f"معرف المستخدم: {order[7]}\n"
         message += f"الحالة: {status_text}\n"
         if order[3] == "rejected" and order[4]:
             message += f"سبب الرفض: {order[4]}\n"
@@ -92,10 +122,33 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = []
         if order[3] == "pending":
             keyboard.append([InlineKeyboardButton("إلغاء الطلب", callback_data=f'cancel_order_{order[0]}')])
+        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]) #added back button
 
         reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
         await update.message.reply_text(message, reply_markup=reply_markup)
         await update.message.reply_text("──────────────")
+
+async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+
+    # التحقق من صلاحيات المدير
+    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (user_id,))
+    is_admin = c.fetchone() is not None
+
+    if not is_admin:
+        await update.message.reply_text("عذراً، هذا الأمر متاح فقط للمدير")
+        return
+
+    keyboard = [
+        [InlineKeyboardButton("إدارة المنتجات", callback_data='manage_products')],
+        [InlineKeyboardButton("إدارة المستخدمين", callback_data='manage_users')],
+        [InlineKeyboardButton("إدارة الطلبات", callback_data='manage_orders')],
+        [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')] #added back button
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
@@ -161,7 +214,9 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup
             )
         else:
-            await query.message.edit_text(f"لا توجد شركات متوفرة في قسم {category_names[category]}") # Changed from منتجات to شركات
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.message.edit_text(f"لا توجد شركات متوفرة في قسم {category_names[category]}", reply_markup=reply_markup) # Changed from منتجات to شركات
 
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
@@ -170,7 +225,9 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = c.fetchone()
         balance = result[0] if result else 0
         conn.close()
-        await query.message.edit_text(f"رصيدك الحالي: {balance} ليرة سوري")
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(f"رصيدك الحالي: {balance} ليرة سوري", reply_markup=reply_markup)
 
     elif query.data == 'my_orders':
         keyboard = [
@@ -197,13 +254,21 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == 'back':
         keyboard = [
-            [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
-            [InlineKeyboardButton("جوال", callback_data='cat_mobile')],
-            [InlineKeyboardButton("خط أرضي", callback_data='cat_landline')],
-            [InlineKeyboardButton("رصيدي", callback_data='balance')]
+            [
+                InlineKeyboardButton("إنترنت", callback_data='cat_internet'),
+                InlineKeyboardButton("جوال", callback_data='cat_mobile'),
+                InlineKeyboardButton("خط أرضي", callback_data='cat_landline')
+            ],
+            [
+                InlineKeyboardButton("البنوك", callback_data='cat_banks')
+            ],
+            [
+                InlineKeyboardButton("رصيدي", callback_data='balance'),
+                InlineKeyboardButton("طلباتي", callback_data='my_orders')
+            ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text('اختر القسم:', reply_markup=reply_markup)
+        await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
 
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
@@ -261,39 +326,66 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         order_number = int(update.message.text)
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+
+        # التحقق من صلاحيات المدير
+        c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (update.effective_user.id,))
+        is_admin = c.fetchone() is not None
+
         try:
-            c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note
-                         FROM orders o 
-                         JOIN products p ON o.product_id = p.id 
-                         WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
+            if is_admin:
+                # المدير يمكنه البحث في جميع الطلبات
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
+                            FROM orders o 
+                            JOIN products p ON o.product_id = p.id 
+                            JOIN users u ON o.user_id = u.telegram_id
+                            WHERE o.id = ?''', (order_number,))
+            else:
+                # المستخدم العادي يبحث في طلباته فقط
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
+                            FROM orders o 
+                            JOIN products p ON o.product_id = p.id 
+                            JOIN users u ON o.user_id = u.telegram_id
+                            WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
             order = c.fetchone()
 
             if order:
-                status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+                status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
                 message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
 الشركة: {order[1]}
 المبلغ: {order[2]} ليرة سوري
-الحالة: {status_text}"""
+الحالة: {status_text}
+بيانات الزبون: {order[4]}
+التاريخ: {order[5]}"""
 
                 if order[3] == "rejected" and order[7]:  # إضافة سبب الرفض
                     message += f"\nسبب الرفض: {order[7]}"
 
-                message += f"""
-بيانات الزبون: {order[4]}
-التاريخ: {order[5]}"""
+                if order[6]:  # إضافة الملاحظة إذا وجدت
+                    message += f"\nملاحظة: {order[6]}"
+
+                # إضافة معرف التيليجرام فقط للمدير
+                if is_admin:
+                    message += f"\nمعرف التيليجرام لمقدم الطلب: {order[8]}"
 
 
                 keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await update.message.reply_text(message, reply_markup=reply_markup)
             else:
-                await update.message.reply_text("لم يتم العثور على الطلب")
+                keyboard = [
+                    [InlineKeyboardButton("التأكد من البيانات", callback_data='search_order_number')],
+                    [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await update.message.reply_text("لم يتم العثور على الطلب. هل تريد إدخال رقم طلب آخر؟", reply_markup=reply_markup)
         finally:
             conn.close()
     except ValueError:
-        await update.message.reply_text("الرجاء إدخال رقم صحيح")
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("الرجاء إدخال رقم صحيح", reply_markup=reply_markup)
     return ConversationHandler.END
 
 async def handle_cancel_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -334,7 +426,9 @@ async def handle_cancel_reason(update: Update, context: ContextTypes.DEFAULT_TYP
 
         await update.message.reply_text("تم إلغاء الطلب بنجاح وتمت إعادة المبلغ إلى رصيدك.")
     else:
-        await update.message.reply_text("عذراً، لم يتم العثور على الطلب.")
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("عذراً، لم يتم العثور على الطلب.", reply_markup=reply_markup)
 
     conn.close()
     return ConversationHandler.END
@@ -343,17 +437,32 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
     customer_info = update.message.text
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note
-                 FROM orders o 
-                 JOIN products p ON o.product_id = p.id 
-                 WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
+
+    # التحقق من صلاحيات المدير
+    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (update.effective_user.id,))
+    is_admin = c.fetchone() is not None
+
+    if is_admin:
+        # المدير يمكنه البحث في جميع الطلبات
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, u.telegram_id
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
+                     WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
+    else:
+        # المستخدم العادي يبحث في طلباته فقط
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, u.telegram_id
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
+                     WHERE o.customer_info LIKE ? AND o.user_id = ?''', ('%' + customer_info + '%', update.effective_user.id))
     orders = c.fetchall()
     conn.close()
 
     if orders:
         message = "الطلبات المطابقة:\n\n"
         for order in orders:
-            status_text = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
+            status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
             message += f"""
 رقم الطلب: {order[0]}
 الشركة: {order[1]} # Changed from المنتج to الشركة
@@ -367,7 +476,9 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(message, reply_markup=reply_markup)
     else:
-        await update.message.reply_text("لم يتم العثور على طلبات مطابقة")
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("لم يتم العثور على طلبات مطابقة", reply_markup=reply_markup)
     return ConversationHandler.END
 
 async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -375,7 +486,9 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     await query.answer()
 
     if query.data == 'cancel_purchase':
-        await query.message.edit_text("تم إلغاء العملية.")
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("تم إلغاء العملية.", reply_markup=reply_markup)
         return ConversationHandler.END
 
     conn = sqlite3.connect('store.db')
@@ -425,7 +538,9 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
 """
-    await query.message.edit_text(confirmation_message)
+    keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.message.edit_text(confirmation_message, reply_markup=reply_markup)
     return ConversationHandler.END
 
 # Flask routes
@@ -576,7 +691,7 @@ def send_notification_route():
                 try:
                     bot.send_message(chat_id=user[0], text=message)
                 except Exception as e:
-                    print(f"Error sending message to {user[0]}: {e}")
+                    print(f"Error sending messageto {user[0]}: {e}")
     except Exception as e:
         print(f"Error sending notification: {e}")
 
@@ -621,6 +736,60 @@ def toggle_user():
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
+
+@app.route('/change_order_status', methods=['POST'])
+def change_order_status():
+    try:
+        order_id = request.form.get('order_id')
+        new_status = request.form.get('new_status')
+        note = request.form.get('note', '')
+        rejection_note = request.form.get('rejection_note', '')
+
+        if not order_id or not new_status:
+            return "بيانات غير صحيحة", 400
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+
+        # استرجاع معلومات الطلب الحالية
+        c.execute('SELECT status, user_id, amount FROM orders WHERE id = ?', (order_id,))
+        current_order = c.fetchone()
+
+        if not current_order:
+            conn.close()
+            return "الطلب غير موجود", 404
+
+        current_status = current_order[0]
+        user_id = current_order[1]
+        amount = current_order[2]
+
+        # التحقق من رصيد المستخدم عند التغيير من مرفوض إلى قيد المعالجة أو مقبول
+        if current_status == 'rejected' and (new_status == 'pending' or new_status == 'accepted'):
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+            user_balance = c.fetchone()[0]
+            if user_balance < amount:
+                conn.close()
+                return "رصيد المستخدم غير كافي لتغيير حالة الطلب", 400
+            # خصم المبلغ
+            c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
+                     (amount, user_id))
+
+        # إعادة المبلغ عند التغيير إلى مرفوض
+        elif current_status != 'rejected' and new_status == 'rejected':
+            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                     (amount, user_id))
+
+        # تحديث حالة الطلب
+        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
+                 (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+
+    except Exception as e:
+        print(f"Error in change_order_status: {str(e)}")
+        return f"حدث خطأ في تغيير حالة الطلب: {str(e)}", 500
 
 @app.route('/handle_order', methods=['POST'])
 def handle_order():
@@ -673,6 +842,58 @@ def handle_order():
             conn.close()
         return f"حدث خطأ في معالجة الطلب: {str(e)}", 500
 
+@app.route('/edit_order_amount', methods=['POST'])
+def edit_order_amount():
+    try:
+        order_id = request.form['order_id']
+        new_amount = float(request.form['new_amount'])
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+
+        # استرجاع معلومات الطلب الحالية
+        c.execute('SELECT amount, user_id, status FROM orders WHERE id = ?', (order_id,))
+        current_order = c.fetchone()
+
+        if not current_order:
+            conn.close()
+            return "الطلب غير موجود", 404
+
+        current_amount = current_order[0]
+        user_id = current_order[1]
+        status = current_order[2]
+
+        # إذا كان الطلب مقبولاً أو قيد المعالجة، نتعامل مع الرصيد
+        if status != 'rejected':
+            amount_diff = new_amount - current_amount
+
+            if amount_diff > 0:  # إذا كان المبلغ الجديد أكبر
+                # التحقق من الرصيد
+                c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+                user_balance = c.fetchone()[0]
+
+                if user_balance < amount_diff:
+                    conn.close()
+                    return "رصيد المستخدم غير كافي للتعديل", 400
+
+                # خصم الفرق من رصيد المستخدم
+                c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
+                         (amount_diff, user_id))
+            elif amount_diff < 0:  # إذا كان المبلغ الجديد أقل
+                # إعادة الفرق لرصيد المستخدم
+                c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                         (-amount_diff, user_id))
+
+        # تحديث مبلغ الطلب
+        c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+
+    except Exception as e:
+        print(f"Error in edit_order_amount: {str(e)}")
+        return f"حدث خطأ في تعديل مبلغ الطلب: {str(e)}", 500
+
 @app.route('/delete_order', methods=['POST'])
 def delete_order():
     order_id = request.form['order_id']
@@ -696,7 +917,10 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
 def get_db_connection():
-    conn = sqlite3.connect('store.db')
+    deployed_db = 'backup_20250406_114149/store.db'
+    if not os.path.exists(deployed_db):
+        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+    conn = sqlite3.connect(deployed_db)
     conn.execute("PRAGMA timezone = '+03:00'")
     return conn
 
@@ -713,13 +937,18 @@ def run_bot():
     print("جاري تشغيل البوت...")
     application = Application.builder().token(bot_token).build()
 
+
+
     # Add handlers
-    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("orders", orders))
+    application.add_handler(CommandHandler("admin", admin_panel_command))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(button_click)],
+        entry_points=[
+            CommandHandler("start", start),
+            CallbackQueryHandler(button_click)
+        ],
         states={
             "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
             "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
@@ -744,7 +973,7 @@ if __name__ == '__main__':
         time.tzset()
     except AttributeError:
         pass  # للتوافق مع أنظمة Windows
-        
+
     # Initialize database
     init_db()
 
