@@ -24,52 +24,23 @@ app = Flask(__name__)
 def sync_deployed_db():
     """مزامنة قاعدة البيانات من النسخة المنشورة"""
     try:
-        # البحث عن أحدث نسخة احتياطية
-        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
-        if not backup_folders:
-            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
-            
-        latest_backup = max(backup_folders)
-        backup_db = f'{latest_backup}/store.db'
+        deployed_db = 'store.db'
+        if os.path.exists(deployed_db):
+            return
         
-        if not os.path.exists(backup_db):
-            raise Exception("لم يتم العثور على قاعدة البيانات في النسخة الاحتياطية")
+        backup_db = 'backup_20250407_094844/store.db'
+        if os.path.exists(backup_db):
+            # إغلاق أي اتصالات مفتوحة
+            try:
+                conn = sqlite3.connect('store.db')
+                conn.close()
+            except:
+                pass
 
-        # إغلاق أي اتصالات مفتوحة
-        try:
-            conn = sqlite3.connect('store.db')
-            conn.close()
-        except:
-            pass
-
-        # فتح الاتصال بقواعد البيانات
-        backup_conn = sqlite3.connect(backup_db)
-        local_conn = sqlite3.connect('store.db')
-        
-        # نقل الطلبات الجديدة
-        backup_conn.execute("ATTACH DATABASE 'store.db' AS local")
-        backup_conn.execute("""
-            INSERT OR IGNORE INTO local.orders 
-            SELECT * FROM orders 
-            WHERE id NOT IN (SELECT id FROM local.orders)
-        """)
-        
-        # تحديث حالة الطلبات الموجودة
-        backup_conn.execute("""
-            UPDATE local.orders 
-            SET status = orders.status,
-                note = orders.note,
-                rejection_note = orders.rejection_note
-            FROM orders 
-            WHERE local.orders.id = orders.id
-        """)
-        
-        backup_conn.commit()
-        backup_conn.close()
-        local_conn.close()
-        
-        print(f"تم تحديث الطلبات من النسخة المنشورة: {backup_db}")
-        
+            shutil.copy2(deployed_db, 'store.db')
+            print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
+        else:
+            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
     except Exception as e:
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
@@ -1090,22 +1061,23 @@ def get_db_connection():
     return conn
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    app.run(host='0.0.0.0', port=5000)
 
 def run_bot():
-    try:
-        # Initialize bot
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        if not bot_token:
-            print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
-            return
+    # Initialize bot
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    if not bot_token:
+        print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
+        return
 
-        print("جاري تشغيل البوت...")
-        application = Application.builder().token(bot_token).build()
+    print("جاري تشغيل البوت...")
+    application = Application.builder().token(bot_token).build()
 
-        # Add handlers
-        application.add_handler(CommandHandler("orders", orders))
-        application.add_handler(CommandHandler("admin", admin_panel_command))
+
+
+    # Add handlers
+    application.add_handler(CommandHandler("orders", orders))
+    application.add_handler(CommandHandler("admin", admin_panel_command))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
@@ -1132,7 +1104,6 @@ def run_bot():
 if __name__ == '__main__':
     # ضبط المنطقة الزمنية
     os.environ['TZ'] = 'Asia/Damascus'
-    
     try:
         import time
         time.tzset()
@@ -1142,11 +1113,17 @@ if __name__ == '__main__':
     # Initialize database
     init_db()
 
-    # تشغيل Flask في خلفية البرنامج
-    app.config['TEMPLATES_AUTO_RELOAD'] = True
-    flask_thread = Thread(target=run_flask)
-    flask_thread.daemon = True  # جعل الخيط يتوقف عند إغلاق البرنامج
-    flask_thread.start()
+    # Check if we're running in deployment mode
+    import os
+    is_deployment = os.environ.get('DEPLOYMENT') == 'true'
 
-    # تشغيل البوت
-    run_bot()
+    if is_deployment:
+        # Only run Flask in deployment with production settings
+        app.config['TEMPLATES_AUTO_RELOAD'] = True
+        app.run(host='0.0.0.0', port=5000)
+    else:
+        # Run both Flask and bot in development
+        app.config['TEMPLATES_AUTO_RELOAD'] = True
+        flask_thread = Thread(target=run_flask)
+        flask_thread.start()
+        run_bot()
