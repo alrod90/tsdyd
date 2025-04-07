@@ -783,17 +783,43 @@ def change_order_status():
         c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
                  (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
 
-        # إرسال إشعار للمستخدم
-        status_text = "قيد المعالجة" if new_status == "pending" else "تمت العملية بنجاح" if new_status == "accepted" else "مرفوض"
-        notification_message = f"تم تغيير حالة الطلب رقم {order_id} إلى: {status_text}"
-        if new_status == "rejected" and rejection_note:
-            notification_message += f"\nسبب الرفض: {rejection_note}"
+        # استرجاع معلومات المنتج
+        c.execute('SELECT p.name FROM orders o JOIN products p ON o.product_id = p.id WHERE o.id = ?', (order_id,))
+        product_name = c.fetchone()[0]
+
+        # إعداد رسالة الإشعار
+        if new_status == "accepted":
+            notification_message = f"""✅ تم قبول طلبك!
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري"""
+        elif new_status == "rejected":
+            notification_message = f"""❌ تم رفض طلبك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري"""
+            if rejection_note:
+                notification_message += f"\nسبب الرفض: {rejection_note}"
+        else:
+            notification_message = f"""🕒 تم تحديث حالة طلبك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+الحالة: قيد المعالجة"""
+
         if note:
             notification_message += f"\nملاحظة: {note}"
 
+        # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+        try:
+            asyncio.run(bot.send_message(
+                chat_id=user_id,
+                text=notification_message,
+                parse_mode='HTML'
+            ))
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
 
         conn.commit()
         conn.close()
