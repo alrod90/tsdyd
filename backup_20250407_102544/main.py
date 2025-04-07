@@ -238,14 +238,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
 
-    elif query.data == 'search_order_number':
-        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
-        return "WAITING_ORDER_NUMBER"
-
-    elif query.data == 'search_customer_info':
-        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
-        return "WAITING_SEARCH_CUSTOMER_INFO"
-
     elif query.data.startswith('cancel_order_'):
         order_id = int(query.data.split('_')[2])
         await query.message.edit_text("الرجاء إدخال سبب الإلغاء:")
@@ -704,10 +696,34 @@ def add_balance():
     amount = float(request.form['amount'])
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+
+    # تحديث الرصيد
     c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
               (amount, user_id))
+
+    # الحصول على الرصيد الجديد
+    c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+    new_balance = c.fetchone()[0]
+
     conn.commit()
     conn.close()
+
+    # إرسال إشعار للمستخدم
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    bot = telegram.Bot(token=bot_token)
+    notification_message = f"""💰 تم إضافة رصيد لحسابك
+المبلغ المضاف: {amount} ليرة سوري
+رصيدك الحالي: {new_balance} ليرة سوري"""
+
+    try:
+        asyncio.run(bot.send_message(
+            chat_id=user_id,
+            text=notification_message,
+            parse_mode='HTML'
+        ))
+    except Exception as e:
+        print(f"خطأ في إرسال الإشعار: {str(e)}")
+
     return redirect(url_for('admin_panel'))
 
 @app.route('/edit_user', methods=['POST'])
@@ -717,10 +733,33 @@ def edit_user():
         new_balance = float(request.form['balance'])
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+
+        # الحصول على الرصيد القديم
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+        old_balance = c.fetchone()[0]
+
+        # تحديث الرصيد
         c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
                   (new_balance, user_id))
         conn.commit()
         conn.close()
+
+        # إرسال إشعار للمستخدم
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        notification_message = f"""💰 تم تعديل رصيدك
+الرصيد السابق: {old_balance} ليرة سوري
+الرصيد الجديد: {new_balance} ليرة سوري"""
+
+        try:
+            asyncio.run(bot.send_message(
+                chat_id=user_id,
+                text=notification_message,
+                parse_mode='HTML'
+            ))
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
+
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"Error in edit_user: {str(e)}")
@@ -783,17 +822,48 @@ def change_order_status():
         c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
                  (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
 
-        # إرسال إشعار للمستخدم
-        status_text = "قيد المعالجة" if new_status == "pending" else "تمت العملية بنجاح" if new_status == "accepted" else "مرفوض"
-        notification_message = f"تم تغيير حالة الطلب رقم {order_id} إلى: {status_text}"
-        if new_status == "rejected" and rejection_note:
-            notification_message += f"\nسبب الرفض: {rejection_note}"
+        # استرجاع معلومات المنتج
+        c.execute('SELECT p.name FROM orders o JOIN products p ON o.product_id = p.id WHERE o.id = ?', (order_id,))
+        product_name = c.fetchone()[0]
+
+        # إعداد رسالة الإشعار
+        if new_status == "accepted":
+            notification_message = f"""✅ تم قبول طلبك!
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري"""
+        elif new_status == "rejected":
+            notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ المعاد لرصيدك: {amount} ليرة سوري"""
+            if rejection_note:
+                notification_message += f"\nسبب الرفض: {rejection_note}"
+
+            # إضافة الرصيد الحالي بعد الإعادة
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+            current_balance = c.fetchone()[0]
+            notification_message += f"\n\nرصيدك الحالي: {current_balance} ليرة سوري"
+        else:
+            notification_message = f"""🕒 تم تحديث حالة طلبك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+الحالة: قيد المعالجة"""
+
         if note:
             notification_message += f"\nملاحظة: {note}"
 
+        # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+        try:
+            asyncio.run(bot.send_message(
+                chat_id=user_id,
+                text=notification_message,
+                parse_mode='HTML'
+            ))
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
 
         conn.commit()
         conn.close()
@@ -817,8 +887,14 @@ def handle_order():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        # التحقق من وجود الطلب
-        c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
+        # استرجاع معلومات الطلب والمنتج
+        c.execute('''
+            SELECT o.user_id, o.amount, p.name, u.balance 
+            FROM orders o 
+            JOIN products p ON o.product_id = p.id 
+            JOIN users u ON o.user_id = u.telegram_id 
+            WHERE o.id = ?
+        ''', (order_id,))
         order = c.fetchone()
 
         if not order:
@@ -826,23 +902,55 @@ def handle_order():
                 conn.close()
             return "الطلب غير موجود", 404
 
+        user_id = order[0]
+        amount = order[1]
+        product_name = order[2]
+        current_balance = order[3]
+
         if action == 'reject':
             if not rejection_note and action == 'reject':
                 if conn:
                     conn.close()
                 return "يجب إدخال سبب الرفض", 400
 
-            note = request.form.get('note', '')  # الحصول على الملاحظة الإضافية
+            note = request.form.get('note', '')
 
             # إعادة المبلغ للمستخدم
             c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                    (order[1], order[0]))
+                    (amount, user_id))
             # تحديث حالة الطلب مع الملاحظة
             c.execute('UPDATE orders SET status = ?, rejection_note = ?, note = ? WHERE id = ?',
                     ('rejected', rejection_note, note, order_id))
+
+            # إعداد رسالة الإشعار للرفض
+            notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ المعاد لرصيدك: {amount} ليرة سوري
+سبب الرفض: {rejection_note}
+رصيدك الحالي: {current_balance + amount} ليرة سوري"""
+
         elif action == 'accept':
             c.execute('UPDATE orders SET status = ? WHERE id = ?', 
                     ('accepted', order_id))
+
+            # إعداد رسالة الإشعار للقبول
+            notification_message = f"""✅ تم قبول طلبك!
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري"""
+
+        # إرسال الإشعار للمستخدم
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        try:
+            asyncio.run(bot.send_message(
+                chat_id=user_id,
+                text=notification_message,
+                parse_mode='HTML'
+            ))
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
 
         conn.commit()
         conn.close()
