@@ -12,7 +12,7 @@ requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
-deploymentTarget = "cloudrun"
+deploymentTarget = "gce"
 
 [workflows]
 runButton = "Run"
