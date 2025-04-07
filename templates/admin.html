@@ -22,16 +22,6 @@
             gap: 10px;
         }
         input, select { 
-
-    function validateRejectForm(form) {
-        var note = form.querySelector('textarea[name="rejection_note"]').value;
-        if (!note.trim()) {
-            alert('الرجاء إدخال سبب الرفض');
-            return false;
-        }
-        return true;
-    }
-
             margin: 5px;
             padding: 8px;
             border: 1px solid #ddd;
@@ -105,6 +95,17 @@
         }
         input:checked + .slider:before {
             transform: translateX(26px);
+        }
+        .pagination-controls {
+            margin: 10px 0;
+            text-align: center;
+        }
+        .pagination-controls button {
+            margin: 0 5px;
+            padding: 5px 10px;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -244,9 +245,9 @@
     <div class="section">
         <h2>الطلبات</h2>
         <div class="pagination-controls">
-            <button onclick="prevPage()">السابق</button>
+            <button onclick="prevPage()" class="pagination-button">السابق</button>
             <span id="page-info"></span>
-            <button onclick="nextPage()">التالي</button>
+            <button onclick="nextPage()" class="pagination-button">التالي</button>
         </div>
         <table>
             <tr>
@@ -292,68 +293,63 @@
                     {% else %}
                     <button onclick="showChangeStatusForm('{{ order[0] }}', '{{ order[5] }}', '{{ order[7] }}')" style="background-color: #2196F3;">تغيير الحالة</button>
                     {% endif %}
-                    
+
                 </td>
             </tr>
             {% endfor %}
         </table>
     </div>
 
-    <style>
-        .pagination-controls {
-            margin: 10px 0;
-            text-align: center;
-        }
-        .pagination-controls button {
-            margin: 0 5px;
-            padding: 5px 10px;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
     <script>
         let currentPage = 1;
         const rowsPerPage = 10;
-        
+
         function showPage(page) {
             const table = document.querySelector('.section:last-child table');
-            const rows = Array.from(table.querySelectorAll('tr')).slice(1); // Skip header row
-            
+            const rows = Array.from(table.querySelectorAll('tr')).slice(1); // تخطي صف العناوين
+
+            const startIndex = (page - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+
             rows.forEach((row, index) => {
-                if (index >= (page - 1) * rowsPerPage && index < page * rowsPerPage) {
+                if (index >= startIndex && index < endIndex) {
                     row.classList.remove('hidden');
                 } else {
                     row.classList.add('hidden');
                 }
             });
-            
-            document.getElementById('page-info').textContent = `صفحة ${page} من ${Math.ceil(rows.length / rowsPerPage)}`;
+
+            const totalPages = Math.ceil(rows.length / rowsPerPage);
+            document.getElementById('page-info').textContent = `صفحة ${page} من ${totalPages}`;
+
+            // تفعيل/تعطيل أزرار التنقل
+            document.querySelector('button[onclick="prevPage()"]').disabled = page === 1;
+            document.querySelector('button[onclick="nextPage()"]').disabled = page === totalPages;
         }
-        
+
         function nextPage() {
             const table = document.querySelector('.section:last-child table');
             const rows = Array.from(table.querySelectorAll('tr')).slice(1);
             const maxPage = Math.ceil(rows.length / rowsPerPage);
-            
+
             if (currentPage < maxPage) {
                 currentPage++;
                 showPage(currentPage);
             }
         }
-        
+
         function prevPage() {
             if (currentPage > 1) {
                 currentPage--;
                 showPage(currentPage);
             }
         }
-        
+
         // تشغيل نظام الصفحات عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', () => {
             showPage(1);
         });
-        
+
         // تحديث الصفحة تلقائياً كل 30 ثانية
         function autoRefresh() {
             fetch(window.location.href)
@@ -361,14 +357,14 @@
                 .then(html => {
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
-                    
+
                     // تحديث جدول الطلبات
                     const currentOrders = document.querySelector('.section:last-child table');
                     const newOrders = doc.querySelector('.section:last-child table');
                     if (currentOrders && newOrders) {
                         currentOrders.innerHTML = newOrders.innerHTML;
                     }
-                    
+
                     // تحديث جدول المستخدمين
                     const currentUsers = document.querySelector('.section:nth-last-child(2) table');
                     const newUsers = doc.querySelector('.section:nth-last-child(2) table');
@@ -377,7 +373,7 @@
                     }
                 });
         }
-        
+
         // تشغيل التحديث التلقائي
         setInterval(autoRefresh, 30000);
 
@@ -449,15 +445,6 @@
     return true;
 }
 
-function validateRejectForm(form) {
-        var rejectionNote = form.querySelector('[name="rejection_note"]').value;
-        if (!rejectionNote.trim()) {
-            alert('الرجاء إدخال سبب الرفض');
-            return false;
-        }
-        return true;
-    }
-
     function showRejectForm(orderId) {
             var modal = document.createElement('div');
             modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
@@ -488,7 +475,7 @@ function validateRejectForm(form) {
 
         var content = document.createElement('div');
         content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
-        
+
         content.innerHTML = `
             <h3>تغيير حالة الطلب</h3>
             <form action="/change_order_status" method="post" onsubmit="return validateStatusChange(this);">
