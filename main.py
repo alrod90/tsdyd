@@ -24,7 +24,7 @@ app = Flask(__name__)
 def sync_deployed_db():
     """مزامنة قاعدة البيانات من النسخة المنشورة"""
     try:
-        deployed_db = 'backup_20250406_114149/store.db'
+        deployed_db = 'backup_20250407_094844/store.db'
         if os.path.exists(deployed_db):
             # إغلاق أي اتصالات مفتوحة
             try:
@@ -41,7 +41,7 @@ def sync_deployed_db():
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
 def init_db():
-    deployed_db = 'backup_20250406_114149/store.db'
+    deployed_db = 'backup_20250407_094844/store.db'
     if not os.path.exists(deployed_db):
         raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
 
@@ -901,7 +901,7 @@ def edit_order_amount():
 
         # إرسال إشعار للمستخدم
         notification_message = f"تم تعديل مبلغ الطلب رقم {order_id}\nالمبلغ الجديد: {new_amount} ليرة سوري"
-        
+
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
         asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
@@ -937,7 +937,7 @@ def delete_order():
     return redirect(url_for('admin_panel'))
 
 def get_db_connection():
-    deployed_db = 'backup_20250406_114149/store.db'
+    deployed_db = 'backup_20250407_094844/store.db'
     if not os.path.exists(deployed_db):
         raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
     conn = sqlite3.connect(deployed_db)
