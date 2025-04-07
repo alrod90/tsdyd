@@ -253,7 +253,22 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return "WAITING_CANCEL_REASON"
 
     elif query.data == 'back':
-        await start(query, context)
+        keyboard = [
+            [
+                InlineKeyboardButton("إنترنت", callback_data='cat_internet'),
+                InlineKeyboardButton("جوال", callback_data='cat_mobile'),
+                InlineKeyboardButton("خط أرضي", callback_data='cat_landline')
+            ],
+            [
+                InlineKeyboardButton("البنوك", callback_data='cat_banks')
+            ],
+            [
+                InlineKeyboardButton("رصيدي", callback_data='balance'),
+                InlineKeyboardButton("طلباتي", callback_data='my_orders')
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
 
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
