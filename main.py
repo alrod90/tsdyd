@@ -1035,19 +1035,28 @@ def edit_order_amount():
 def get_db_connection():
     """إنشاء اتصال بقاعدة البيانات مع الحفاظ على البيانات"""
     try:
-        # التحقق من وجود قاعدة البيانات المحلية
-        if not os.path.exists('store.db'):
-            # إذا لم تكن موجودة، ابحث عن النسخة المنشورة
-            backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
-            if backup_folders:
-                latest_backup = max(backup_folders)
-                deployed_db = f'{latest_backup}/store.db'
-                if os.path.exists(deployed_db):
-                    shutil.copy2(deployed_db, 'store.db')
-                    print(f"تم إنشاء قاعدة البيانات من النسخة المنشورة: {deployed_db}")
-
+        # استخدم قاعدة البيانات المحلية إذا كانت موجودة
+        if os.path.exists('store.db'):
+            conn = sqlite3.connect('store.db')
+            conn.execute("PRAGMA timezone = '+03:00'")
+            return conn
+            
+        # إذا لم تكن موجودة، قم بإنشاء قاعدة بيانات جديدة
         conn = sqlite3.connect('store.db')
         conn.execute("PRAGMA timezone = '+03:00'")
+        
+        # إنشاء الجداول الأساسية
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS products 
+                     (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS users
+                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
+                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS orders
+                     (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
+                      customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+        conn.commit()
         return conn
     except Exception as e:
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
