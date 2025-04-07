@@ -1,127 +1,92 @@
-
 import sqlite3
 import json
 import os
 from datetime import datetime
 import shutil
 
-def sync_from_deployed():
-    """مزامنة البيانات بين النسخة المحلية والمنشورة"""
+def merge_databases(source_db, target_db):
+    """دمج قاعدتي بيانات مع الحفاظ على البيانات الموجودة"""
     try:
-        import sqlite3
-        import json
-        import os
-        from datetime import datetime
-        import shutil
+        source_conn = sqlite3.connect(source_db)
+        target_conn = sqlite3.connect(target_db)
 
-        # إغلاق أي اتصالات مفتوحة
-        try:
-            conn = sqlite3.connect('store.db')
-            conn.close()
-        except:
-            pass
+        # نسخ البيانات الجديدة مع تجنب التكرار
+        target_conn.execute("ATTACH DATABASE ? AS source", (source_db,))
 
-        # حفظ نسخة احتياطية من قاعدة البيانات الحالية
-        if os.path.exists('store.db'):
-            backup_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-            os.makedirs('local_backups', exist_ok=True)
-            shutil.copy2('store.db', f'local_backups/store_backup_{backup_time}.db')
-            print(f"تم حفظ نسخة احتياطية: store_backup_{backup_time}.db")
+        # دمج المنتجات
+        target_conn.execute("""
+            INSERT OR IGNORE INTO main.products 
+            SELECT * FROM source.products
+        """)
 
-        # البحث عن أحدث نسخة في مجلد النسخ الاحتياطية
-        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
-        if not backup_folders:
-            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
-            
-        latest_backup = max(backup_folders)
-        deployed_db = f'{latest_backup}/store.db'
-        
-        if not os.path.exists(deployed_db):
-            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-            
-        # فتح الاتصال بقواعد البيانات
-        deployed_conn = sqlite3.connect(deployed_db)
-        local_conn = sqlite3.connect('store.db')
-        
-        # دمج المنتجات الجديدة
-        deployed_conn.execute("ATTACH DATABASE 'store.db' AS local")
-        deployed_conn.execute("""
-            INSERT OR IGNORE INTO local.products 
-            SELECT * FROM products 
-            WHERE id NOT IN (SELECT id FROM local.products)
+        # دمج المستخدمين مع تحديث الأرصدة
+        target_conn.execute("""
+            INSERT OR IGNORE INTO main.users 
+            SELECT * FROM source.users
         """)
-        
-        # دمج المستخدمين الجدد
-        deployed_conn.execute("""
-            INSERT OR IGNORE INTO local.users 
-            SELECT * FROM users 
-            WHERE telegram_id NOT IN (SELECT telegram_id FROM local.users)
+
+        # دمج الطلبات الجديدة فقط
+        target_conn.execute("""
+            INSERT OR IGNORE INTO main.orders 
+            SELECT * FROM source.orders
         """)
-        
-        # دمج الطلبات الجديدة
-        deployed_conn.execute("""
-            INSERT OR IGNORE INTO local.orders 
-            SELECT * FROM orders 
-            WHERE id NOT IN (SELECT id FROM local.orders)
-        """)
-        
-        # نقل بيانات المنتجات
-        deployed_conn.execute("ATTACH DATABASE 'store.db' AS local")
-        deployed_conn.execute("INSERT OR REPLACE INTO local.products SELECT * FROM products")
-        
-        # نقل بيانات المستخدمين
-        deployed_conn.execute("INSERT OR REPLACE INTO local.users SELECT * FROM users")
-        
-        # نقل بيانات الطلبات
-        deployed_conn.execute("INSERT OR REPLACE INTO local.orders SELECT * FROM orders")
-        
-        deployed_conn.commit()
-        deployed_conn.close()
-        local_conn.close()
-        
-        print(f"تم نقل جميع البيانات من النسخة المنشورة: {deployed_db}")
-        
+
+        target_conn.commit()
+        target_conn.close()
+        source_conn.close()
+        print("تم دمج قواعد البيانات بنجاح")
     except Exception as e:
-        print(f"حدث خطأ أثناء التحديث: {str(e)}")
+        print(f"خطأ في دمج قواعد البيانات: {str(e)}")
 
 def create_backup():
+    """إنشاء نسخة احتياطية مع دمج البيانات"""
     # إنشاء مجلد للنسخ الاحتياطي
     backup_dir = "backup_" + datetime.now().strftime("%Y%m%d_%H%M%S")
     os.makedirs(backup_dir, exist_ok=True)
-    
-    # نسخ قاعدة البيانات
-    conn = sqlite3.connect('store.db')
-    backup_conn = sqlite3.connect(f'{backup_dir}/store.db')
-    conn.backup(backup_conn)
-    conn.close()
-    backup_conn.close()
-    
-    # نسخ الملفات
+
+    # البحث عن آخر نسخة احتياطية
+    backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+    if backup_folders:
+        latest_backup = max(backup_folders)
+        old_db = f'{latest_backup}/store.db'
+        if os.path.exists(old_db):
+            # نسخ قاعدة البيانات القديمة أولاً
+            shutil.copy2(old_db, f'{backup_dir}/store.db')
+            # دمج البيانات الجديدة
+            merge_databases('store.db', f'{backup_dir}/store.db')
+        else:
+            shutil.copy2('store.db', f'{backup_dir}/store.db')
+    else:
+        shutil.copy2('store.db', f'{backup_dir}/store.db')
+
+    # نسخ الملفات الأخرى
     files_to_backup = ['main.py', 'templates/admin.html', 'templates/login.html']
     for file in files_to_backup:
         if os.path.exists(file):
             os.makedirs(os.path.dirname(f'{backup_dir}/{file}'), exist_ok=True)
             shutil.copy2(file, f'{backup_dir}/{file}')
-    
+
     print(f"تم إنشاء النسخة الاحتياطية في المجلد: {backup_dir}")
 
-def auto_sync():
-    """مزامنة تلقائية كل 30 ثانية"""
-    while True:
-        try:
-            sync_from_deployed()
-            time.sleep(30)  # انتظار 30 ثانية
-        except Exception as e:
-            print(f"خطأ في المزامنة التلقائية: {str(e)}")
-            time.sleep(30)  # انتظار 30 ثانية في حالة الخطأ
+def sync_from_deployed():
+    """مزامنة البيانات من النسخة المنشورة"""
+    try:
+        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+        if not backup_folders:
+            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
+
+        latest_backup = max(backup_folders)
+        deployed_db = f'{latest_backup}/store.db'
+
+        if not os.path.exists(deployed_db):
+            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+
+        # دمج البيانات بدلاً من النسخ المباشر
+        merge_databases(deployed_db, 'store.db')
+        print(f"تم مزامنة البيانات من النسخة المنشورة: {deployed_db}")
+
+    except Exception as e:
+        print(f"خطأ في مزامنة البيانات: {str(e)}")
 
 if __name__ == "__main__":
-    import threading
-    import time
-    
-    # بدء المزامنة التلقائية في خلفية البرنامج
-    sync_thread = threading.Thread(target=auto_sync, daemon=True)
-    sync_thread.start()
-    
-    # إنشاء النسخة الاحتياطية
     create_backup()
