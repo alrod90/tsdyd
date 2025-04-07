@@ -1104,8 +1104,8 @@ def run_bot():
         application = Application.builder().token(bot_token).build()
 
         # Add handlers
-    application.add_handler(CommandHandler("orders", orders))
-    application.add_handler(CommandHandler("admin", admin_panel_command))
+        application.add_handler(CommandHandler("orders", orders))
+        application.add_handler(CommandHandler("admin", admin_panel_command))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
