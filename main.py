@@ -253,14 +253,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return "WAITING_CANCEL_REASON"
 
     elif query.data == 'back':
-        keyboard = [
-            [InlineKeyboardButton("إنترنت", callback_data='cat_internet')],
-            [InlineKeyboardButton("جوال", callback_data='cat_mobile')],
-            [InlineKeyboardButton("خط أرضي", callback_data='cat_landline')],
-            [InlineKeyboardButton("رصيدي", callback_data='balance')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text('اختر القسم:', reply_markup=reply_markup)
+        await start(query, context)
 
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
