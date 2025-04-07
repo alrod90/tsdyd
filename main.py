@@ -355,14 +355,15 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 رقم الطلب: {order[0]}
 الشركة: {order[1]}
 المبلغ: {order[2]} ليرة سوري
-الحالة: {status_text}"""
+الحالة: {status_text}
+بيانات الزبون: {order[4]}
+التاريخ: {order[5]}"""
 
                 if order[3] == "rejected" and order[7]:  # إضافة سبب الرفض
                     message += f"\nسبب الرفض: {order[7]}"
-
-                message += f"""
-بيانات الزبون: {order[4]}
-التاريخ: {order[5]}"""
+                
+                if order[6]:  # إضافة الملاحظة إذا وجدت
+                    message += f"\nملاحظة: {order[6]}"
 
                 # إضافة معرف التيليجرام فقط للمدير
                 if is_admin:
