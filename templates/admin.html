@@ -262,7 +262,17 @@
                 <td>{{ order[2] }}</td>
                 <td>{{ order[3] }}</td>
                 <td>{{ order[4] }}</td>
-                <td>{{ order[5] }}</td>
+                <td>
+                    {% if order[5] == 'pending' %}
+                        قيد المعالجة
+                    {% elif order[5] == 'accepted' %}
+                        مقبول
+                    {% elif order[5] == 'rejected' %}
+                        مرفوض
+                    {% else %}
+                        {{ order[5] }}
+                    {% endif %}
+                </td>
                 <td>{{ order[6] }}</td>
                 <td>{{ order[7] }}</td>
                 <td>
