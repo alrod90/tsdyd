@@ -848,8 +848,14 @@ def handle_order():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        # التحقق من وجود الطلب
-        c.execute('SELECT user_id, amount FROM orders WHERE id = ?', (order_id,))
+        # استرجاع معلومات الطلب والمنتج
+        c.execute('''
+            SELECT o.user_id, o.amount, p.name, u.balance 
+            FROM orders o 
+            JOIN products p ON o.product_id = p.id 
+            JOIN users u ON o.user_id = u.telegram_id 
+            WHERE o.id = ?
+        ''', (order_id,))
         order = c.fetchone()
 
         if not order:
@@ -857,23 +863,55 @@ def handle_order():
                 conn.close()
             return "الطلب غير موجود", 404
 
+        user_id = order[0]
+        amount = order[1]
+        product_name = order[2]
+        current_balance = order[3]
+
         if action == 'reject':
             if not rejection_note and action == 'reject':
                 if conn:
                     conn.close()
                 return "يجب إدخال سبب الرفض", 400
 
-            note = request.form.get('note', '')  # الحصول على الملاحظة الإضافية
+            note = request.form.get('note', '')
 
             # إعادة المبلغ للمستخدم
             c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                    (order[1], order[0]))
+                    (amount, user_id))
             # تحديث حالة الطلب مع الملاحظة
             c.execute('UPDATE orders SET status = ?, rejection_note = ?, note = ? WHERE id = ?',
                     ('rejected', rejection_note, note, order_id))
+
+            # إعداد رسالة الإشعار للرفض
+            notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ المعاد لرصيدك: {amount} ليرة سوري
+سبب الرفض: {rejection_note}
+رصيدك الحالي: {current_balance + amount} ليرة سوري"""
+
         elif action == 'accept':
             c.execute('UPDATE orders SET status = ? WHERE id = ?', 
                     ('accepted', order_id))
+
+            # إعداد رسالة الإشعار للقبول
+            notification_message = f"""✅ تم قبول طلبك!
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري"""
+
+        # إرسال الإشعار للمستخدم
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        try:
+            asyncio.run(bot.send_message(
+                chat_id=user_id,
+                text=notification_message,
+                parse_mode='HTML'
+            ))
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
 
         conn.commit()
         conn.close()
