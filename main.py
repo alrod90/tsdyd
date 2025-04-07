@@ -361,7 +361,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 
                 if order[3] == "rejected" and order[7]:  # إضافة سبب الرفض
                     message += f"\nسبب الرفض: {order[7]}"
-                
+
                 if order[6]:  # إضافة الملاحظة إذا وجدت
                     message += f"\nملاحظة: {order[6]}"
 
@@ -374,9 +374,12 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await update.message.reply_text(message, reply_markup=reply_markup)
             else:
-                keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
+                keyboard = [
+                    [InlineKeyboardButton("التأكد من البيانات", callback_data='search_order_number')],
+                    [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
+                ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                await update.message.reply_text("لم يتم العثور على الطلب", reply_markup=reply_markup)
+                await update.message.reply_text("لم يتم العثور على الطلب. هل تريد إدخال رقم طلب آخر؟", reply_markup=reply_markup)
         finally:
             conn.close()
     except ValueError:
@@ -688,7 +691,7 @@ def send_notification_route():
                 try:
                     bot.send_message(chat_id=user[0], text=message)
                 except Exception as e:
-                    print(f"Error sending message to {user[0]}: {e}")
+                    print(f"Error sending messageto {user[0]}: {e}")
     except Exception as e:
         print(f"Error sending notification: {e}")
 
