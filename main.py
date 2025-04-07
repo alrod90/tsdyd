@@ -1090,17 +1090,18 @@ def get_db_connection():
     return conn
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, threaded=True)
 
 def run_bot():
-    # Initialize bot
-    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    if not bot_token:
-        print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
-        return
+    try:
+        # Initialize bot
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
+            return
 
-    print("جاري تشغيل البوت...")
-    application = Application.builder().token(bot_token).build()
+        print("جاري تشغيل البوت...")
+        application = Application.builder().token(bot_token).build()
 
 
 
@@ -1134,8 +1135,6 @@ if __name__ == '__main__':
     # ضبط المنطقة الزمنية
     os.environ['TZ'] = 'Asia/Damascus'
     
-    # مزامنة قاعدة البيانات من النسخة المنشورة
-    sync_deployed_db()
     try:
         import time
         time.tzset()
@@ -1145,17 +1144,11 @@ if __name__ == '__main__':
     # Initialize database
     init_db()
 
-    # Check if we're running in deployment mode
-    import os
-    is_deployment = os.environ.get('DEPLOYMENT') == 'true'
+    # تشغيل Flask في خلفية البرنامج
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    flask_thread = Thread(target=run_flask)
+    flask_thread.daemon = True  # جعل الخيط يتوقف عند إغلاق البرنامج
+    flask_thread.start()
 
-    if is_deployment:
-        # Only run Flask in deployment with production settings
-        app.config['TEMPLATES_AUTO_RELOAD'] = True
-        app.run(host='0.0.0.0', port=5000)
-    else:
-        # Run both Flask and bot in development
-        app.config['TEMPLATES_AUTO_RELOAD'] = True
-        flask_thread = Thread(target=run_flask)
-        flask_thread.start()
-        run_bot()
+    # تشغيل البوت
+    run_bot()
