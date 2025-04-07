@@ -238,14 +238,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
 
-    elif query.data == 'search_order_number':
-        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
-        return "WAITING_ORDER_NUMBER"
-
-    elif query.data == 'search_customer_info':
-        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
-        return "WAITING_SEARCH_CUSTOMER_INFO"
-
     elif query.data.startswith('cancel_order_'):
         order_id = int(query.data.split('_')[2])
         await query.message.edit_text("الرجاء إدخال سبب الإلغاء:")
@@ -704,10 +696,34 @@ def add_balance():
     amount = float(request.form['amount'])
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+
+    # تحديث الرصيد
     c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
               (amount, user_id))
+
+    # الحصول على الرصيد الجديد
+    c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+    new_balance = c.fetchone()[0]
+
     conn.commit()
     conn.close()
+
+    # إرسال إشعار للمستخدم
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    bot = telegram.Bot(token=bot_token)
+    notification_message = f"""💰 تم إضافة رصيد لحسابك
+المبلغ المضاف: {amount} ليرة سوري
+رصيدك الحالي: {new_balance} ليرة سوري"""
+
+    try:
+        asyncio.run(bot.send_message(
+            chat_id=user_id,
+            text=notification_message,
+            parse_mode='HTML'
+        ))
+    except Exception as e:
+        print(f"خطأ في إرسال الإشعار: {str(e)}")
+
     return redirect(url_for('admin_panel'))
 
 @app.route('/edit_user', methods=['POST'])
@@ -717,10 +733,33 @@ def edit_user():
         new_balance = float(request.form['balance'])
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+
+        # الحصول على الرصيد القديم
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+        old_balance = c.fetchone()[0]
+
+        # تحديث الرصيد
         c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
                   (new_balance, user_id))
         conn.commit()
         conn.close()
+
+        # إرسال إشعار للمستخدم
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        notification_message = f"""💰 تم تعديل رصيدك
+الرصيد السابق: {old_balance} ليرة سوري
+الرصيد الجديد: {new_balance} ليرة سوري"""
+
+        try:
+            asyncio.run(bot.send_message(
+                chat_id=user_id,
+                text=notification_message,
+                parse_mode='HTML'
+            ))
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
+
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"Error in edit_user: {str(e)}")
@@ -800,7 +839,7 @@ def change_order_status():
 المبلغ المعاد لرصيدك: {amount} ليرة سوري"""
             if rejection_note:
                 notification_message += f"\nسبب الرفض: {rejection_note}"
-            
+
             # إضافة الرصيد الحالي بعد الإعادة
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
             current_balance = c.fetchone()[0]
