@@ -727,15 +727,27 @@ def change_order_status():
             conn.close()
             return "الطلب غير موجود", 404
 
-        # إذا كان التغيير من مقبول إلى مرفوض، نعيد المبلغ للمستخدم
-        if current_order[0] == 'accepted' and new_status == 'rejected':
-            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                     (current_order[2], current_order[1]))
+        current_status = current_order[0]
+        user_id = current_order[1]
+        amount = current_order[2]
 
-        # إذا كان التغيير من مرفوض إلى مقبول، نخصم المبلغ من المستخدم
-        elif current_order[0] == 'rejected' and new_status == 'accepted':
+        # التحقق من رصيد المستخدم عند التغيير من مرفوض/معلق إلى مقبول
+        if new_status == 'accepted' and current_status != 'accepted':
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+            user_balance = c.fetchone()[0]
+            if user_balance < amount:
+                conn.close()
+                return "رصيد المستخدم غير كافي لقبول الطلب", 400
+
+        # معالجة الرصيد بناءً على التغيير في الحالة
+        if current_status == 'accepted' and new_status != 'accepted':
+            # إعادة المبلغ عند تغيير الحالة من مقبول إلى مرفوض أو معلق
+            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                     (amount, user_id))
+        elif current_status != 'accepted' and new_status == 'accepted':
+            # خصم المبلغ عند تغيير الحالة من مرفوض أو معلق إلى مقبول
             c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
-                     (current_order[2], current_order[1]))
+                     (amount, user_id))
 
         # تحديث حالة الطلب
         c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
