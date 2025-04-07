@@ -1063,7 +1063,7 @@ def get_db_connection():
         return sqlite3.connect('store.db')
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=False)
 
 def run_bot():
     # Initialize bot
