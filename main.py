@@ -238,6 +238,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
 
+    elif query.data == 'search_order_number':
+        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
+        return "WAITING_ORDER_NUMBER"
+
+    elif query.data == 'search_customer_info':
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_SEARCH_CUSTOMER_INFO"
+
     elif query.data.startswith('cancel_order_'):
         order_id = int(query.data.split('_')[2])
         await query.message.edit_text("الرجاء إدخال سبب الإلغاء:")
