@@ -34,7 +34,7 @@ def sync_deployed_db():
         
         if not os.path.exists(backup_db):
             raise Exception("لم يتم العثور على قاعدة البيانات في النسخة الاحتياطية")
-            
+
         # إغلاق أي اتصالات مفتوحة
         try:
             conn = sqlite3.connect('store.db')
@@ -42,9 +42,33 @@ def sync_deployed_db():
         except:
             pass
 
-        # نسخ قاعدة البيانات من النسخة الاحتياطية
-        shutil.copy2(backup_db, 'store.db')
-        print(f"تم تحديث قاعدة البيانات من النسخة الاحتياطية: {backup_db}")
+        # فتح الاتصال بقواعد البيانات
+        backup_conn = sqlite3.connect(backup_db)
+        local_conn = sqlite3.connect('store.db')
+        
+        # نقل الطلبات الجديدة
+        backup_conn.execute("ATTACH DATABASE 'store.db' AS local")
+        backup_conn.execute("""
+            INSERT OR IGNORE INTO local.orders 
+            SELECT * FROM orders 
+            WHERE id NOT IN (SELECT id FROM local.orders)
+        """)
+        
+        # تحديث حالة الطلبات الموجودة
+        backup_conn.execute("""
+            UPDATE local.orders 
+            SET status = orders.status,
+                note = orders.note,
+                rejection_note = orders.rejection_note
+            FROM orders 
+            WHERE local.orders.id = orders.id
+        """)
+        
+        backup_conn.commit()
+        backup_conn.close()
+        local_conn.close()
+        
+        print(f"تم تحديث الطلبات من النسخة المنشورة: {backup_db}")
         
     except Exception as e:
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
