@@ -794,12 +794,17 @@ def change_order_status():
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري"""
         elif new_status == "rejected":
-            notification_message = f"""❌ تم رفض طلبك
+            notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
 رقم الطلب: {order_id}
 الشركة: {product_name}
-المبلغ: {amount} ليرة سوري"""
+المبلغ المعاد لرصيدك: {amount} ليرة سوري"""
             if rejection_note:
                 notification_message += f"\nسبب الرفض: {rejection_note}"
+            
+            # إضافة الرصيد الحالي بعد الإعادة
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+            current_balance = c.fetchone()[0]
+            notification_message += f"\n\nرصيدك الحالي: {current_balance} ليرة سوري"
         else:
             notification_message = f"""🕒 تم تحديث حالة طلبك
 رقم الطلب: {order_id}
