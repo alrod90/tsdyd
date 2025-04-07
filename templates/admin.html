@@ -253,7 +253,6 @@
                 <th>الحالة</th>
                 <th>التاريخ</th>
                 <th>ملاحظة</th>
-                <th>سبب الرفض</th>
                 <th>الإجراءات</th>
             </tr>
             {% for order in orders %}
@@ -276,7 +275,6 @@
                 </td>
                 <td>{{ order[6] }}</td>
                 <td>{{ order[7] if order[7] else '' }}</td>
-                <td>{{ order[6] if order[5] == 'rejected' and order[6] else '' }}</td>
                 <td>
                     <button onclick="showEditAmountForm('{{ order[0] }}', '{{ order[3] }}')" style="background-color: #FF9800; margin-right: 5px;">تعديل المبلغ</button>
                     {% if order[5] == 'pending' %}
