@@ -1033,23 +1033,19 @@ def edit_order_amount():
 # تم إزالة وظيفة حذف الطلبات لمنع حذف أي طلب
 
 def get_db_connection():
-    """إنشاء اتصال بقاعدة البيانات مع المزامنة التلقائية"""
+    """إنشاء اتصال بقاعدة البيانات مع الحفاظ على البيانات"""
     try:
-        # البحث عن أحدث نسخة احتياطية
-        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
-        if not backup_folders:
-            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
-            
-        latest_backup = max(backup_folders)
-        deployed_db = f'{latest_backup}/store.db'
-        
-        if not os.path.exists(deployed_db):
-            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+        # التحقق من وجود قاعدة البيانات المحلية
+        if not os.path.exists('store.db'):
+            # إذا لم تكن موجودة، ابحث عن النسخة المنشورة
+            backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+            if backup_folders:
+                latest_backup = max(backup_folders)
+                deployed_db = f'{latest_backup}/store.db'
+                if os.path.exists(deployed_db):
+                    shutil.copy2(deployed_db, 'store.db')
+                    print(f"تم إنشاء قاعدة البيانات من النسخة المنشورة: {deployed_db}")
 
-        # نسخ النسخة المنشورة إلى الملف المحلي
-        shutil.copy2(deployed_db, 'store.db')
-        print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
-        
         conn = sqlite3.connect('store.db')
         conn.execute("PRAGMA timezone = '+03:00'")
         return conn
