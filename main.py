@@ -1033,15 +1033,29 @@ def edit_order_amount():
 # تم إزالة وظيفة حذف الطلبات لمنع حذف أي طلب
 
 def get_db_connection():
-    """إنشاء اتصال بقاعدة البيانات المنشورة فقط"""
-    deployed_db = 'backup_20250407_094844/store.db'
-    if not os.path.exists(deployed_db):
-        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-    # نسخ قاعدة البيانات المنشورة إلى الملف الرئيسي
-    shutil.copy2(deployed_db, 'store.db')
-    conn = sqlite3.connect('store.db')
-    conn.execute("PRAGMA timezone = '+03:00'")
-    return conn
+    """إنشاء اتصال بقاعدة البيانات مع المزامنة التلقائية"""
+    try:
+        # البحث عن أحدث نسخة احتياطية
+        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+        if not backup_folders:
+            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
+            
+        latest_backup = max(backup_folders)
+        deployed_db = f'{latest_backup}/store.db'
+        
+        if not os.path.exists(deployed_db):
+            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+
+        # نسخ النسخة المنشورة إلى الملف المحلي
+        shutil.copy2(deployed_db, 'store.db')
+        print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
+        
+        conn = sqlite3.connect('store.db')
+        conn.execute("PRAGMA timezone = '+03:00'")
+        return conn
+    except Exception as e:
+        print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
+        return sqlite3.connect('store.db')
 
 def run_flask():
     app.run(host='0.0.0.0', port=5000)
