@@ -1103,9 +1103,7 @@ def run_bot():
         print("جاري تشغيل البوت...")
         application = Application.builder().token(bot_token).build()
 
-
-
-    # Add handlers
+        # Add handlers
     application.add_handler(CommandHandler("orders", orders))
     application.add_handler(CommandHandler("admin", admin_panel_command))
 
