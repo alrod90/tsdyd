@@ -243,6 +243,11 @@
 
     <div class="section">
         <h2>الطلبات</h2>
+        <div class="pagination-controls">
+            <button onclick="prevPage()">السابق</button>
+            <span id="page-info"></span>
+            <button onclick="nextPage()">التالي</button>
+        </div>
         <table>
             <tr>
                 <th>رقم الطلب</th>
@@ -294,7 +299,61 @@
         </table>
     </div>
 
+    <style>
+        .pagination-controls {
+            margin: 10px 0;
+            text-align: center;
+        }
+        .pagination-controls button {
+            margin: 0 5px;
+            padding: 5px 10px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
     <script>
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        
+        function showPage(page) {
+            const table = document.querySelector('.section:last-child table');
+            const rows = Array.from(table.querySelectorAll('tr')).slice(1); // Skip header row
+            
+            rows.forEach((row, index) => {
+                if (index >= (page - 1) * rowsPerPage && index < page * rowsPerPage) {
+                    row.classList.remove('hidden');
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+            
+            document.getElementById('page-info').textContent = `صفحة ${page} من ${Math.ceil(rows.length / rowsPerPage)}`;
+        }
+        
+        function nextPage() {
+            const table = document.querySelector('.section:last-child table');
+            const rows = Array.from(table.querySelectorAll('tr')).slice(1);
+            const maxPage = Math.ceil(rows.length / rowsPerPage);
+            
+            if (currentPage < maxPage) {
+                currentPage++;
+                showPage(currentPage);
+            }
+        }
+        
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                showPage(currentPage);
+            }
+        }
+        
+        // تشغيل نظام الصفحات عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', () => {
+            showPage(1);
+        });
+        
         // تحديث الصفحة تلقائياً كل 30 ثانية
         function autoRefresh() {
             fetch(window.location.href)
