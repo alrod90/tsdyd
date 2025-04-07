@@ -403,28 +403,27 @@
 
         var content = document.createElement('div');
         content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
-
-        var newStatus = currentStatus === 'accepted' ? 'rejected' : 'accepted';
         
         content.innerHTML = `
             <h3>تغيير حالة الطلب</h3>
             <form action="/change_order_status" method="post" onsubmit="return validateStatusChange(this);">
                 <input type="hidden" name="order_id" value="${orderId}">
-                <input type="hidden" name="new_status" value="${newStatus}">
                 <div style="margin: 10px 0;">
                     <label>الحالة الجديدة:</label>
-                    <strong>${newStatus === 'accepted' ? 'مقبول' : 'مرفوض'}</strong>
+                    <select name="new_status" onchange="toggleRejectionNote(this)" style="width: 100%; padding: 8px; margin-top: 5px;">
+                        <option value="pending" ${currentStatus === 'pending' ? 'selected' : ''}>قيد المعالجة</option>
+                        <option value="accepted" ${currentStatus === 'accepted' ? 'selected' : ''}>مقبول</option>
+                        <option value="rejected" ${currentStatus === 'rejected' ? 'selected' : ''}>مرفوض</option>
+                    </select>
                 </div>
                 <div style="margin: 10px 0;">
                     <label>ملاحظة:</label>
                     <textarea name="note" style="width: 100%; height: 100px;">${note || ''}</textarea>
                 </div>
-                ${newStatus === 'rejected' ? `
-                <div style="margin: 10px 0;">
+                <div id="rejectionNoteDiv" style="margin: 10px 0; display: none;">
                     <label>سبب الرفض:</label>
-                    <textarea name="rejection_note" style="width: 100%; height: 100px;" required></textarea>
+                    <textarea name="rejection_note" style="width: 100%; height: 100px;"></textarea>
                 </div>
-                ` : ''}
                 <div style="margin-top: 20px;">
                     <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
                     <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
@@ -436,8 +435,20 @@
         document.body.appendChild(modal);
     }
 
+    function toggleRejectionNote(selectElement) {
+        var rejectionNoteDiv = document.getElementById('rejectionNoteDiv');
+        var rejectionNoteTextarea = document.querySelector('textarea[name="rejection_note"]');
+        if (selectElement.value === 'rejected') {
+            rejectionNoteDiv.style.display = 'block';
+            rejectionNoteTextarea.required = true;
+        } else {
+            rejectionNoteDiv.style.display = 'none';
+            rejectionNoteTextarea.required = false;
+        }
+    }
+
     function validateStatusChange(form) {
-        var newStatus = form.querySelector('input[name="new_status"]').value;
+        var newStatus = form.querySelector('select[name="new_status"]').value;
         if (newStatus === 'rejected') {
             var rejectionNote = form.querySelector('textarea[name="rejection_note"]').value;
             if (!rejectionNote.trim()) {
