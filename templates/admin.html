@@ -305,8 +305,10 @@
         const rowsPerPage = 10;
 
         function showPage(page) {
-            const table = document.querySelector('.section:last-child table');
-            const rows = Array.from(table.querySelectorAll('tr')).slice(1); // تخطي صف العناوين
+            const ordersTable = document.querySelector('.section:last-child table');
+            if (!ordersTable) return;
+            
+            const rows = Array.from(ordersTable.getElementsByTagName('tr')).slice(1); // تخطي صف العناوين
 
             const startIndex = (page - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage;
@@ -346,7 +348,7 @@
         }
 
         // تشغيل نظام الصفحات عند تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('load', () => {
             showPage(1);
         });
 
