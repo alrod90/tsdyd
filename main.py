@@ -705,6 +705,50 @@ def toggle_user():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/change_order_status', methods=['POST'])
+def change_order_status():
+    try:
+        order_id = request.form.get('order_id')
+        new_status = request.form.get('new_status')
+        note = request.form.get('note', '')
+        rejection_note = request.form.get('rejection_note', '')
+
+        if not order_id or not new_status:
+            return "بيانات غير صحيحة", 400
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+
+        # استرجاع معلومات الطلب الحالية
+        c.execute('SELECT status, user_id, amount FROM orders WHERE id = ?', (order_id,))
+        current_order = c.fetchone()
+
+        if not current_order:
+            conn.close()
+            return "الطلب غير موجود", 404
+
+        # إذا كان التغيير من مقبول إلى مرفوض، نعيد المبلغ للمستخدم
+        if current_order[0] == 'accepted' and new_status == 'rejected':
+            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                     (current_order[2], current_order[1]))
+
+        # إذا كان التغيير من مرفوض إلى مقبول، نخصم المبلغ من المستخدم
+        elif current_order[0] == 'rejected' and new_status == 'accepted':
+            c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
+                     (current_order[2], current_order[1]))
+
+        # تحديث حالة الطلب
+        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
+                 (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+
+    except Exception as e:
+        print(f"Error in change_order_status: {str(e)}")
+        return f"حدث خطأ في تغيير حالة الطلب: {str(e)}", 500
+
 @app.route('/handle_order', methods=['POST'])
 def handle_order():
     conn = None
