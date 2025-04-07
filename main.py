@@ -1110,20 +1110,22 @@ if __name__ == '__main__':
     except AttributeError:
         pass  # للتوافق مع أنظمة Windows
 
-    # Initialize database
+    # تهيئة قاعدة البيانات
     init_db()
 
-    # Check if we're running in deployment mode
-    import os
-    is_deployment = os.environ.get('DEPLOYMENT') == 'true'
-
-    if is_deployment:
-        # Only run Flask in deployment with production settings
-        app.config['TEMPLATES_AUTO_RELOAD'] = True
-        app.run(host='0.0.0.0', port=5000)
-    else:
-        # Run both Flask and bot in development
+    # التحقق من عدم وجود نسخة أخرى من البوت
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(('localhost', 5001))  # منفذ للتحقق فقط
+        
+        # تشغيل التطبيق
         app.config['TEMPLATES_AUTO_RELOAD'] = True
         flask_thread = Thread(target=run_flask)
         flask_thread.start()
         run_bot()
+        
+    except socket.error:
+        print("هناك نسخة أخرى من البوت قيد التشغيل")
+    finally:
+        sock.close()
