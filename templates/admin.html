@@ -276,7 +276,7 @@
                 </td>
                 <td>{{ order[6] }}</td>
                 <td>{{ order[7] if order[7] else '' }}</td>
-                <td>{{ order[8] if order[5] == 'rejected' else '' }}</td>
+                <td>{{ order[5] if order[5] == 'rejected' else '' }}</td>
                 <td>
                     <button onclick="showEditAmountForm('{{ order[0] }}', '{{ order[3] }}')" style="background-color: #FF9800; margin-right: 5px;">تعديل المبلغ</button>
                     {% if order[5] == 'pending' %}
