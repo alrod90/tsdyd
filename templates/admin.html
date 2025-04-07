@@ -244,11 +244,7 @@
 
     <div class="section">
         <h2>الطلبات</h2>
-        <div class="pagination-controls">
-            <button onclick="prevPage()" class="pagination-button">السابق</button>
-            <span id="page-info"></span>
-            <button onclick="nextPage()" class="pagination-button">التالي</button>
-        </div>
+        
         <table>
             <tr>
                 <th>رقم الطلب</th>
@@ -301,56 +297,7 @@
     </div>
 
     <script>
-        let currentPage = 1;
-        const rowsPerPage = 10;
-
-        function showPage(page) {
-            const ordersTable = document.querySelector('.section:last-child table');
-            if (!ordersTable) return;
-            
-            const rows = Array.from(ordersTable.getElementsByTagName('tr')).slice(1); // تخطي صف العناوين
-
-            const startIndex = (page - 1) * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-
-            rows.forEach((row, index) => {
-                if (index >= startIndex && index < endIndex) {
-                    row.classList.remove('hidden');
-                } else {
-                    row.classList.add('hidden');
-                }
-            });
-
-            const totalPages = Math.ceil(rows.length / rowsPerPage);
-            document.getElementById('page-info').textContent = `صفحة ${page} من ${totalPages}`;
-
-            // تفعيل/تعطيل أزرار التنقل
-            document.querySelector('button[onclick="prevPage()"]').disabled = page === 1;
-            document.querySelector('button[onclick="nextPage()"]').disabled = page === totalPages;
-        }
-
-        function nextPage() {
-            const table = document.querySelector('.section:last-child table');
-            const rows = Array.from(table.querySelectorAll('tr')).slice(1);
-            const maxPage = Math.ceil(rows.length / rowsPerPage);
-
-            if (currentPage < maxPage) {
-                currentPage++;
-                showPage(currentPage);
-            }
-        }
-
-        function prevPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                showPage(currentPage);
-            }
-        }
-
-        // تشغيل نظام الصفحات عند تحميل الصفحة
-        window.addEventListener('load', () => {
-            showPage(1);
-        });
+        
 
         // تحديث الصفحة تلقائياً كل 30 ثانية
         function autoRefresh() {
