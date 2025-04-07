@@ -482,7 +482,9 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     await query.answer()
 
     if query.data == 'cancel_purchase':
-        await query.message.edit_text("تم إلغاء العملية.")
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("تم إلغاء العملية.", reply_markup=reply_markup)
         return ConversationHandler.END
 
     conn = sqlite3.connect('store.db')
@@ -532,7 +534,9 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
 """
-    await query.message.edit_text(confirmation_message)
+    keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.message.edit_text(confirmation_message, reply_markup=reply_markup)
     return ConversationHandler.END
 
 # Flask routes
