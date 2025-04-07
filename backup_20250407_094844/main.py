@@ -24,8 +24,12 @@ app = Flask(__name__)
 def sync_deployed_db():
     """مزامنة قاعدة البيانات من النسخة المنشورة"""
     try:
-        deployed_db = 'backup_20250407_094844/store.db'
+        deployed_db = 'store.db'
         if os.path.exists(deployed_db):
+            return
+        
+        backup_db = 'backup_20250407_094844/store.db'
+        if os.path.exists(backup_db):
             # إغلاق أي اتصالات مفتوحة
             try:
                 conn = sqlite3.connect('store.db')
@@ -41,11 +45,7 @@ def sync_deployed_db():
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
 
 def init_db():
-    deployed_db = 'backup_20250407_094844/store.db'
-    if not os.path.exists(deployed_db):
-        raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-
-    conn = sqlite3.connect(deployed_db)
+    conn = sqlite3.connect('store.db')
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
