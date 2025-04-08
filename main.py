@@ -1128,7 +1128,26 @@ if __name__ == '__main__':
     # التحقق من عدم وجود نسخة أخرى من البوت
     import socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
     try:
+        # استخدام ملف قفل لمنع تشغيل نسخ متعددة
+        if os.path.exists('bot.lock'):
+            try:
+                with open('bot.lock', 'r') as f:
+                    pid = int(f.read().strip())
+                try:
+                    os.kill(pid, 0)  # اختبار إذا كانت العملية نشطة
+                    print("هناك نسخة أخرى من البوت قيد التشغيل")
+                    exit(1)
+                except OSError:
+                    pass  # العملية غير موجودة
+            except:
+                pass
+            
+        # تسجيل PID العملية الحالية
+        with open('bot.lock', 'w') as f:
+            f.write(str(os.getpid()))
+            
         sock.bind(('0.0.0.0', 5001))  # منفذ للتحقق فقط
         
         # تشغيل التطبيق
@@ -1140,6 +1159,13 @@ if __name__ == '__main__':
         
     except socket.error:
         print("هناك نسخة أخرى من البوت قيد التشغيل")
-        exit(1)  # إنهاء البرنامج إذا كان هناك نسخة أخرى
+        exit(1)
+    except Exception as e:
+        print(f"خطأ: {str(e)}")
+        if os.path.exists('bot.lock'):
+            os.remove('bot.lock')
+        exit(1)
     finally:
         sock.close()
+        if os.path.exists('bot.lock'):
+            os.remove('bot.lock')
