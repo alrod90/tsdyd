@@ -128,26 +128,32 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("──────────────")
 
 async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
+    try:
+        user_id = update.effective_user.id
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
 
-    # التحقق من صلاحيات المدير
-    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (user_id,))
-    is_admin = c.fetchone() is not None
+        # تحسين التحقق من صلاحيات المدير
+        c.execute('SELECT id, telegram_id FROM users WHERE telegram_id = ? AND id = 1', (user_id,))
+        admin = c.fetchone()
+        conn.close()
 
-    if not is_admin:
-        await update.message.reply_text("عذراً، هذا الأمر متاح فقط للمدير")
-        return
+        if not admin or admin[1] != user_id:
+            await update.message.reply_text("عذراً، هذا الأمر متاح فقط للمدير")
+            return
 
-    keyboard = [
-        [InlineKeyboardButton("إدارة المنتجات", callback_data='manage_products')],
-        [InlineKeyboardButton("إدارة المستخدمين", callback_data='manage_users')],
-        [InlineKeyboardButton("إدارة الطلبات", callback_data='manage_orders')],
-        [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')] #added back button
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
+        keyboard = [
+            [InlineKeyboardButton("إدارة المنتجات", callback_data='manage_products')],
+            [InlineKeyboardButton("إدارة المستخدمين", callback_data='manage_users')],
+            [InlineKeyboardButton("إدارة الطلبات", callback_data='manage_orders')],
+            [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
+
+    except Exception as e:
+        print(f"خطأ في لوحة التحكم: {str(e)}")
+        await update.message.reply_text("حدث خطأ في الوصول للوحة التحكم، الرجاء المحاولة مرة أخرى")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
