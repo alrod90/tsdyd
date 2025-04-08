@@ -1130,15 +1130,17 @@ if __name__ == '__main__':
     import socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        sock.bind(('localhost', 5001))  # منفذ للتحقق فقط
+        sock.bind(('0.0.0.0', 5001))  # منفذ للتحقق فقط
         
         # تشغيل التطبيق
         app.config['TEMPLATES_AUTO_RELOAD'] = True
+        app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # مدة الجلسة يوم كامل
         flask_thread = Thread(target=run_flask)
         flask_thread.start()
         run_bot()
         
     except socket.error:
         print("هناك نسخة أخرى من البوت قيد التشغيل")
+        exit(1)  # إنهاء البرنامج إذا كان هناك نسخة أخرى
     finally:
         sock.close()
