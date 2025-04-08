@@ -22,27 +22,26 @@ app = Flask(__name__)
 
 # Database setup
 def sync_deployed_db():
-    """مزامنة قاعدة البيانات من النسخة المنشورة"""
+    """التحقق من وجود قاعدة البيانات"""
     try:
-        deployed_db = 'store.db'
-        if os.path.exists(deployed_db):
-            return
-        
-        backup_db = 'backup_20250407_094844/store.db'
-        if os.path.exists(backup_db):
-            # إغلاق أي اتصالات مفتوحة
-            try:
-                conn = sqlite3.connect('store.db')
-                conn.close()
-            except:
-                pass
-
-            shutil.copy2(deployed_db, 'store.db')
-            print(f"تم تحديث قاعدة البيانات من النسخة المنشورة: {deployed_db}")
-        else:
-            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
+        if not os.path.exists('store.db'):
+            # إنشاء قاعدة بيانات جديدة فقط إذا لم تكن موجودة
+            conn = sqlite3.connect('store.db')
+            c = conn.cursor()
+            c.execute('''CREATE TABLE IF NOT EXISTS products 
+                     (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
+            c.execute('''CREATE TABLE IF NOT EXISTS users
+                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
+                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
+            c.execute('''CREATE TABLE IF NOT EXISTS orders
+                     (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
+                      customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+            conn.commit()
+            conn.close()
+            print("تم إنشاء قاعدة بيانات جديدة")
     except Exception as e:
-        print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
+        print(f"خطأ في التحقق من قاعدة البيانات: {str(e)}")
 
 def init_db():
     conn = sqlite3.connect('store.db')
