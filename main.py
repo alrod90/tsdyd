@@ -143,9 +143,9 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
 
         keyboard = [
-            [InlineKeyboardButton("إدارة المنتجات", callback_data='manage_products')],
-            [InlineKeyboardButton("إدارة المستخدمين", callback_data='manage_users')],
-            [InlineKeyboardButton("إدارة الطلبات", callback_data='manage_orders')],
+            [InlineKeyboardButton("إدارة المنتجات", callback_data='admin_products')],
+            [InlineKeyboardButton("إدارة المستخدمين", callback_data='admin_users')],
+            [InlineKeyboardButton("إدارة الطلبات", callback_data='admin_orders')],
             [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -256,6 +256,68 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("الرجاء إدخال سبب الإلغاء:")
         context.user_data['canceling_order_id'] = order_id
         return "WAITING_CANCEL_REASON"
+
+    elif query.data == 'admin_products':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT * FROM products')
+        products = c.fetchall()
+        conn.close()
+
+        message = "قائمة المنتجات:\n\n"
+        for product in products:
+            status = "✅ مفعل" if product[3] else "❌ معطل"
+            message += f"الاسم: {product[1]}\nالقسم: {product[2]}\nالحالة: {status}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='admin_back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'admin_users':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT * FROM users')
+        users = c.fetchall()
+        conn.close()
+
+        message = "قائمة المستخدمين:\n\n"
+        for user in users:
+            status = "✅ مفعل" if user[4] else "❌ معطل"
+            message += f"المعرف: {user[1]}\nالرصيد: {user[2]} ل.س\nالحالة: {status}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='admin_back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'admin_orders':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT o.id, u.telegram_id, p.name, o.amount, o.status, o.created_at 
+                     FROM orders o 
+                     JOIN users u ON o.user_id = u.telegram_id 
+                     JOIN products p ON o.product_id = p.id 
+                     ORDER BY o.created_at DESC LIMIT 10''')
+        orders = c.fetchall()
+        conn.close()
+
+        message = "آخر 10 طلبات:\n\n"
+        for order in orders:
+            status = "⏳ قيد المعالجة" if order[4] == "pending" else "✅ مقبول" if order[4] == "accepted" else "❌ مرفوض"
+            message += f"رقم الطلب: {order[0]}\nالمستخدم: {order[1]}\nالشركة: {order[2]}\nالمبلغ: {order[3]} ل.س\nالحالة: {status}\nالتاريخ: {order[5]}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='admin_back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'admin_back':
+        keyboard = [
+            [InlineKeyboardButton("إدارة المنتجات", callback_data='admin_products')],
+            [InlineKeyboardButton("إدارة المستخدمين", callback_data='admin_users')],
+            [InlineKeyboardButton("إدارة الطلبات", callback_data='admin_orders')],
+            [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
 
     elif query.data == 'back':
         keyboard = [
