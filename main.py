@@ -1152,17 +1152,39 @@ def run_bot():
     conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler("start", start),
-            CallbackQueryHandler(button_click)
+            CallbackQueryHandler(button_click, pattern="^(?!cancel$).*$")
         ],
         states={
-            "WAITING_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info)],
-            "WAITING_AMOUNT": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount)],
-            "WAITING_CONFIRMATION": [CallbackQueryHandler(handle_purchase_confirmation)],
-            "WAITING_ORDER_NUMBER": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number)],
-            "WAITING_SEARCH_CUSTOMER_INFO": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_info)],
-            "WAITING_CANCEL_REASON": [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_cancel_reason)]
+            "WAITING_CUSTOMER_INFO": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_AMOUNT": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_CONFIRMATION": [
+                CallbackQueryHandler(handle_purchase_confirmation)
+            ],
+            "WAITING_ORDER_NUMBER": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_SEARCH_CUSTOMER_INFO": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_info),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_CANCEL_REASON": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_cancel_reason),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ]
         },
-        fallbacks=[CommandHandler("cancel", lambda u, c: ConversationHandler.END)]
+        fallbacks=[
+            CommandHandler("cancel", lambda u, c: ConversationHandler.END),
+            CallbackQueryHandler(button_click, pattern="^cancel$")
+        ],
+        per_message=False,
+        per_chat=True
     )
 
     application.add_handler(conv_handler)
