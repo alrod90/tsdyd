@@ -132,6 +132,21 @@
     </div>
 
     <div class="section">
+        <h2>إضافة طلب جديد</h2>
+        <form action="/add_order" method="post" onsubmit="return validateOrderForm(this);">
+            <input type="number" name="user_id" placeholder="معرف المستخدم في تيليجرام" required>
+            <select name="product_id" required>
+                {% for product in products %}
+                <option value="{{ product[0] }}">{{ product[1] }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" name="amount" placeholder="المبلغ" step="0.01" required>
+            <textarea name="customer_info" placeholder="بيانات الزبون" required></textarea>
+            <input type="submit" value="إضافة الطلب">
+        </form>
+    </div>
+
+    <div class="section">
         <h2>إرسال إشعار للمستخدمين</h2>
         <form action="/send_notification" method="post">
             <input type="text" name="message" placeholder="نص الإشعار" required>

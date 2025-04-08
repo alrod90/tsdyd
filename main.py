@@ -697,6 +697,68 @@ def send_notification_route():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/add_order', methods=['POST'])
+def add_order():
+    try:
+        user_id = int(request.form['user_id'])
+        product_id = int(request.form['product_id'])
+        amount = float(request.form['amount'])
+        customer_info = request.form['customer_info']
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+
+        # التحقق من وجود المستخدم والمنتج
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+        user = c.fetchone()
+        
+        if not user:
+            conn.close()
+            return "المستخدم غير موجود", 400
+
+        if user[0] < amount:
+            conn.close()
+            return "رصيد المستخدم غير كافي", 400
+
+        # خصم المبلغ من رصيد المستخدم
+        c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
+                 (amount, user_id))
+
+        # إنشاء الطلب
+        c.execute('''INSERT INTO orders (user_id, product_id, amount, customer_info, status) 
+                     VALUES (?, ?, ?, ?, ?)''',
+                 (user_id, product_id, amount, customer_info, 'pending'))
+        
+        order_id = c.lastrowid
+
+        # الحصول على اسم المنتج للإشعار
+        c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
+        product_name = c.fetchone()[0]
+
+        conn.commit()
+        conn.close()
+
+        # إرسال إشعار للمستخدم
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        
+        notification_message = f"""✉️ تم إنشاء طلب جديد
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري
+بيانات الزبون: {customer_info}"""
+
+        try:
+            asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
+
+        return redirect(url_for('admin_panel'))
+
+    except Exception as e:
+        print(f"Error in add_order: {str(e)}")
+        return f"حدث خطأ في إضافة الطلب: {str(e)}", 500
+
 @app.route('/add_balance', methods=['POST'])
 def add_balance():
     user_id = int(request.form['user_id'])
