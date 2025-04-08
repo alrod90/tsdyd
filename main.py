@@ -1035,9 +1035,20 @@ def edit_order_amount():
 def get_db_connection():
     """إنشاء اتصال بقاعدة البيانات مع المزامنة"""
     try:
+        # التحقق من وجود قاعدة البيانات المنشورة
+        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
+        if backup_folders:
+            latest_backup = max(backup_folders)
+            backup_db = f'{latest_backup}/store.db'
+            if os.path.exists(backup_db):
+                # استخدام قاعدة البيانات المنشورة إذا كانت موجودة
+                if not os.path.exists('store.db') or os.path.getmtime(backup_db) > os.path.getmtime('store.db'):
+                    shutil.copy2(backup_db, 'store.db')
+                    print("تم استخدام قاعدة البيانات المنشورة")
+
         conn = sqlite3.connect('store.db', timeout=20)
-        conn.execute("PRAGMA busy_timeout = 10000")  # زيادة وقت الانتظار
-        conn.execute("PRAGMA journal_mode = WAL")    # تحسين التزامن
+        conn.execute("PRAGMA busy_timeout = 10000")
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.execute("PRAGMA timezone = '+03:00'")
         return conn
             
