@@ -1042,6 +1042,8 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.edit_text(confirmation_message, reply_markup=reply_markup)
+    if query.data == 'back':
+        await start(update, context)
     return ConversationHandler.END
 
 async def handle_new_order_user_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
