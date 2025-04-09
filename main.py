@@ -460,11 +460,21 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 keyboard.append(row)
                 row = []
 
-        # إضافة أزرار الرصيد والطلبات
-        keyboard.append([
+        # التحقق من صلاحية الموزع
+        c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        is_distributor = c.fetchone()[0] if c.fetchone() else False
+
+        # إضافة أزرار الرصيد والطلبات والموزع
+        bottom_buttons = [
             InlineKeyboardButton("رصيدي", callback_data='balance'),
             InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ])
+        ]
+        
+        # إضافة زر الموزع إذا كان المستخدم يملك الصلاحية
+        if is_distributor:
+            bottom_buttons.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
+        
+        keyboard.append(bottom_buttons)
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
@@ -589,6 +599,67 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data['customer_info'] = customer_info
     await update.message.reply_text("الرجاء إدخال المبلغ:")
     return "WAITING_AMOUNT"
+
+async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # التحقق من صلاحية الموزع
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    is_distributor = c.fetchone()
+    conn.close()
+
+    if not is_distributor or not is_distributor[0]:
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.callback_query.message.edit_text("عذراً، ليس لديك صلاحيات الموزع.", reply_markup=reply_markup)
+        return
+
+    keyboard = [
+        [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
+        [InlineKeyboardButton("رجوع", callback_data='back')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(
+        "مرحباً بك في لوحة الموزع\nالرجاء اختيار العملية المطلوبة:",
+        reply_markup=reply_markup
+    )
+
+async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        user_id, amount = update.message.text.split('|')
+        user_id = int(user_id.strip())
+        amount = float(amount.strip())
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+
+        # التحقق من رصيد الموزع
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        distributor_balance = c.fetchone()[0]
+
+        if distributor_balance < amount:
+            await update.message.reply_text("عذراً، رصيدك غير كافي")
+            conn.close()
+            return ConversationHandler.END
+
+        # خصم المبلغ من الموزع وإضافته للمستخدم
+        c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
+                 (amount, update.effective_user.id))
+        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                 (amount, user_id))
+        conn.commit()
+
+        # إرسال إشعار للمستخدم
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"تم إضافة {amount} ليرة سوري إلى رصيدك من قبل الموزع"
+        )
+
+        conn.close()
+        await update.message.reply_text("تمت العملية بنجاح")
+    except:
+        await update.message.reply_text("حدث خطأ. الرجاء التأكد من صحة المعلومات المدخلة")
+    return ConversationHandler.END
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     amount = float(update.message.text)
