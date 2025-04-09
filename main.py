@@ -469,11 +469,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("رصيدي", callback_data='balance'),
             InlineKeyboardButton("طلباتي", callback_data='my_orders')
         ]
-        
+
         # إضافة زر الموزع إذا كان المستخدم يملك الصلاحية
         if is_distributor:
             bottom_buttons.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
-        
+
         keyboard.append(bottom_buttons)
 
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -601,28 +601,32 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     return "WAITING_AMOUNT"
 
 async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # التحقق من صلاحية الموزع
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    is_distributor = c.fetchone()
+    c.execute('SELECT is_distributor, balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    result = c.fetchone()
     conn.close()
 
-    if not is_distributor or not is_distributor[0]:
+    if not result or not result[0]:
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.callback_query.message.edit_text("عذراً، ليس لديك صلاحيات الموزع.", reply_markup=reply_markup)
         return
 
+    balance = result[1]
+    message = f"""مرحباً بك في لوحة الموزع
+رصيدك الحالي: {balance} ليرة سوري
+
+لإضافة رصيد لمستخدم، اضغط على الزر أدناه ثم أدخل:
+معرف المستخدم|المبلغ
+مثال: 123456789|1000"""
     keyboard = [
         [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
         [InlineKeyboardButton("رجوع", callback_data='back')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(
-        "مرحباً بك في لوحة الموزع\nالرجاء اختيار العملية المطلوبة:",
-        reply_markup=reply_markup
-    )
+    await update.callback_query.message.edit_text(message, reply_markup=reply_markup)
+
 
 async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -1347,7 +1351,7 @@ def admin_panel():
         print(f"Error in admin_panel: {str(e)}")
         if conn:
             conn.close()
-        return "حدث خطأ في الوصول إلى لوحة التحكم. الرجاء المحاولة مرة أخرى.", 500
+        return "حدثخطأ في الوصول إلى لوحة التحكم. الرجاء المحاولة مرة أخرى.", 500
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
@@ -1630,14 +1634,14 @@ def toggle_distributor():
         user_id = request.form['user_id']
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # التأكد من وجود العمود is_distributor
         c.execute('''SELECT COUNT(*) FROM pragma_table_info('users') 
                     WHERE name='is_distributor' ''')
         if c.fetchone()[0] == 0:
             c.execute('ALTER TABLE users ADD COLUMN is_distributor BOOLEAN DEFAULT 0')
             conn.commit()
-            
+
         # تحديث حالة الموزع
         c.execute('''UPDATE users SET is_distributor = 
                      CASE WHEN is_distributor = 1 THEN 0 ELSE 1 END 
@@ -2116,25 +2120,30 @@ async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_T
     # التحقق من صلاحية الموزع
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    is_distributor = c.fetchone()
+    c.execute('SELECT is_distributor, balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    result = c.fetchone()
     conn.close()
 
-    if not is_distributor or not is_distributor[0]:
+    if not result or not result[0]:
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.callback_query.message.edit_text("عذراً، ليس لديك صلاحيات الموزع.", reply_markup=reply_markup)
         return
 
+    balance = result[1]
+    message = f"""مرحباً بك في لوحة الموزع
+رصيدك الحالي: {balance} ليرة سوري
+
+لإضافة رصيد لمستخدم، اضغط على الزر أدناه ثم أدخل:
+معرف المستخدم|المبلغ
+مثال: 123456789|1000"""
     keyboard = [
         [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
         [InlineKeyboardButton("رجوع", callback_data='back')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(
-        "مرحباً بك في لوحة الموزع\nالرجاء اختيار العملية المطلوبة:",
-        reply_markup=reply_markup
-    )
+    await update.callback_query.message.edit_text(message, reply_markup=reply_markup)
+
 
 async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -2149,7 +2158,7 @@ async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
         distributor_balance = c.fetchone()[0]
 
-        if distributor_balance < amount:
+if distributor_balance < amount:
             await update.message.reply_text("عذراً، رصيدك غير كافي")
             conn.close()
             return ConversationHandler.END
