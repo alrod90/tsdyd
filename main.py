@@ -59,6 +59,8 @@ def init_db():
     """)
 
     # إنشاء الجداول إذا لم تكن موجودة
+    c.execute('''CREATE TABLE IF NOT EXISTS categories
+                 (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS products 
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
@@ -68,6 +70,17 @@ def init_db():
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
                   created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+                  
+    # إضافة الأقسام القديمة إذا لم تكن موجودة
+    c.execute('SELECT COUNT(*) FROM categories')
+    if c.fetchone()[0] == 0:
+        categories = [
+            ('إنترنت', 'internet', 1),
+            ('جوال', 'mobile', 1),
+            ('خط أرضي', 'landline', 1),
+            ('البنوك', 'banks', 1)
+        ]
+        c.executemany('INSERT INTO categories (name, identifier, is_active) VALUES (?, ?, ?)', categories)
     conn.commit()
     conn.close()
 
