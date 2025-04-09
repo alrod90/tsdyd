@@ -2042,6 +2042,19 @@ if __name__ == '__main__':
         if os.path.exists('bot.lock'):
             os.remove('bot.lock')
 async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # التحقق من صلاحية الموزع
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    is_distributor = c.fetchone()
+    conn.close()
+
+    if not is_distributor or not is_distributor[0]:
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.callback_query.message.edit_text("عذراً، ليس لديك صلاحيات الموزع.", reply_markup=reply_markup)
+        return
+
     keyboard = [
         [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
         [InlineKeyboardButton("رجوع", callback_data='back')]
