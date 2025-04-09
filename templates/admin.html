@@ -116,12 +116,110 @@
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
-            <select name="category" required>
-                <option value="internet">إنترنت</option>
-                <option value="mobile">جوال</option>
-                <option value="landline">خط أرضي</option>
-                <option value="banks">البنوك</option>
+            <select name="category" id="categorySelect" required>
             </select>
+            
+            <div class="section">
+                <h2>إدارة الأقسام</h2>
+                <form action="/add_category" method="post">
+                    <input type="text" name="category_name" placeholder="اسم القسم" required>
+                    <label class="switch">
+                        <input type="checkbox" name="is_active" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>تفعيل القسم</span>
+                    <input type="submit" value="إضافة قسم">
+                </form>
+                
+                <table id="categoriesTable">
+                    <tr>
+                        <th>اسم القسم</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </table>
+            </div>
+
+            <script>
+                // تحديث القائمة المنسدلة والجدول
+                function updateCategories() {
+                    fetch('/get_categories')
+                        .then(response => response.json())
+                        .then(categories => {
+                            // تحديث القائمة المنسدلة
+                            const select = document.getElementById('categorySelect');
+                            select.innerHTML = '';
+                            categories.forEach(cat => {
+                                if (cat.is_active) {
+                                    const option = document.createElement('option');
+                                    option.value = cat.name;
+                                    option.textContent = cat.name;
+                                    select.appendChild(option);
+                                }
+                            });
+
+                            // تحديث جدول الأقسام
+                            const table = document.getElementById('categoriesTable');
+                            const rows = table.getElementsByTagName('tr');
+                            while (rows.length > 1) {
+                                table.deleteRow(1);
+                            }
+
+                            categories.forEach(cat => {
+                                const row = table.insertRow();
+                                row.innerHTML = `
+                                    <td>${cat.name}</td>
+                                    <td class="status-${cat.is_active ? 'active' : 'inactive'}">
+                                        ${cat.is_active ? 'مفعل' : 'معطل'}
+                                    </td>
+                                    <td>
+                                        <button onclick="toggleCategory('${cat.name}')" class="toggle-btn">
+                                            ${cat.is_active ? 'تعطيل' : 'تفعيل'}
+                                        </button>
+                                        <button onclick="editCategory('${cat.name}')" class="edit-btn">
+                                            تعديل
+                                        </button>
+                                        <button onclick="deleteCategory('${cat.name}')" class="delete-btn">
+                                            حذف
+                                        </button>
+                                    </td>
+                                `;
+                            });
+                        });
+                }
+
+                // تحميل الأقسام عند تحميل الصفحة
+                document.addEventListener('DOMContentLoaded', updateCategories);
+
+                function toggleCategory(name) {
+                    fetch('/toggle_category', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: `category_name=${encodeURIComponent(name)}`
+                    }).then(() => updateCategories());
+                }
+
+                function deleteCategory(name) {
+                    if (confirm('هل أنت متأكد من حذف هذا القسم؟')) {
+                        fetch('/delete_category', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: `category_name=${encodeURIComponent(name)}`
+                        }).then(() => updateCategories());
+                    }
+                }
+
+                function editCategory(name) {
+                    const newName = prompt('أدخل الاسم الجديد للقسم:', name);
+                    if (newName && newName !== name) {
+                        fetch('/edit_category', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: `old_name=${encodeURIComponent(name)}&new_name=${encodeURIComponent(newName)}`
+                        }).then(() => updateCategories());
+                    }
+                }
+            </script>
             <label class="switch">
                 <input type="checkbox" name="is_active" checked>
                 <span class="slider"></span>
