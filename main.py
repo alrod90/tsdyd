@@ -658,7 +658,6 @@ async def handle_new_order_customer_info(update: Update, context: ContextTypes.D
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث عن الطلب:", reply_markup=reply_markup)
-        return
 
     elif query.data == 'search_order_for_edit':
         await query.message.edit_text("الرجاء إدخال رقم الطلب:")
