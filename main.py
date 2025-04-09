@@ -144,16 +144,12 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         keyboard = [
             [
-                InlineKeyboardButton("عرض المنتجات", callback_data='admin_products'),
-                InlineKeyboardButton("إضافة منتج", callback_data='add_product')
+                InlineKeyboardButton("المنتجات", callback_data='products_menu'),
+                InlineKeyboardButton("الطلبات", callback_data='orders_menu')
             ],
             [
-                InlineKeyboardButton("عرض المستخدمين", callback_data='admin_users'),
-                InlineKeyboardButton("تعديل الأرصدة", callback_data='edit_balance')
-            ],
-            [
-                InlineKeyboardButton("عرض الطلبات", callback_data='admin_orders'),
-                InlineKeyboardButton("البحث في الطلبات", callback_data='search_orders')
+                InlineKeyboardButton("المستخدمين", callback_data='users_menu'),
+                InlineKeyboardButton("الأرصدة", callback_data='balance_menu')
             ],
             [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
         ]
@@ -313,16 +309,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'admin_back':
         keyboard = [
             [
-                InlineKeyboardButton("عرض المنتجات", callback_data='admin_products'),
-                InlineKeyboardButton("إضافة منتج", callback_data='add_product')
+                InlineKeyboardButton("المنتجات", callback_data='products_menu'),
+                InlineKeyboardButton("الطلبات", callback_data='orders_menu')
             ],
             [
-                InlineKeyboardButton("عرض المستخدمين", callback_data='admin_users'),
-                InlineKeyboardButton("تعديل الأرصدة", callback_data='edit_balance')
-            ],
-            [
-                InlineKeyboardButton("عرض الطلبات", callback_data='admin_orders'),
-                InlineKeyboardButton("البحث في الطلبات", callback_data='search_orders')
+                InlineKeyboardButton("المستخدمين", callback_data='users_menu'),
+                InlineKeyboardButton("الأرصدة", callback_data='balance_menu')
             ],
             [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
         ]
