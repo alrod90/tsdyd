@@ -410,15 +410,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_CUSTOMER_INFO"
 
-    elif query.data == 'edit_order':
-        keyboard = [
-            [InlineKeyboardButton("البحث برقم الطلب", callback_data='search_order_for_edit')],
-            [InlineKeyboardButton("البحث ببيانات الزبون", callback_data='search_customer_for_edit')],
-            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("اختر طريقة البحث عن الطلب:", reply_markup=reply_markup)
-
     elif query.data == 'view_products':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
@@ -667,13 +658,13 @@ async def handle_new_order_customer_info(update: Update, context: ContextTypes.D
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث عن الطلب:", reply_markup=reply_markup)
+        return
 
     elif query.data == 'search_order_for_edit':
         await query.message.edit_text("الرجاء إدخال رقم الطلب:")
         return "WAITING_SEARCH_ORDER_FOR_EDIT"
 
-    elif query.data == 'search_customer_for_edit```python
-:
+    elif query.data == 'search_customer_for_edit':
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_SEARCH_CUSTOMER_FOR_EDIT"
 
@@ -1332,7 +1323,7 @@ def admin_panel():
     if admin_id and admin_id[0]:  # إذا كان المستخدم هو المدير
         c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
                      FROM orders o 
-                     JOIN products p ON o.product_id= p.id 
+                     JOIN products p ON o.product_id = p.id 
                      ORDER BY o.created_at DESC''')
     else:  # إذا كان مستخدم عادي
         user_telegram_id = session.get('user_telegram_id')
