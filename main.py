@@ -234,12 +234,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data.startswith('cat_'):
         category = query.data.split('_')[1]
-        category_names = {
-            'internet': 'إنترنت',
-            'mobile': 'جوال',
-            'landline': 'خط أرضي',
-            'banks': 'البنوك'
-        }
+        # جلب اسم القسم من قاعدة البيانات
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name FROM categories WHERE identifier = ?', (category,))
+        category_result = c.fetchone()
+        category_name = category_result[0] if category_result else category
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category,))
@@ -254,13 +254,13 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.message.edit_text(
-                f"الشركات المتوفرة في قسم {category_names[category]}:", # Changed from المنتجات to الشركات
+                f"الشركات المتوفرة في قسم {category_name}:", # Changed from المنتجات to الشركات
                 reply_markup=reply_markup
             )
         else:
             keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.message.edit_text(f"لا توجد شركات متوفرة في قسم {category_names[category]}", reply_markup=reply_markup) # Changed from منتجات to شركات
+            await query.message.edit_text(f"لا توجد شركات متوفرة في قسم {category_name}", reply_markup=reply_markup) # Changed from منتجات to شركات
 
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
