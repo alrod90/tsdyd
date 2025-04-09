@@ -32,8 +32,7 @@ def sync_deployed_db():
                      (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
             c.execute('''CREATE TABLE IF NOT EXISTS users
                      (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT,
-                      is_distributor BOOLEAN DEFAULT 0)''')
+                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
             c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -425,57 +424,262 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'back':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
         # التحقق من صلاحية الموزع
         c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        distributor_result = c.fetchone()
-        is_distributor = distributor_result[0] if distributor_result else False
-
+        is_distributor = c.fetchone()[0] if c.fetchone() else False
+        
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
-
-        # إنشاء أزرار الأقسام
-        keyboard = []
-        row = []
-        for i, category in enumerate(categories):
-            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
-            if len(row) == 3 or i == len(categories) - 1:
-                keyboard.append(row)
-                row = []
-
-        # إضافة أزرار الرصيد والطلبات والموزع
-        bottom_row = [
-            InlineKeyboardButton("رصيدي", callback_data='balance'),
-            InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ]
-        if is_distributor:
-            bottom_row.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
-        keyboard.append(bottom_row)
-
-        # إنشاء أزرار الأقسام
-        keyboard = []
-        row = []
-        for i, category in enumerate(categories):
-            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
-            if len(row) == 3 or i == len(categories) - 1:
-                keyboard.append(row)
-                row = []
-
-        # إضافة أزرار الرصيد والطلبات والموزع
-        bottom_row = [
-            InlineKeyboardButton("رصيدي", callback_data='balance'),
-            InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ]
-        
-        # إضافة زر الموزع إذا كان المستخدم يملك الصلاحية
-        if is_distributor:
-            bottom_row.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
-        
-        keyboard.append(bottom_row)
         conn.close()
+
+        # إنشاء أزرار الأقسام
+        keyboard = []
+        row = []
+        for i, category in enumerate(categories):
+            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
+            if len(row) == 3 or i == len(categories) - 1:
+                keyboard.append(row)
+                row = []
+
+        # إضافة أزرار الرصيد والطلبات والموزع
+        bottom_row = [
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ]
+        if is_distributor:
+            bottom_row.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
+        keyboard.append(bottom_row)
+
+        # إنشاء أزرار الأقسام
+        keyboard = []
+        row = []
+        for i, category in enumerate(categories):
+            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
+            if len(row) == 3 or i == len(categories) - 1:
+                keyboard.append(row)
+                row = []
+
+        # إضافة أزرار الرصيد والطلبات
+        keyboard.append([
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
+
+    elif query.data.startswith('buy_'):
+        product_id = int(query.data.split('_')[1])
+        context.user_data['product_id'] = product_id
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
+        product_name = c.fetchone()[0]
+        conn.close()
+
+        context.user_data['product_name'] = product_name
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_CUSTOMER_INFO"
+
+    elif query.data == 'view_products':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name, category, is_active FROM products')
+        products = c.fetchall()
+        conn.close()
+
+        message = "قائمة المنتجات:\n\n"
+        for product in products:
+            status = "✅ مفعل" if product[2] else "❌ معطل"
+            message += f"الاسم: {product[0]}\nالقسم: {product[1]}\nالحالة: {status}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='products_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'view_orders':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.created_at 
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     ORDER BY o.created_at DESC LIMIT 10''')
+        orders = c.fetchall()
+        conn.close()
+
+        message = "آخر 10 طلبات:\n\n"
+        for order in orders:
+            status = "⏳ قيد المعالجة" if order[3] == "pending" else "✅ مقبول" if order[3] == "accepted" else "❌ مرفوض"
+            message += f"رقم الطلب: {order[0]}\nالشركة: {order[1]}\nالمبلغ: {order[2]} ل.س\nالحالة: {status}\nالتاريخ: {order[4]}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'view_users':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT telegram_id, balance, is_active FROM users')
+        users = c.fetchall()
+        conn.close()
+
+        message = "قائمة المستخدمين:\n\n"
+        for user in users:
+            status = "✅ مفعل" if user[2] else "❌ معطل"
+            message += f"المعرف: {user[0]}\nالرصيد: {user[1]} ل.س\nالحالة: {status}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='users_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'view_balances':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT telegram_id, balance FROM users ORDER BY balance DESC')
+        balances = c.fetchall()
+        conn.close()
+
+        message = "قائمة الأرصدة:\n\n"
+        for balance in balances:
+            message += f"المعرف: {balance[0]}\nالرصيد: {balance[1]} ل.س\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='balance_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'search_users':
+        await query.message.edit_text(
+            "الرجاء إدخال معرف المستخدم للبحث عنه:"
+        )
+        return "WAITING_SEARCH_USER"
+
+    elif query.data == 'search_products':
+        await query.message.edit_text(
+            "الرجاء إدخال اسم المنتج للبحث عنه:"
+        )
+        return "WAITING_SEARCH_PRODUCT"
+
+    elif query.data == 'search_orders':
+        keyboard = [
+            [InlineKeyboardButton("البحث برقم الطلب", callback_data='search_by_order_number')],
+            [InlineKeyboardButton("البحث ببيانات الزبون", callback_data='search_by_customer_info')],
+            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
+
+    elif query.data == 'search_by_order_number':
+        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
+        return "WAITING_SEARCH_ORDER_NUMBER"
+
+    elif query.data == 'search_by_customer_info':
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_SEARCH_CUSTOMER_INFO"
+
+    elif query.data == 'pending_orders':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT o.id, p.name, o.amount, o.customer_info, o.created_at 
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     WHERE o.status = 'pending'
+                     ORDER BY o.created_at DESC''')
+        orders = c.fetchall()
+        conn.close()
+
+        if not orders:
+            message = "لا توجد طلبات معلقة"
+        else:
+            message = "الطلبات المعلقة:\n\n"
+            for order in orders:
+                message += f"""رقم الطلب: {order[0]}
+الشركة: {order[1]}
+المبلغ: {order[2]} ل.س
+بيانات الزبون: {order[3]}
+التاريخ: {order[4]}
+──────────────\n"""
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'add_product':
+        await query.message.edit_text(
+            "الرجاء إدخال معلومات المنتج بالتنسيق التالي:\n"
+            "الاسم|القسم\n"
+            "مثال: شركة الاتصالات|جوال"
+        )
+        return "WAITING_NEW_PRODUCT"
+
+    elif query.data == 'edit_product':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name, category FROM products')
+        products = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for product in products:
+            keyboard.append([InlineKeyboardButton(
+                f"{product[1]} - {product[2]}", 
+                callback_data=f'edit_product_{product[0]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='products_menu')])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر المنتج للتعديل:", reply_markup=reply_markup)
+
+    elif query.data.startswith('edit_product_'):
+        product_id = query.data.split('_')[2]
+        context.user_data['editing_product'] = product_id
+        await query.message.edit_text(
+            "الرجاء إدخال المعلومات الجديدة بالتنسيق التالي:\n"
+            "الاسم|القسم\n"
+            "مثال: شركة الاتصالات|جوال"
+        )
+        return "WAITING_EDIT_PRODUCT"
+
+    elif query.data == 'add_balance':
+        await query.message.edit_text(
+            "الرجاء إدخال المعلومات بالتنسيق التالي:\n"
+            "معرف المستخدم|المبلغ\n"
+            "مثال: 123456789|50000"
+        )
+        return "WAITING_ADD_BALANCE"
+
+    elif query.data == 'deduct_balance':
+        await query.message.edit_text(
+            "الرجاء إدخال المعلومات بالتنسيق التالي:\n"
+            "معرف المستخدم|المبلغ\n"
+            "مثال: 123456789|50000"
+        )
+        return "WAITING_DEDUCT_BALANCE"
+
+    elif query.data == 'edit_balance':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT telegram_id, balance FROM users')
+        users = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for user in users:
+            keyboard.append([InlineKeyboardButton(
+                f"المعرف: {user[0]} - الرصيد: {user[1]}", 
+                callback_data=f'edit_balance_{user[0]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='balance_menu')])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر المستخدم لتعديل رصيده:", reply_markup=reply_markup)
+
+    elif query.data.startswith('edit_balance_'):
+        user_id = query.data.split('_')[2]
+        context.user_data['editing_balance_user'] = user_id
+        await query.message.edit_text(
+            "الرجاء إدخال المبلغ الجديد"
+        )
+        return "WAITING_EDIT_BALANCE"
+
 
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
@@ -597,67 +801,6 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data['customer_info'] = customer_info
     await update.message.reply_text("الرجاء إدخال المبلغ:")
     return "WAITING_AMOUNT"
-
-async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # التحقق من صلاحية الموزع
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    is_distributor = c.fetchone()
-    conn.close()
-
-    if not is_distributor or not is_distributor[0]:
-        keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.callback_query.message.edit_text("عذراً، ليس لديك صلاحيات الموزع.", reply_markup=reply_markup)
-        return
-
-    keyboard = [
-        [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
-        [InlineKeyboardButton("رجوع", callback_data='back')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.message.edit_text(
-        "مرحباً بك في لوحة الموزع\nالرجاء اختيار العملية المطلوبة:",
-        reply_markup=reply_markup
-    )
-
-async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        user_id, amount = update.message.text.split('|')
-        user_id = int(user_id.strip())
-        amount = float(amount.strip())
-
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-
-        # التحقق من رصيد الموزع
-        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        distributor_balance = c.fetchone()[0]
-
-        if distributor_balance < amount:
-            await update.message.reply_text("عذراً، رصيدك غير كافي")
-            conn.close()
-            return ConversationHandler.END
-
-        # خصم المبلغ من الموزع وإضافته للمستخدم
-        c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
-                 (amount, update.effective_user.id))
-        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                 (amount, user_id))
-        conn.commit()
-
-        # إرسال إشعار للمستخدم
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"تم إضافة {amount} ليرة سوري إلى رصيدك من قبل الموزع"
-        )
-
-        conn.close()
-        await update.message.reply_text("تمت العملية بنجاح")
-    except:
-        await update.message.reply_text("حدث خطأ. الرجاء التأكد من صحة المعلومات المدخلة")
-    return ConversationHandler.END
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     amount = float(update.message.text)
@@ -1628,15 +1771,6 @@ def toggle_distributor():
         user_id = request.form['user_id']
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
-        # التأكد من وجود العمود is_distributor
-        c.execute('''SELECT COUNT(*) FROM pragma_table_info('users') 
-                    WHERE name='is_distributor' ''')
-        if c.fetchone()[0] == 0:
-            c.execute('ALTER TABLE users ADD COLUMN is_distributor BOOLEAN DEFAULT 0')
-            conn.commit()
-            
-        # تحديث حالة الموزع
         c.execute('''UPDATE users SET is_distributor = 
                      CASE WHEN is_distributor = 1 THEN 0 ELSE 1 END 
                      WHERE telegram_id = ?''', (user_id,))
@@ -1645,8 +1779,6 @@ def toggle_distributor():
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"Error in toggle_distributor: {str(e)}")
-        if conn:
-            conn.close()
         return "حدث خطأ في تغيير صلاحية الموزع", 500
 
 @app.route('/toggle_user', methods=['POST'])
@@ -2111,19 +2243,6 @@ if __name__ == '__main__':
         if os.path.exists('bot.lock'):
             os.remove('bot.lock')
 async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # التحقق من صلاحية الموزع
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    is_distributor = c.fetchone()
-    conn.close()
-
-    if not is_distributor or not is_distributor[0]:
-        keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.callback_query.message.edit_text("عذراً، ليس لديك صلاحيات الموزع.", reply_markup=reply_markup)
-        return
-
     keyboard = [
         [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
         [InlineKeyboardButton("رجوع", callback_data='back')]
@@ -2142,7 +2261,7 @@ async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-
+        
         # التحقق من رصيد الموزع
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
         distributor_balance = c.fetchone()[0]
@@ -2173,27 +2292,11 @@ async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_
 
 @app.route('/toggle_distributor', methods=['POST'])
 def toggle_distributor():
-    try:
-        user_id = request.form['user_id']
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        # التأكد من وجود العمود is_distributor
-        c.execute('''SELECT COUNT(*) FROM pragma_table_info('users') 
-                    WHERE name='is_distributor' ''')
-        if c.fetchone()[0] == 0:
-            c.execute('ALTER TABLE users ADD COLUMN is_distributor BOOLEAN DEFAULT 0')
-            conn.commit()
-            
-        # تحديث حالة الموزع
-        c.execute('''UPDATE users SET is_distributor = 
-                     CASE WHEN is_distributor = 1 THEN 0 ELSE 1 END 
-                     WHERE telegram_id = ?''', (user_id,))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_panel'))
-    except Exception as e:
-        print(f"Error in toggle_distributor: {str(e)}")
-        if conn:
-            conn.close()
-        return "حدث خطأ في تغيير صلاحية الموزع", 500
+    user_id = request.form['user_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE users SET is_distributor = NOT is_distributor WHERE telegram_id = ?',
+              (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
