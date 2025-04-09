@@ -570,20 +570,27 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        if 'product_id' not in context.user_data or 'customer_info' not in context.user_data:
+        # التحقق من وجود البيانات المطلوبة
+        if 'product_id' not in context.user_data:
             keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text("حدث خطأ، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
+            await update.message.reply_text("حدث خطأ في معرف المنتج، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
+            return ConversationHandler.END
+            
+        if 'customer_info' not in context.user_data:
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text("حدث خطأ في بيانات الزبون، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
             return ConversationHandler.END
 
+        # التحقق من صحة المبلغ
         try:
             amount = float(update.message.text.strip())
+            if amount <= 0:
+                await update.message.reply_text("المبلغ يجب أن يكون أكبر من صفر")
+                return "WAITING_AMOUNT"
         except ValueError:
             await update.message.reply_text("الرجاء إدخال رقم صحيح")
-            return "WAITING_AMOUNT"
-
-        if amount <= 0:
-            await update.message.reply_text("المبلغ يجب أن يكون أكبر من صفر")
             return "WAITING_AMOUNT"
             
         context.user_data['amount'] = amount
