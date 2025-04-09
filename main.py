@@ -68,6 +68,18 @@ def init_db():
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
                   created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS categories
+                     (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
+
+    # تحديث حالة المنتجات عند تغيير حالة القسم
+    c.execute('''CREATE TRIGGER IF NOT EXISTS update_products_status 
+                 AFTER UPDATE ON categories
+                 FOR EACH ROW
+                 BEGIN
+                     UPDATE products SET is_active = NEW.is_active 
+                     WHERE category = NEW.identifier;
+                 END;''')
+
     conn.commit()
     conn.close()
 
@@ -667,7 +679,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("البحث ببيانات الزبون", callback_data='search_customer_for_edit')],
             [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup =InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث عن الطلب:", reply_markup=reply_markup)
         return
 
@@ -1330,19 +1342,19 @@ def toggle_category():
     category_id = request.form['category_id']
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
+
     # تحديث حالة القسم
     c.execute('UPDATE categories SET is_active = NOT is_active WHERE id = ?', (category_id,))
-    
+
     # جلب معلومات القسم المحدث
     c.execute('SELECT identifier, is_active FROM categories WHERE id = ?', (category_id,))
     category = c.fetchone()
-    
+
     if category:
         # تحديث المنتجات المرتبطة بالقسم
         c.execute('UPDATE products SET is_active = ? WHERE category = ?', 
                  (category[1], category[0]))
-    
+
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
@@ -1362,11 +1374,11 @@ def admin_panel():
     try:
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # إضافة جدول الأقسام إذا لم يكن موجوداً
         c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
-        
+
         # إضافة الأقسام الافتراضية إذا كان الجدول فارغاً
         c.execute('SELECT COUNT(*) FROM categories')
         if c.fetchone()[0] == 0:
@@ -1379,7 +1391,7 @@ def admin_panel():
             c.executemany('INSERT INTO categories (name, identifier, is_active) VALUES (?, ?, ?)',
                          default_categories)
             conn.commit()
-        
+
         # التأكد من وجود الجداول
         c.execute('''CREATE TABLE IF NOT EXISTS products 
                      (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
@@ -1391,7 +1403,7 @@ def admin_panel():
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
                       created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
         conn.commit()
-        
+
         c.execute('SELECT * FROM categories')
         categories = c.fetchall()
         c.execute('SELECT * FROM products')
