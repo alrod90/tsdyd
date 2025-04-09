@@ -565,6 +565,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
+
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
+    product_name = c.fetchone()[0]
+    conn.close()
+
+    context.user_data['product_name'] = product_name
     await update.message.reply_text("الرجاء إدخال المبلغ:")
     return "WAITING_AMOUNT"
 
