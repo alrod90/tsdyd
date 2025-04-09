@@ -1047,20 +1047,9 @@ async def handle_new_order_product(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_new_order_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     customer_info = update.message.text
-    context.user_data['new_order_customer_info'] = customer_info
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT id, name FROM products WHERE is_active = 1')
-    products = c.fetchall()
-    conn.close()
-
-    keyboard = []
-    for product in products:
-        keyboard.append([InlineKeyboardButton(product[1], callback_data=f'select_product_{product[0]}')])
-    keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("اختر الشركة:", reply_markup=reply_markup)
-    return "WAITING_NEW_ORDER_PRODUCT"
+    context.user_data['customer_info'] = customer_info
+    await update.message.reply_text("الرجاء إدخال المبلغ:")
+    return "WAITING_AMOUNT"
 
 async def handle_new_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     amount = update.message.text
