@@ -570,32 +570,51 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        # التحقق من وجود product_id
-        if 'product_id' not in context.user_data:
-            await update.message.reply_text("حدث خطأ، الرجاء بدء العملية من جديد")
+        if 'product_id' not in context.user_data or 'customer_info' not in context.user_data:
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text("حدث خطأ، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
             return ConversationHandler.END
 
-        amount = float(update.message.text)
+        try:
+            amount = float(update.message.text.strip())
+        except ValueError:
+            await update.message.reply_text("الرجاء إدخال رقم صحيح")
+            return "WAITING_AMOUNT"
+
         if amount <= 0:
             await update.message.reply_text("المبلغ يجب أن يكون أكبر من صفر")
             return "WAITING_AMOUNT"
             
         context.user_data['amount'] = amount
 
-        # التحقق من الرصيد
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        user_balance = c.fetchone()[0]
         
-        if amount > user_balance:
-            await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
-            conn.close()
-            return ConversationHandler.END
+        try:
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+            user_balance = c.fetchone()
+            
+            if not user_balance:
+                await update.message.reply_text("حدث خطأ في العثور على حسابك")
+                return ConversationHandler.END
+                
+            user_balance = user_balance[0]
+            
+            if amount > user_balance:
+                await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
+                return ConversationHandler.END
 
-        c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
-        product_name = c.fetchone()[0]
-        conn.close()
+            c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
+            product = c.fetchone()
+            
+            if not product:
+                await update.message.reply_text("المنتج غير متوفر")
+                return ConversationHandler.END
+                
+            product_name = product[0]
+        finally:
+            conn.close()
 
         await update.message.reply_text(
             f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
