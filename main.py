@@ -1030,19 +1030,8 @@ async def handle_new_order_user_id(update: Update, context: ContextTypes.DEFAULT
     try:
         user_id = int(user_id)
         context.user_data['new_order_user_id'] = user_id
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        c.execute('SELECT id, name FROM products WHERE is_active = 1')
-        products = c.fetchall()
-        conn.close()
-
-        keyboard = []
-        for product in products:
-            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'select_product_{product[0]}')])
-        keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("اختر الشركة:", reply_markup=reply_markup)
-        return "WAITING_NEW_ORDER_PRODUCT"
+        await update.message.reply_text("أدخل بيانات الزبون:")
+        return "WAITING_NEW_ORDER_CUSTOMER_INFO"
     except ValueError:
         await update.message.reply_text("معرف مستخدم غير صحيح، الرجاء المحاولة مرة أخرى.")
         return ConversationHandler.END
@@ -1059,8 +1048,19 @@ async def handle_new_order_product(update: Update, context: ContextTypes.DEFAULT
 async def handle_new_order_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     customer_info = update.message.text
     context.user_data['new_order_customer_info'] = customer_info
-    await update.message.reply_text("أدخل المبلغ:")
-    return "WAITING_NEW_ORDER_AMOUNT"
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT id, name FROM products WHERE is_active = 1')
+    products = c.fetchall()
+    conn.close()
+
+    keyboard = []
+    for product in products:
+        keyboard.append([InlineKeyboardButton(product[1], callback_data=f'select_product_{product[0]}')])
+    keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("اختر الشركة:", reply_markup=reply_markup)
+    return "WAITING_NEW_ORDER_PRODUCT"
 
 async def handle_new_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     amount = update.message.text
