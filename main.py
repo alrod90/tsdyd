@@ -819,6 +819,152 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
         await update.message.reply_text("لم يتم العثور على طلبات مطابقة", reply_markup=reply_markup)
     return ConversationHandler.END
 
+async def handle_search_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_query = update.message.text
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT telegram_id, balance, is_active FROM users WHERE telegram_id LIKE ?', ('%' + user_query + '%',))
+    users = c.fetchall()
+    conn.close()
+
+    if users:
+        message = "نتائج البحث:\n\n"
+        for user in users:
+            status = "✅ مفعل" if user[2] else "❌ معطل"
+            message += f"المعرف: {user[0]}\nالرصيد: {user[1]} ل.س\nالحالة: {status}\n──────────────\n"
+    else:
+        message = "لم يتم العثور على مستخدمين"
+
+    keyboard = [[InlineKeyboardButton("رجوع", callback_data='users_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(message, reply_markup=reply_markup)
+    return ConversationHandler.END
+
+async def handle_search_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    product_query = update.message.text
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT name, category, is_active FROM products WHERE name LIKE ?', ('%' + product_query + '%',))
+    products = c.fetchall()
+    conn.close()
+
+    if products:
+        message = "نتائج البحث:\n\n"
+        for product in products:
+            status = "✅ مفعل" if product[2] else "❌ معطل"
+            message += f"الاسم: {product[0]}\nالقسم: {product[1]}\nالحالة: {status}\n──────────────\n"
+    else:
+        message = "لم يتم العثور على منتجات"
+
+    keyboard = [[InlineKeyboardButton("رجوع", callback_data='products_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(message, reply_markup=reply_markup)
+    return ConversationHandler.END
+
+async def handle_new_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        name, category = update.message.text.split('|')
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, 1)', (name.strip(), category.strip()))
+        conn.commit()
+        conn.close()
+        message = "تم إضافة المنتج بنجاح"
+    except ValueError:
+        message = "صيغة غير صحيحة. الرجاء استخدام: الاسم|القسم"
+    except Exception as e:
+        message = f"حدث خطأ: {str(e)}"
+
+    keyboard = [[InlineKeyboardButton("رجوع", callback_data='products_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(message, reply_markup=reply_markup)
+    return ConversationHandler.END
+
+async def handle_edit_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        name, category = update.message.text.split('|')
+        product_id = context.user_data.get('editing_product')
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('UPDATE products SET name = ?, category = ? WHERE id = ?', 
+                 (name.strip(), category.strip(), product_id))
+        conn.commit()
+        conn.close()
+        message = "تم تعديل المنتج بنجاح"
+    except ValueError:
+        message = "صيغة غير صحيحة. الرجاء استخدام: الاسم|القسم"
+    except Exception as e:
+        message = f"حدث خطأ: {str(e)}"
+
+    keyboard = [[InlineKeyboardButton("رجوع", callback_data='products_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(message, reply_markup=reply_markup)
+    return ConversationHandler.END
+
+async def handle_add_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        user_id, amount = update.message.text.split('|')
+        amount = float(amount.strip())
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?', (amount, user_id.strip()))
+        conn.commit()
+        conn.close()
+        message = f"تم إضافة {amount} ل.س للمستخدم {user_id}"
+    except ValueError:
+        message = "صيغة غير صحيحة. الرجاء استخدام: معرف المستخدم|المبلغ"
+    except Exception as e:
+        message = f"حدث خطأ: {str(e)}"
+
+    keyboard = [[InlineKeyboardButton("رجوع", callback_data='balance_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(message, reply_markup=reply_markup)
+    return ConversationHandler.END
+
+async def handle_deduct_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        user_id, amount = update.message.text.split('|')
+        amount = float(amount.strip())
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id.strip()))
+        conn.commit()
+        conn.close()
+        message = f"تم خصم {amount} ل.س من المستخدم {user_id}"
+    except ValueError:
+        message = "صيغة غير صحيحة. الرجاء استخدام: معرف المستخدم|المبلغ"
+    except Exception as e:
+        message = f"حدث خطأ: {str(e)}"
+
+    keyboard = [[InlineKeyboardButton("رجوع", callback_data='balance_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(message, reply_markup=reply_markup)
+    return ConversationHandler.END
+
+async def handle_edit_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        new_balance = float(update.message.text)
+        user_id = context.user_data.get('editing_balance_user')
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?', (new_balance, user_id))
+        conn.commit()
+        conn.close()
+        message = f"تم تعديل رصيد المستخدم {user_id} إلى {new_balance} ل.س"
+    except ValueError:
+        message = "الرجاء إدخال رقم صحيح"
+    except Exception as e:
+        message = f"حدث خطأ: {str(e)}"
+
+    keyboard = [[InlineKeyboardButton("رجوع", callback_data='balance_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(message, reply_markup=reply_markup)
+    return ConversationHandler.END
+
 async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -1509,6 +1655,34 @@ def run_bot():
             ],
             "WAITING_CANCEL_REASON": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_cancel_reason),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_SEARCH_USER": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_user),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_SEARCH_PRODUCT": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_product),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_NEW_PRODUCT": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_new_product),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_EDIT_PRODUCT": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_product),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_ADD_BALANCE": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_add_balance),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_DEDUCT_BALANCE": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_deduct_balance),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_EDIT_BALANCE": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_balance),
                 CallbackQueryHandler(button_click, pattern="^back$")
             ]
         },
