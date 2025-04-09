@@ -2173,11 +2173,27 @@ async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_
 
 @app.route('/toggle_distributor', methods=['POST'])
 def toggle_distributor():
-    user_id = request.form['user_id']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE users SET is_distributor = NOT is_distributor WHERE telegram_id = ?',
-              (user_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
+    try:
+        user_id = request.form['user_id']
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # التأكد من وجود العمود is_distributor
+        c.execute('''SELECT COUNT(*) FROM pragma_table_info('users') 
+                    WHERE name='is_distributor' ''')
+        if c.fetchone()[0] == 0:
+            c.execute('ALTER TABLE users ADD COLUMN is_distributor BOOLEAN DEFAULT 0')
+            conn.commit()
+            
+        # تحديث حالة الموزع
+        c.execute('''UPDATE users SET is_distributor = 
+                     CASE WHEN is_distributor = 1 THEN 0 ELSE 1 END 
+                     WHERE telegram_id = ?''', (user_id,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in toggle_distributor: {str(e)}")
+        if conn:
+            conn.close()
+        return "حدث خطأ في تغيير صلاحية الموزع", 500
