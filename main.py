@@ -1312,11 +1312,61 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 # Flask routes
+@app.route('/add_category', methods=['POST'])
+def add_category():
+    name = request.form['name']
+    identifier = request.form['identifier']
+    is_active = 'is_active' in request.form
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO categories (name, identifier, is_active) VALUES (?, ?, ?)',
+              (name, identifier, is_active))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/toggle_category', methods=['POST'])
+def toggle_category():
+    category_id = request.form['category_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE categories SET is_active = NOT is_active WHERE id = ?', (category_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/delete_category', methods=['POST'])
+def delete_category():
+    category_id = request.form['category_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM categories WHERE id = ?', (category_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
 @app.route('/')
 def admin_panel():
     try:
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # إضافة جدول الأقسام إذا لم يكن موجوداً
+        c.execute('''CREATE TABLE IF NOT EXISTS categories
+                     (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
+        
+        # إضافة الأقسام الافتراضية إذا كان الجدول فارغاً
+        c.execute('SELECT COUNT(*) FROM categories')
+        if c.fetchone()[0] == 0:
+            default_categories = [
+                ('إنترنت', 'internet', 1),
+                ('جوال', 'mobile', 1),
+                ('خط أرضي', 'landline', 1),
+                ('البنوك', 'banks', 1)
+            ]
+            c.executemany('INSERT INTO categories (name, identifier, is_active) VALUES (?, ?, ?)',
+                         default_categories)
+            conn.commit()
         
         # التأكد من وجود الجداول
         c.execute('''CREATE TABLE IF NOT EXISTS products 
@@ -1330,6 +1380,8 @@ def admin_panel():
                       created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
         conn.commit()
         
+        c.execute('SELECT * FROM categories')
+        categories = c.fetchall()
         c.execute('SELECT * FROM products')
         products = c.fetchall()
         c.execute('SELECT * FROM users')
@@ -1351,7 +1403,7 @@ def admin_panel():
                          ORDER BY o.created_at DESC''', (user_telegram_id,))
         orders = c.fetchall()
         conn.close()
-        return render_template('admin.html', products=products, users=users, orders=orders)
+        return render_template('admin.html', categories=categories, products=products, users=users, orders=orders)
     except Exception as e:
         print(f"Error in admin_panel: {str(e)}")
         if conn:
