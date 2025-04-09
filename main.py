@@ -1330,7 +1330,19 @@ def toggle_category():
     category_id = request.form['category_id']
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+    
+    # تحديث حالة القسم
     c.execute('UPDATE categories SET is_active = NOT is_active WHERE id = ?', (category_id,))
+    
+    # جلب معلومات القسم المحدث
+    c.execute('SELECT identifier, is_active FROM categories WHERE id = ?', (category_id,))
+    category = c.fetchone()
+    
+    if category:
+        # تحديث المنتجات المرتبطة بالقسم
+        c.execute('UPDATE products SET is_active = ? WHERE category = ?', 
+                 (category[1], category[0]))
+    
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
