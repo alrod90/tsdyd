@@ -2074,28 +2074,20 @@ def run_flask():
     app.run(host='0.0.0.0', port=5000, debug=False)
 
 def run_bot():
-    try:
-        # Initialize bot
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        if not bot_token:
-            print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
-            return
+    # Initialize bot
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    if not bot_token:
+        print("خطأ: لم يتم العثور على توكن البوت. الرجاء إضافته في Secrets")
+        return
 
-        print("جاري تشغيل البوت...")
-        application = Application.builder().token(bot_token).concurrent_updates(True).build()
-        application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+    print("جاري تشغيل البوت...")
+    application = Application.builder().token(bot_token).build()
 
 
 
-    try:
-        # Add handlers
-        application.add_handler(CommandHandler("orders", orders))
-        application.add_handler(CommandHandler("admin", admin_panel_command))
-
-        # Run bot
-        application.run_polling()
-    except Exception as e:
-        print(f"Error starting bot: {str(e)}")
+    # Add handlers
+    application.add_handler(CommandHandler("orders", orders))
+    application.add_handler(CommandHandler("admin", admin_panel_command))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
