@@ -623,20 +623,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_CUSTOMER_INFO"
     elif query.data == 'add_new_order':
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        c.execute('SELECT id, name FROM products WHERE is_active = 1')
-        products = c.fetchall()
-        conn.close()
-
-        keyboard = []
-        for product in products:
-            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
-        keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("اختر المنتج للطلب الجديد:", reply_markup=reply_markup)
-        return
+        await query.message.edit_text("الرجاء إدخال معرف المستخدم في تيليجرام:")
+        return "WAITING_NEW_ORDER_USER_ID"
 
     elif query.data.startswith('add_order_product_'):
         product_id = query.data.split('_')[3]
@@ -1200,8 +1188,19 @@ async def handle_new_order_user_id(update: Update, context: ContextTypes.DEFAULT
     try:
         user_id = int(user_id)
         context.user_data['new_order_user_id'] = user_id
-        await update.message.reply_text("أدخل المبلغ:")
-        return "WAITING_NEW_ORDER_AMOUNT"
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name FROM products WHERE is_active = 1')
+        products = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for product in products:
+            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("اختر المنتج للطلب:", reply_markup=reply_markup)
+        return "WAITING_NEW_ORDER_PRODUCT"
     except ValueError:
         await update.message.reply_text("معرف مستخدم غير صحيح، الرجاء المحاولة مرة أخرى.")
         return ConversationHandler.END
