@@ -680,22 +680,17 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return "WAITING_SEARCH_CUSTOMER_FOR_EDIT"
 
         if not orders:
-            keyboard = [[InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
+            keyboard = []
+            for order in orders:
+                keyboard.append([InlineKeyboardButton(
+                    f"طلب #{order[0]} - {order[1]} - {order[2]} ل.س",
+                    callback_data=f'edit_order_{order[0]}'
+                )])
+            keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
+
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.message.edit_text("لا توجد طلبات معلقة للتعديل", reply_markup=reply_markup)
+            await query.message.edit_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
             return
-
-        keyboard = []
-        for order in orders:
-            keyboard.append([InlineKeyboardButton(
-                f"طلب #{order[0]} - {order[1]} - {order[2]} ل.س",
-                callback_data=f'edit_order_{order[0]}'
-            )])
-        keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
-        return
 
     elif query.data.startswith('edit_order_'):
         order_id = query.data.split('_')[2]
@@ -1374,14 +1369,14 @@ def delete_product():
         product_id = request.form['product_id']
         conn = sqlite3.connect('store.db')  # تصحيح اسم قاعدة البيانات
         c = conn.cursor()
-        
+
         # التحقق من وجود الجدول
         c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products'")
         if not c.fetchone():
             c.execute('''CREATE TABLE IF NOT EXISTS products 
                      (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
             conn.commit()
-            
+
         c.execute('DELETE FROM products WHERE id = ?', (product_id,))
         conn.commit()
         conn.close()
@@ -1935,6 +1930,10 @@ def run_bot():
             CallbackQueryHandler(button_click, pattern="^(?!cancel$).*$")
         ],
         states={
+            "WAITING_SEARCH_ORDER_NUMBER": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
             "WAITING_CUSTOMER_INFO": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info),
                 CallbackQueryHandler(button_click, pattern="^back$")
