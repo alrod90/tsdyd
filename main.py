@@ -147,8 +147,14 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 InlineKeyboardButton("عرض المنتجات", callback_data='admin_products'),
                 InlineKeyboardButton("إضافة منتج", callback_data='add_product')
             ],
-            [InlineKeyboardButton("إدارة المستخدمين", callback_data='admin_users')],
-            [InlineKeyboardButton("إدارة الطلبات", callback_data='admin_orders')],
+            [
+                InlineKeyboardButton("عرض المستخدمين", callback_data='admin_users'),
+                InlineKeyboardButton("تعديل الأرصدة", callback_data='edit_balance')
+            ],
+            [
+                InlineKeyboardButton("عرض الطلبات", callback_data='admin_orders'),
+                InlineKeyboardButton("البحث في الطلبات", callback_data='search_orders')
+            ],
             [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -310,8 +316,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("عرض المنتجات", callback_data='admin_products'),
                 InlineKeyboardButton("إضافة منتج", callback_data='add_product')
             ],
-            [InlineKeyboardButton("إدارة المستخدمين", callback_data='admin_users')],
-            [InlineKeyboardButton("إدارة الطلبات", callback_data='admin_orders')],
+            [
+                InlineKeyboardButton("عرض المستخدمين", callback_data='admin_users'),
+                InlineKeyboardButton("تعديل الأرصدة", callback_data='edit_balance')
+            ],
+            [
+                InlineKeyboardButton("عرض الطلبات", callback_data='admin_orders'),
+                InlineKeyboardButton("البحث في الطلبات", callback_data='search_orders')
+            ],
             [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
