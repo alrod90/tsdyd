@@ -358,8 +358,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [
                 InlineKeyboardButton("عرض الطلبات", callback_data='view_orders'),
-                InlineKeyboardButton("طلبات معلقة", callback_data='pending_orders'),
-                InlineKeyboardButton("إضافة طلب جديد", callback_data='add_new_order')
+                InlineKeyboardButton("طلبات معلقة", callback_data='pending_orders')
             ],
             [
                 InlineKeyboardButton("بحث في الطلبات", callback_data='search_orders'),
