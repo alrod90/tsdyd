@@ -261,14 +261,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'admin_products':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT * FROM products')
+        c.execute('SELECT name, category, is_active FROM products')
         products = c.fetchall()
         conn.close()
 
         message = "قائمة المنتجات:\n\n"
         for product in products:
-            status = "✅ مفعل" if product[3] else "❌ معطل"
-            message += f"الاسم: {product[1]}\nالقسم: {product[2]}\nالحالة: {status}\n──────────────\n"
+            status = "✅ مفعل" if product[2] else "❌ معطل"
+            message += f"الاسم: {product[0]}\nالقسم: {product[1]}\nالحالة: {status}\n──────────────\n"
 
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='admin_back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -277,14 +277,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'admin_users':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT * FROM users')
+        c.execute('SELECT telegram_id, balance, is_active FROM users')
         users = c.fetchall()
         conn.close()
 
         message = "قائمة المستخدمين:\n\n"
         for user in users:
-            status = "✅ مفعل" if user[4] else "❌ معطل"
-            message += f"المعرف: {user[1]}\nالرصيد: {user[2]} ل.س\nالحالة: {status}\n──────────────\n"
+            status = "✅ مفعل" if user[2] else "❌ معطل"
+            message += f"المعرف: {user[0]}\nالرصيد: {user[1]} ل.س\nالحالة: {status}\n──────────────\n"
 
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='admin_back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
