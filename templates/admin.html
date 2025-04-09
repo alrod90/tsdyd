@@ -113,55 +113,6 @@
     <h1>لوحة تحكم المتجر</h1>
 
     <div class="section">
-        <h2>إدارة الأقسام</h2>
-        <form action="/add_category" method="post">
-            <input type="text" name="name" placeholder="اسم القسم" required>
-            <input type="text" name="identifier" placeholder="معرف القسم (مثال: internet)" required>
-            <label class="switch">
-                <input type="checkbox" name="is_active" checked>
-                <span class="slider"></span>
-            </label>
-            <span>تفعيل القسم</span>
-            <input type="submit" value="إضافة قسم">
-        </form>
-
-        <table>
-            <tr>
-                <th>الاسم</th>
-                <th>المعرف</th>
-                <th>الحالة</th>
-                <th>الإجراءات</th>
-            </tr>
-            {% for category in categories %}
-            <tr>
-                <td>{{ category[1] }}</td>
-                <td>{{ category[2] }}</td>
-                <td class="status-{{ 'active' if category[3] else 'inactive' }}">
-                    {{ 'مفعل' if category[3] else 'غير مفعل' }}
-                </td>
-                <td>
-                    <form action="/toggle_category" method="post" style="display: inline;">
-                        <input type="hidden" name="category_id" value="{{ category[0] }}">
-                        <button type="submit">
-                            {{ 'إلغاء التفعيل' if category[3] else 'تفعيل' }}
-                        </button>
-                    </form>
-                    <button onclick="showEditCategoryForm('{{ category[0] }}', '{{ category[1] }}', '{{ category[2] }}')" style="margin-right: 10px;">
-                        تعديل
-                    </button>
-                    <form action="/delete_category" method="post" style="display: inline;">
-                        <input type="hidden" name="category_id" value="{{ category[0] }}">
-                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذا القسم؟')" style="background-color: #ff4444;">
-                            حذف
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
-
-    <div class="section">
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
