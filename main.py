@@ -588,6 +588,29 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         context.user_data['amount'] = amount
 
+        # التحقق من رصيد المستخدم
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        user_balance = c.fetchone()
+        
+        if not user_balance or user_balance[0] < amount:
+            await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance[0] if user_balance else 0} ليرة سوري")
+            conn.close()
+            return ConversationHandler.END
+
+        # التحقق من وجود المنتج
+        c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
+        product = c.fetchone()
+        
+        if not product:
+            await update.message.reply_text("المنتج غير متوفر")
+            conn.close()
+            return ConversationHandler.END
+            
+        product_name = product[0]
+        conn.close()
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
