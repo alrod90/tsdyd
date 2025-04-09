@@ -143,7 +143,10 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
 
         keyboard = [
-            [InlineKeyboardButton("إدارة المنتجات", callback_data='admin_products')],
+            [
+                InlineKeyboardButton("عرض المنتجات", callback_data='admin_products'),
+                InlineKeyboardButton("إضافة منتج", callback_data='add_product')
+            ],
             [InlineKeyboardButton("إدارة المستخدمين", callback_data='admin_users')],
             [InlineKeyboardButton("إدارة الطلبات", callback_data='admin_orders')],
             [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
@@ -243,14 +246,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
 
-    elif query.data == 'search_order_number':
-        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
-        return "WAITING_ORDER_NUMBER"
-
-    elif query.data == 'search_customer_info':
-        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
-        return "WAITING_SEARCH_CUSTOMER_INFO"
-
     elif query.data.startswith('cancel_order_'):
         order_id = int(query.data.split('_')[2])
         await query.message.edit_text("الرجاء إدخال سبب الإلغاء:")
@@ -311,7 +306,10 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == 'admin_back':
         keyboard = [
-            [InlineKeyboardButton("إدارة المنتجات", callback_data='admin_products')],
+            [
+                InlineKeyboardButton("عرض المنتجات", callback_data='admin_products'),
+                InlineKeyboardButton("إضافة منتج", callback_data='add_product')
+            ],
             [InlineKeyboardButton("إدارة المستخدمين", callback_data='admin_users')],
             [InlineKeyboardButton("إدارة الطلبات", callback_data='admin_orders')],
             [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
@@ -665,7 +663,7 @@ def toggle_product():
 @app.route('/delete_product', methods=['POST'])
 def delete_product():
     product_id = request.form['product_id']
-    conn = sqlite3.connect('store.db')
+    conn = sqlite3.connect('storedb')
     c = conn.cursor()
     c.execute('DELETE FROM products WHERE id = ?', (product_id,))
     conn.commit()
@@ -779,7 +777,7 @@ def add_order():
         # التحقق من وجود المستخدم والمنتج
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
         user = c.fetchone()
-        
+
         if not user:
             conn.close()
             return "المستخدم غير موجود", 400
@@ -796,7 +794,7 @@ def add_order():
         c.execute('''INSERT INTO orders (user_id, product_id, amount, customer_info, status) 
                      VALUES (?, ?, ?, ?, ?)''',
                  (user_id, product_id, amount, customer_info, 'pending'))
-        
+
         order_id = c.lastrowid
 
         # الحصول على اسم المنتج للإشعار
@@ -809,7 +807,7 @@ def add_order():
         # إرسال إشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        
+
         notification_message = f"""✉️ تم إنشاء طلب جديد
 رقم الطلب: {order_id}
 الشركة: {product_name}
@@ -1169,11 +1167,11 @@ def get_db_connection():
         conn.execute("PRAGMA journal_mode = WAL")
         conn.execute("PRAGMA timezone = '+03:00'")
         return conn
-            
+
         # إذا لم تكن موجودة، قم بإنشاء قاعدة بيانات جديدة
         conn = sqlite3.connect('store.db')
         conn.execute("PRAGMA timezone = '+03:00'")
-        
+
         # إنشاء الجداول الأساسية
         c = conn.cursor()
         c.execute('''CREATE TABLE IF NOT EXISTS products 
@@ -1269,7 +1267,7 @@ if __name__ == '__main__':
     # التحقق من عدم وجود نسخة أخرى من البوت
     import socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
+
     try:
         # استخدام ملف قفل لمنع تشغيل نسخ متعددة
         if os.path.exists('bot.lock'):
@@ -1284,20 +1282,20 @@ if __name__ == '__main__':
                     pass  # العملية غير موجودة
             except:
                 pass
-            
+
         # تسجيل PID العملية الحالية
         with open('bot.lock', 'w') as f:
             f.write(str(os.getpid()))
-            
+
         sock.bind(('0.0.0.0', 5001))  # منفذ للتحقق فقط
-        
+
         # تشغيل التطبيق
         app.config['TEMPLATES_AUTO_RELOAD'] = True
         app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # مدة الجلسة يوم كامل
         flask_thread = Thread(target=run_flask)
         flask_thread.start()
         run_bot()
-        
+
     except socket.error:
         print("هناك نسخة أخرى من البوت قيد التشغيل")
         exit(1)
