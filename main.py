@@ -1765,6 +1765,22 @@ def edit_user():
         print(f"Error in edit_user: {str(e)}")
         return "حدث خطأ في تحديث الرصيد", 500
 
+@app.route('/toggle_distributor', methods=['POST'])
+def toggle_distributor():
+    try:
+        user_id = request.form['user_id']
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''UPDATE users SET is_distributor = 
+                     CASE WHEN is_distributor = 1 THEN 0 ELSE 1 END 
+                     WHERE telegram_id = ?''', (user_id,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in toggle_distributor: {str(e)}")
+        return "حدث خطأ في تغيير صلاحية الموزع", 500
+
 @app.route('/toggle_user', methods=['POST'])
 def toggle_user():
     user_id = request.form['user_id']
