@@ -324,7 +324,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [
                 InlineKeyboardButton("عرض الطلبات", callback_data='view_orders'),
-                InlineKeyboardButton("طلبات معلقة", callback_data='pending_orders')
+                InlineKeyboardButton("طلبات معلقة", callback_data='pending_orders'),
+                InlineKeyboardButton("إضافة طلب جديد", callback_data='add_new_order')
             ],
             [
                 InlineKeyboardButton("بحث في الطلبات", callback_data='search_orders'),
@@ -621,6 +622,105 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['product_name'] = product_name
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_CUSTOMER_INFO"
+    elif query.data == 'add_new_order':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name FROM products WHERE is_active = 1')
+        products = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for product in products:
+            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر المنتج للطلب الجديد:", reply_markup=reply_markup)
+        return
+
+    elif query.data.startswith('add_order_product_'):
+        product_id = query.data.split('_')[3]
+        context.user_data['new_order_product_id'] = product_id
+        await query.message.edit_text("أدخل معرف المستخدم في تيليجرام:")
+        return "WAITING_NEW_ORDER_USER_ID"
+
+    elif query.data == 'edit_order':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT o.id, p.name, o.amount, o.status 
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     WHERE o.status = 'pending' 
+                     ORDER BY o.created_at DESC LIMIT 10''')
+        orders = c.fetchall()
+        conn.close()
+
+        if not orders:
+            keyboard = [[InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.message.edit_text("لا توجد طلبات معلقة للتعديل", reply_markup=reply_markup)
+            return
+
+        keyboard = []
+        for order in orders:
+            keyboard.append([InlineKeyboardButton(
+                f"طلب #{order[0]} - {order[1]} - {order[2]} ل.س",
+                callback_data=f'edit_order_{order[0]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
+        return
+
+    elif query.data.startswith('edit_order_'):
+        order_id = query.data.split('_')[2]
+        context.user_data['editing_order_id'] = order_id
+
+        keyboard = [
+            [
+                InlineKeyboardButton("تعديل المبلغ", callback_data=f'edit_order_amount_{order_id}'),
+                InlineKeyboardButton("تعديل الحالة", callback_data=f'edit_order_status_{order_id}')
+            ],
+            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر ما تريد تعديله:", reply_markup=reply_markup)
+        return
+
+    elif query.data.startswith('edit_order_amount_'):
+        order_id = query.data.split('_')[3]
+        context.user_data['editing_order_id'] = order_id
+        await query.message.edit_text("أدخل المبلغ الجديد:")
+        return "WAITING_EDIT_ORDER_AMOUNT"
+
+    elif query.data.startswith('edit_order_status_'):
+        order_id = query.data.split('_')[3]
+        context.user_data['editing_order_id'] = order_id
+        keyboard = [
+            [InlineKeyboardButton("قيد المعالجة", callback_data=f'set_order_status_pending_{order_id}')],
+            [InlineKeyboardButton("مقبول", callback_data=f'set_order_status_accepted_{order_id}')],
+            [InlineKeyboardButton("مرفوض", callback_data=f'set_order_status_rejected_{order_id}')],
+            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر الحالة الجديدة:", reply_markup=reply_markup)
+        return
+
+    elif query.data.startswith('set_order_status_'):
+        order_id = query.data.split('_')[4]
+        status = query.data.split('_')[3]
+        await update_order_status(update, context, order_id, status)
+        return
+
+    elif query.data.startswith('search_order_number'):
+        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
+        return "WAITING_SEARCH_ORDER_NUMBER"
+
+    elif query.data.startswith('search_customer_info'):
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_SEARCH_CUSTOMER_INFO"
+
 
 async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     customer_info = update.message.text
@@ -884,7 +984,7 @@ async def handle_edit_product(update: Update, context: ContextTypes.DEFAULT_TYPE
     try:
         name, category = update.message.text.split('|')
         product_id = context.user_data.get('editing_product')
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('UPDATE products SET name = ?, category = ? WHERE id = ?', 
@@ -906,7 +1006,7 @@ async def handle_add_balance(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         user_id, amount = update.message.text.split('|')
         amount = float(amount.strip())
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?', (amount, user_id.strip()))
@@ -927,7 +1027,7 @@ async def handle_deduct_balance(update: Update, context: ContextTypes.DEFAULT_TY
     try:
         user_id, amount = update.message.text.split('|')
         amount = float(amount.strip())
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id.strip()))
@@ -948,7 +1048,7 @@ async def handle_edit_balance(update: Update, context: ContextTypes.DEFAULT_TYPE
     try:
         new_balance = float(update.message.text)
         user_id = context.user_data.get('editing_balance_user')
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?', (new_balance, user_id))
@@ -1026,6 +1126,116 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.edit_text(confirmation_message, reply_markup=reply_markup)
     return ConversationHandler.END
+
+async def handle_new_order_user_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.text
+    try:
+        user_id = int(user_id)
+        context.user_data['new_order_user_id'] = user_id
+        await update.message.reply_text("أدخل المبلغ:")
+        return "WAITING_NEW_ORDER_AMOUNT"
+    except ValueError:
+        await update.message.reply_text("معرف مستخدم غير صحيح، الرجاء المحاولة مرة أخرى.")
+        return ConversationHandler.END
+
+async def handle_new_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    amount = update.message.text
+    try:
+        amount = float(amount)
+        context.user_data['new_order_amount'] = amount
+        await create_new_order(update, context)
+        return ConversationHandler.END
+    except ValueError:
+        await update.message.reply_text("مبلغ غير صحيح، الرجاء المحاولة مرة أخرى.")
+        return ConversationHandler.END
+
+async def create_new_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = context.user_data.get('new_order_user_id')
+    product_id = context.user_data.get('new_order_product_id')
+    amount = context.user_data.get('new_order_amount')
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+    user_balance = c.fetchone()[0]
+    if user_balance < amount:
+        await update.message.reply_text(f"رصيد المستخدم غير كافٍ، رصيده الحالي {user_balance}")
+        conn.close()
+        return
+    c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id))
+    c.execute('INSERT INTO orders (user_id, product_id, amount, status) VALUES (?, ?, ?, ?)', (user_id, product_id, amount, 'pending'))
+    order_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    await update.message.reply_text(f"تم إضافة طلب جديد برقم {order_id}")
+
+
+async def handle_edit_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    new_amount = update.message.text
+    try:
+        new_amount = float(new_amount)
+        await update_order_amount(update, context, new_amount)
+        return ConversationHandler.END
+    except ValueError:
+        await update.message.reply_text("مبلغ غير صحيح، الرجاء المحاولة مرة أخرى.")
+        return ConversationHandler.END
+
+async def update_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE, new_amount):
+    order_id = context.user_data.get('editing_order_id')
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT amount, user_id, status FROM orders WHERE id = ?', (order_id,))
+    current_order = c.fetchone()
+    if not current_order:
+        await update.message.reply_text("الطلب غير موجود")
+        conn.close()
+        return
+    current_amount = current_order[0]
+    user_id = current_order[1]
+    status = current_order[2]
+    if status != 'rejected':
+        amount_diff = new_amount - current_amount
+        if amount_diff > 0:
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+            user_balance = c.fetchone()[0]
+            if user_balance < amount_diff:
+                await update.message.reply_text(f"رصيد المستخدم غير كافٍ، رصيده الحالي {user_balance}")
+                conn.close()
+                return
+            c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount_diff, user_id))
+        elif amount_diff < 0:
+            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?', (-amount_diff, user_id))
+    c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
+    conn.commit()
+    conn.close()
+    await update.message.reply_text(f"تم تحديث مبلغ الطلب {order_id} إلى {new_amount}")
+
+async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE, order_id, status):
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT amount, user_id, status FROM orders WHERE id = ?', (order_id,))
+    current_order = c.fetchone()
+    if not current_order:
+        await update.message.reply_text("الطلب غير موجود")
+        conn.close()
+        return
+    amount = current_order[0]
+    user_id = current_order[1]
+    current_status = current_order[2]
+    if current_status == 'rejected' and (status == 'pending' or status == 'accepted'):
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+        user_balance = c.fetchone()[0]
+        if user_balance < amount:
+            await update.message.reply_text(f"رصيد المستخدم غير كافٍ، رصيده الحالي {user_balance}")
+            conn.close()
+            return
+        c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id))
+    elif current_status != 'rejected' and status == 'rejected':
+        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?', (amount, user_id))
+    c.execute('UPDATE orders SET status = ? WHERE id = ?', (status, order_id))
+    conn.commit()
+    conn.close()
+    await update.message.reply_text(f"تم تحديث حالة الطلب {order_id} إلى {status}")
+
 
 # Flask routes
 @app.route('/')
@@ -1684,7 +1894,20 @@ def run_bot():
             "WAITING_EDIT_BALANCE": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_balance),
                 CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_NEW_ORDER_USER_ID": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_new_order_user_id),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_NEW_ORDER_AMOUNT": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_new_order_amount),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_EDIT_ORDER_AMOUNT": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_order_amount),
+                CallbackQueryHandler(button_click, pattern="^back$")
             ]
+
         },
         fallbacks=[
             CommandHandler("cancel", lambda u, c: ConversationHandler.END),
