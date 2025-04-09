@@ -46,22 +46,6 @@ def sync_deployed_db():
 def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
-    # إنشاء جدول الأقسام
-    c.execute('''CREATE TABLE IF NOT EXISTS categories
-                 (id INTEGER PRIMARY KEY, category TEXT UNIQUE, is_active BOOLEAN DEFAULT 1)''')
-    
-    # إضافة الأقسام الافتراضية إذا كان الجدول فارغاً
-    c.execute('SELECT COUNT(*) FROM categories')
-    if c.fetchone()[0] == 0:
-        default_categories = [
-            ('internet', 1),
-            ('mobile', 1),
-            ('landline', 1),
-            ('banks', 1)
-        ]
-        c.executemany('INSERT OR IGNORE INTO categories (category, is_active) VALUES (?, ?)',
-                     default_categories)
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
     c.execute("""
@@ -1373,62 +1357,6 @@ def admin_panel():
         if conn:
             conn.close()
         return "حدث خطأ في الوصول إلى لوحة التحكم. الرجاء المحاولة مرة أخرى.", 500
-
-@app.route('/get_categories')
-def get_categories():
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT DISTINCT category, is_active FROM categories ORDER BY category')
-    categories = [{'name': row[0], 'is_active': bool(row[1])} for row in c.fetchall()]
-    conn.close()
-    return jsonify(categories)
-
-@app.route('/add_category', methods=['POST'])
-def add_category():
-    category_name = request.form['category_name']
-    is_active = 'is_active' in request.form
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('INSERT INTO categories (category, is_active) VALUES (?, ?)',
-              (category_name, is_active))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
-
-@app.route('/toggle_category', methods=['POST'])
-def toggle_category():
-    category_name = request.form['category_name']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE categories SET is_active = NOT is_active WHERE category = ?',
-              (category_name,))
-    conn.commit()
-    conn.close()
-    return '', 204
-
-@app.route('/delete_category', methods=['POST'])
-def delete_category():
-    category_name = request.form['category_name']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('DELETE FROM categories WHERE category = ?', (category_name,))
-    conn.commit()
-    conn.close()
-    return '', 204
-
-@app.route('/edit_category', methods=['POST'])
-def edit_category():
-    old_name = request.form['old_name']
-    new_name = request.form['new_name']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE categories SET category = ? WHERE category = ?',
-              (new_name, old_name))
-    c.execute('UPDATE products SET category = ? WHERE category = ?',
-              (new_name, old_name))
-    conn.commit()
-    conn.close()
-    return '', 204
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
