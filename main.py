@@ -1379,7 +1379,8 @@ def admin_panel():
     # إضافة استرجاع الأقسام
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('SELECT * FROM categories')
+    # استرجاع جميع الأقسام النشطة وغير النشطة
+    c.execute('SELECT * FROM categories ORDER BY id')
     categories = c.fetchall()
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
