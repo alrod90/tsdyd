@@ -569,34 +569,45 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     return "WAITING_AMOUNT"
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    amount = float(update.message.text)
-    context.user_data['amount'] = amount
+    try:
+        amount = float(update.message.text)
+        if amount <= 0:
+            await update.message.reply_text("المبلغ يجب أن يكون أكبر من صفر")
+            return "WAITING_AMOUNT"
+            
+        context.user_data['amount'] = amount
 
-    # التحقق من الرصيد
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    user_balance = c.fetchone()[0]
-    conn.close()
+        # التحقق من الرصيد
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        user_balance = c.fetchone()[0]
+        
+        if amount > user_balance:
+            await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
+            conn.close()
+            return ConversationHandler.END
 
-    if amount > user_balance:
-        await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
+        c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
+        product_name = c.fetchone()[0]
+        conn.close()
+
+        await update.message.reply_text(
+            f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
+            f"اضغط على تأكيد لإتمام العملية.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("تأكيد", callback_data='confirm_purchase'),
+                InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')
+            ]])
+        )
+        return "WAITING_CONFIRMATION"
+    except ValueError:
+        await update.message.reply_text("الرجاء إدخال رقم صحيح")
+        return "WAITING_AMOUNT"
+    except Exception as e:
+        print(f"Error in handle_amount: {str(e)}")
+        await update.message.reply_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
         return ConversationHandler.END
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
-    product_name = c.fetchone()[0]
-    conn.close()
-
-    await update.message.reply_text(
-        f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
-        f"اضغط على تأكيد لإتمام العملية.",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("تأكيد", callback_data='confirm_purchase'),
-            InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')
-        ]])
-    )
-    return "WAITING_CONFIRMATION"
 
 
 async def handle_search_order_for_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
