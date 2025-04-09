@@ -1312,8 +1312,46 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 # Flask routes
+@app.route('/add_category', methods=['POST'])
+def add_category():
+    name = request.form['name']
+    identifier = request.form['identifier']
+    is_active = 'is_active' in request.form
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO categories (name, identifier, is_active) VALUES (?, ?, ?)',
+              (name, identifier, is_active))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/toggle_category', methods=['POST'])
+def toggle_category():
+    category_id = request.form['category_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE categories SET is_active = NOT is_active WHERE id = ?', (category_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/delete_category', methods=['POST'])
+def delete_category():
+    category_id = request.form['category_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM categories WHERE id = ?', (category_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
 @app.route('/')
 def admin_panel():
+    # إضافة استرجاع الأقسام
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM categories')
+    categories = c.fetchall()
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     c.execute('SELECT * FROM products')
@@ -1881,6 +1919,25 @@ def get_db_connection():
         conn.execute("PRAGMA busy_timeout = 10000")
         conn.execute("PRAGMA journal_mode = WAL")
         conn.execute("PRAGMA timezone = '+03:00'")
+        
+        # إنشاء جدول الأقسام إذا لم يكن موجوداً
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS categories 
+                     (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
+        
+        # إضافة الأقسام الافتراضية إذا كان الجدول فارغاً
+        c.execute('SELECT COUNT(*) FROM categories')
+        if c.fetchone()[0] == 0:
+            default_categories = [
+                ('إنترنت', 'internet', 1),
+                ('جوال', 'mobile', 1),
+                ('خط أرضي', 'landline', 1),
+                ('البنوك', 'banks', 1)
+            ]
+            c.executemany('INSERT INTO categories (name, identifier, is_active) VALUES (?, ?, ?)',
+                         default_categories)
+            conn.commit()
+        
         return conn
 
         # إذا لم تكن موجودة، قم بإنشاء قاعدة بيانات جديدة
