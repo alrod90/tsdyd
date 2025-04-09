@@ -475,6 +475,62 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(message, reply_markup=reply_markup)
 
+    elif query.data == 'search_users':
+        await query.message.edit_text(
+            "الرجاء إدخال معرف المستخدم للبحث عنه:"
+        )
+        return "WAITING_SEARCH_USER"
+
+    elif query.data == 'search_products':
+        await query.message.edit_text(
+            "الرجاء إدخال اسم المنتج للبحث عنه:"
+        )
+        return "WAITING_SEARCH_PRODUCT"
+
+    elif query.data == 'search_orders':
+        keyboard = [
+            [InlineKeyboardButton("البحث برقم الطلب", callback_data='search_by_order_number')],
+            [InlineKeyboardButton("البحث ببيانات الزبون", callback_data='search_by_customer_info')],
+            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر طريقة البحث:", reply_markup=reply_markup)
+
+    elif query.data == 'search_by_order_number':
+        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
+        return "WAITING_SEARCH_ORDER_NUMBER"
+
+    elif query.data == 'search_by_customer_info':
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_SEARCH_CUSTOMER_INFO"
+
+    elif query.data == 'pending_orders':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT o.id, p.name, o.amount, o.customer_info, o.created_at 
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     WHERE o.status = 'pending'
+                     ORDER BY o.created_at DESC''')
+        orders = c.fetchall()
+        conn.close()
+
+        if not orders:
+            message = "لا توجد طلبات معلقة"
+        else:
+            message = "الطلبات المعلقة:\n\n"
+            for order in orders:
+                message += f"""رقم الطلب: {order[0]}
+الشركة: {order[1]}
+المبلغ: {order[2]} ل.س
+بيانات الزبون: {order[3]}
+التاريخ: {order[4]}
+──────────────\n"""
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
     elif query.data == 'add_product':
         await query.message.edit_text(
             "الرجاء إدخال معلومات المنتج بالتنسيق التالي:\n"
