@@ -423,11 +423,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'back':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # جلب الأقسام النشطة
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
-        
+
         # إنشاء أزرار الأقسام
         keyboard = []
         row = []
@@ -570,78 +570,59 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        # التحقق من وجود البيانات المطلوبة
+        amount = float(update.message.text)
         if 'product_id' not in context.user_data:
             keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text("حدث خطأ في معرف المنتج، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
             return ConversationHandler.END
-            
-        if 'customer_info' not in context.user_data:
-            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text("حدث خطأ في بيانات الزبون، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
-            return ConversationHandler.END
 
-        # التحقق من صحة المبلغ
-        try:
-            amount = float(update.message.text.strip())
-            if amount <= 0:
-                await update.message.reply_text("المبلغ يجب أن يكون أكبر من صفر")
-                return "WAITING_AMOUNT"
-        except ValueError:
-            await update.message.reply_text("الرجاء إدخال رقم صحيح")
-            return "WAITING_AMOUNT"
-            
         context.user_data['amount'] = amount
 
-        # التحقق من رصيد المستخدم
+        # التحقق من الرصيد
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        user_balance = c.fetchone()
-        
-        if not user_balance or user_balance[0] < amount:
-            await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance[0] if user_balance else 0} ليرة سوري")
+        user_balance = c.fetchone()[0]
+
+        if amount > user_balance:
+            await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
             conn.close()
             return ConversationHandler.END
 
-        # التحقق من وجود المنتج
         c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
         product = c.fetchone()
-        
-        if not product:
-            await update.message.reply_text("المنتج غير متوفر")
-            conn.close()
-            return ConversationHandler.END
-            
-        product_name = product[0]
         conn.close()
+
+        if not product:
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text("المنتج غير متوفر، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
+            return ConversationHandler.END
+
+        product_name = product[0]
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         try:
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
             user_balance = c.fetchone()
-            
-            if not user_balance:
-                await update.message.reply_text("حدث خطأ في العثور على حسابك")
-                return ConversationHandler.END
-                
-            user_balance = user_balance[0]
-            
-            if amount > user_balance:
-                await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
+
+            if not user_balance or user_balance[0] < amount:
+                await update.message.reply_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance[0] if user_balance else 0} ليرة سوري")
+                conn.close()
                 return ConversationHandler.END
 
+            # التحقق من وجود المنتج
             c.execute('SELECT name FROM products WHERE id = ?', (context.user_data['product_id'],))
             product = c.fetchone()
-            
+
             if not product:
                 await update.message.reply_text("المنتج غير متوفر")
+                conn.close()
                 return ConversationHandler.END
-                
+
             product_name = product[0]
         finally:
             conn.close()
@@ -1104,7 +1085,7 @@ async def handle_new_order_user_id(update: Update, context: ContextTypes.DEFAULT
 async def handle_new_order_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+
     product_id = int(query.data.split('_')[2])
     context.user_data['new_order_product_id'] = product_id
     await query.message.edit_text("أدخل بيانات الزبون:")
@@ -1373,7 +1354,7 @@ def delete_product():
         c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products'")
         if not c.fetchone():
             c.execute('''CREATE TABLE IF NOT EXISTS products 
-                     (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
+                     (id INTEGER PRIMARY KEY,name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
             conn.commit()
 
         c.execute('DELETE FROM products WHERE id = ?', (product_id,))
