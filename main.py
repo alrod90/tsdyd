@@ -1314,31 +1314,49 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
 # Flask routes
 @app.route('/')
 def admin_panel():
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM products')
-    products = c.fetchall()
-    c.execute('SELECT * FROM users')
-    users = c.fetchall()
-    # التحقق من صلاحيات المستخدم
-    c.execute('SELECT telegram_id FROM users WHERE id = 1')  # المدير له ID = 1
-    admin_id = c.fetchone()
+    try:
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # التأكد من وجود الجداول
+        c.execute('''CREATE TABLE IF NOT EXISTS products 
+                     (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS users
+                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
+                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS orders
+                     (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
+                      customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+        conn.commit()
+        
+        c.execute('SELECT * FROM products')
+        products = c.fetchall()
+        c.execute('SELECT * FROM users')
+        users = c.fetchall()
+        c.execute('SELECT telegram_id FROM users WHERE id = 1')
+        admin_id = c.fetchone()
 
-    if admin_id and admin_id[0]:  # إذا كان المستخدم هو المدير
-        c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
-                     FROM orders o 
-                     JOIN products p ON o.product_id = p.id 
-                     ORDER BY o.created_at DESC''')
-    else:  # إذا كان مستخدم عادي
-        user_telegram_id = session.get('user_telegram_id')
-        c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
-                     FROM orders o 
-                     JOIN products p ON o.product_id = p.id 
-                     WHERE o.user_id = ?
-                     ORDER BY o.created_at DESC''', (user_telegram_id,))
-    orders = c.fetchall()
-    conn.close()
-    return render_template('admin.html', products=products, users=users, orders=orders)
+        if admin_id and admin_id[0]:
+            c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
+                         FROM orders o 
+                         JOIN products p ON o.product_id = p.id 
+                         ORDER BY o.created_at DESC''')
+        else:
+            user_telegram_id = session.get('user_telegram_id')
+            c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
+                         FROM orders o 
+                         JOIN products p ON o.product_id = p.id 
+                         WHERE o.user_id = ?
+                         ORDER BY o.created_at DESC''', (user_telegram_id,))
+        orders = c.fetchall()
+        conn.close()
+        return render_template('admin.html', products=products, users=users, orders=orders)
+    except Exception as e:
+        print(f"Error in admin_panel: {str(e)}")
+        if conn:
+            conn.close()
+        return "حدث خطأ في الوصول إلى لوحة التحكم. الرجاء المحاولة مرة أخرى.", 500
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
