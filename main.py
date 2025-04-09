@@ -198,6 +198,23 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    # التحقق من حالة المستخدم
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT is_active FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    user_status = c.fetchone()
+    conn.close()
+
+    # إذا كان المستخدم معطل ويحاول الوصول إلى قسم غير مسموح به
+    if user_status and not user_status[0] and query.data.startswith(('cat_', 'buy_')):
+        keyboard = [
+            [InlineKeyboardButton("رصيدي", callback_data='balance'),
+             InlineKeyboardButton("طلباتي", callback_data='my_orders')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("عذراً، حسابك معطل. يمكنك فقط عرض رصيدك وطلباتك.", reply_markup=reply_markup)
+        return
+
     if query.data.startswith('cat_'):
         category = query.data.split('_')[1]
         category_names = {
