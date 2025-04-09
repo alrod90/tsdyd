@@ -425,13 +425,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'back':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
         # التحقق من صلاحية الموزع
         c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        is_distributor = c.fetchone()[0] if c.fetchone() else False
+        distributor_result = c.fetchone()
+        is_distributor = distributor_result[0] if distributor_result else False
 
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
-        conn.close()
 
         # إنشاء أزرار الأقسام
         keyboard = []
@@ -460,21 +461,18 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 keyboard.append(row)
                 row = []
 
-        # التحقق من صلاحية الموزع
-        c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        is_distributor = c.fetchone()[0] if c.fetchone() else False
-
         # إضافة أزرار الرصيد والطلبات والموزع
-        bottom_buttons = [
+        bottom_row = [
             InlineKeyboardButton("رصيدي", callback_data='balance'),
             InlineKeyboardButton("طلباتي", callback_data='my_orders')
         ]
         
         # إضافة زر الموزع إذا كان المستخدم يملك الصلاحية
         if is_distributor:
-            bottom_buttons.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
+            bottom_row.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
         
-        keyboard.append(bottom_buttons)
+        keyboard.append(bottom_row)
+        conn.close()
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
