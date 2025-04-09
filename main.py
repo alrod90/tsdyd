@@ -1371,6 +1371,19 @@ def toggle_category():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/edit_category', methods=['POST'])
+def edit_category():
+    category_id = request.form['category_id']
+    name = request.form['name']
+    identifier = request.form['identifier']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE categories SET name = ?, identifier = ? WHERE id = ?',
+              (name, identifier, category_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
 @app.route('/delete_category', methods=['POST'])
 def delete_category():
     category_id = request.form['category_id']
