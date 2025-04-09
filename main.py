@@ -427,7 +427,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # التحقق من صلاحية الموزع
         c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
         is_distributor = c.fetchone()[0] if c.fetchone() else False
-        
+
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
         conn.close()
@@ -2170,6 +2170,10 @@ def run_bot():
             "WAITING_SEARCH_CUSTOMER_FOR_EDIT": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_for_edit),
                 CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_ADD_USER_BALANCE": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_add_user_balance),
+                CallbackQueryHandler(button_click, pattern="^back$")
             ]
 
         },
@@ -2261,7 +2265,7 @@ async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # التحقق من رصيد الموزع
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
         distributor_balance = c.fetchone()[0]
