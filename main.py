@@ -645,15 +645,22 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return "WAITING_NEW_ORDER_USER_ID"
 
     elif query.data == 'edit_order':
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        c.execute('''SELECT o.id, p.name, o.amount, o.status 
-                     FROM orders o 
-                     JOIN products p ON o.product_id = p.id 
-                     WHERE o.status = 'pending' 
-                     ORDER BY o.created_at DESC LIMIT 10''')
-        orders = c.fetchall()
-        conn.close()
+        keyboard = [
+            [InlineKeyboardButton("البحث برقم الطلب", callback_data='search_order_for_edit')],
+            [InlineKeyboardButton("البحث ببيانات الزبون", callback_data='search_customer_for_edit')],
+            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر طريقة البحث عن الطلب:", reply_markup=reply_markup)
+        return
+
+    elif query.data == 'search_order_for_edit':
+        await query.message.edit_text("الرجاء إدخال رقم الطلب:")
+        return "WAITING_SEARCH_ORDER_FOR_EDIT"
+
+    elif query.data == 'search_customer_for_edit':
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_SEARCH_CUSTOMER_FOR_EDIT"
 
         if not orders:
             keyboard = [[InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
@@ -758,6 +765,61 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return "WAITING_CONFIRMATION"
 
+
+async def handle_search_order_for_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    order_number = update.message.text
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info 
+                 FROM orders o 
+                 JOIN products p ON o.product_id = p.id 
+                 WHERE o.id = ?''', (order_number,))
+    order = c.fetchone()
+    conn.close()
+
+    if order:
+        keyboard = [
+            [InlineKeyboardButton("تعديل المبلغ", callback_data=f'edit_order_amount_{order[0]}')],
+            [InlineKeyboardButton("تعديل الحالة", callback_data=f'edit_order_status_{order[0]}')],
+            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
+        ]
+        message = f"""
+رقم الطلب: {order[0]}
+الشركة: {order[1]}
+المبلغ: {order[2]} ل.س
+الحالة: {order[3]}
+بيانات الزبون: {order[4]}
+"""
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(message, reply_markup=reply_markup)
+    else:
+        await update.message.reply_text("لم يتم العثور على الطلب")
+    return ConversationHandler.END
+
+async def handle_search_customer_for_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    customer_info = update.message.text
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info 
+                 FROM orders o 
+                 JOIN products p ON o.product_id = p.id 
+                 WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
+    orders = c.fetchall()
+    conn.close()
+
+    if orders:
+        keyboard = []
+        for order in orders:
+            keyboard.append([InlineKeyboardButton(
+                f"طلب #{order[0]} - {order[1]} - {order[2]} ل.س",
+                callback_data=f'edit_order_{order[0]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
+    else:
+        await update.message.reply_text("لم يتم العثور على طلبات مطابقة")
+    return ConversationHandler.END
 
 async def handle_search_order_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -1905,6 +1967,14 @@ def run_bot():
             ],
             "WAITING_EDIT_ORDER_AMOUNT": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_order_amount),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_SEARCH_ORDER_FOR_EDIT": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_for_edit),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_SEARCH_CUSTOMER_FOR_EDIT": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_for_edit),
                 CallbackQueryHandler(button_click, pattern="^back$")
             ]
 
