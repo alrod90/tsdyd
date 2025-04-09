@@ -475,6 +475,82 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(message, reply_markup=reply_markup)
 
+    elif query.data == 'add_product':
+        await query.message.edit_text(
+            "الرجاء إدخال معلومات المنتج بالتنسيق التالي:\n"
+            "الاسم|القسم\n"
+            "مثال: شركة الاتصالات|جوال"
+        )
+        return "WAITING_NEW_PRODUCT"
+
+    elif query.data == 'edit_product':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name, category FROM products')
+        products = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for product in products:
+            keyboard.append([InlineKeyboardButton(
+                f"{product[1]} - {product[2]}", 
+                callback_data=f'edit_product_{product[0]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='products_menu')])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر المنتج للتعديل:", reply_markup=reply_markup)
+
+    elif query.data.startswith('edit_product_'):
+        product_id = query.data.split('_')[2]
+        context.user_data['editing_product'] = product_id
+        await query.message.edit_text(
+            "الرجاء إدخال المعلومات الجديدة بالتنسيق التالي:\n"
+            "الاسم|القسم\n"
+            "مثال: شركة الاتصالات|جوال"
+        )
+        return "WAITING_EDIT_PRODUCT"
+
+    elif query.data == 'add_balance':
+        await query.message.edit_text(
+            "الرجاء إدخال المعلومات بالتنسيق التالي:\n"
+            "معرف المستخدم|المبلغ\n"
+            "مثال: 123456789|50000"
+        )
+        return "WAITING_ADD_BALANCE"
+
+    elif query.data == 'deduct_balance':
+        await query.message.edit_text(
+            "الرجاء إدخال المعلومات بالتنسيق التالي:\n"
+            "معرف المستخدم|المبلغ\n"
+            "مثال: 123456789|50000"
+        )
+        return "WAITING_DEDUCT_BALANCE"
+
+    elif query.data == 'edit_balance':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT telegram_id, balance FROM users')
+        users = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for user in users:
+            keyboard.append([InlineKeyboardButton(
+                f"المعرف: {user[0]} - الرصيد: {user[1]}", 
+                callback_data=f'edit_balance_{user[0]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='balance_menu')])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر المستخدم لتعديل رصيده:", reply_markup=reply_markup)
+
+    elif query.data.startswith('edit_balance_'):
+        user_id = query.data.split('_')[2]
+        context.user_data['editing_balance_user'] = user_id
+        await query.message.edit_text(
+            "الرجاء إدخال المبلغ الجديد"
+        )
+        return "WAITING_EDIT_BALANCE"
+
 
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
