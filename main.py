@@ -63,8 +63,7 @@ def init_db():
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT,
-                  is_distributor BOOLEAN DEFAULT 0)''')
+                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -425,13 +424,9 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        # جلب معلومات المستخدم والأقسام النشطة
+        # جلب الأقسام النشطة
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
-        
-        # التحقق من صلاحيات الموزع
-        c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        is_distributor = c.fetchone()[0] if c.fetchone() else False
         
         # إنشاء أزرار الأقسام
         keyboard = []
@@ -442,14 +437,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 keyboard.append(row)
                 row = []
 
-        # إضافة أزرار الرصيد والطلبات والموزع
-        bottom_row = [
+        # إضافة أزرار الرصيد والطلبات
+        keyboard.append([
             InlineKeyboardButton("رصيدي", callback_data='balance'),
             InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ]
-        if is_distributor:
-            bottom_row.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
-        keyboard.append(bottom_row)
+        ])
 
         conn.close()
         reply_markup = InlineKeyboardMarkup(keyboard)
