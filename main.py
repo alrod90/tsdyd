@@ -646,7 +646,6 @@ async def handle_new_order_customer_info(update: Update, context: ContextTypes.D
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث عن الطلب:", reply_markup=reply_markup)
-        return
 
     elif query.data == 'search_order_for_edit':
         await query.message.edit_text("الرجاء إدخال رقم الطلب:")
@@ -655,8 +654,6 @@ async def handle_new_order_customer_info(update: Update, context: ContextTypes.D
     elif query.data == 'search_customer_for_edit':
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_SEARCH_CUSTOMER_FOR_EDIT"
-
-        if not orders:
             keyboard = [[InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.message.edit_text("لا توجد طلبات معلقة للتعديل", reply_markup=reply_markup)
