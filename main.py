@@ -46,6 +46,22 @@ def sync_deployed_db():
 def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+    
+    # إنشاء جدول الأقسام إذا لم يكن موجوداً
+    c.execute('''CREATE TABLE IF NOT EXISTS categories 
+                 (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
+    
+    # إضافة الأقسام الافتراضية إذا كان الجدول فارغاً
+    c.execute('SELECT COUNT(*) FROM categories')
+    if c.fetchone()[0] == 0:
+        default_categories = [
+            ('إنترنت', 'internet', 1),
+            ('جوال', 'mobile', 1),
+            ('خط أرضي', 'landline', 1),
+            ('البنوك', 'banks', 1)
+        ]
+        c.executemany('INSERT INTO categories (name, identifier, is_active) VALUES (?, ?, ?)',
+                     default_categories)
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
     c.execute("""
