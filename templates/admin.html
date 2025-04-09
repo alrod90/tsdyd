@@ -275,12 +275,6 @@
                     <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px;">
                         إرسال إشعار
                     </button>
-                    <form action="/toggle_distributor" method="post" style="display: inline;">
-                        <input type="hidden" name="user_id" value="{{ user[1] }}">
-                        <button type="submit" style="background-color: {{ '#4CAF50' if not user[6] else '#ff4444' }}">
-                            {{ 'منح صلاحية موزع' if not user[6] else 'إلغاء صلاحية موزع' }}
-                        </button>
-                    </form>
                     <form action="/toggle_user" method="post" style="display: inline;">
                         <input type="hidden" name="user_id" value="{{ user[1] }}">
                         <button type="submit" style="background-color: {{ '#ff4444' if user[3] else '#4CAF50' }}">
