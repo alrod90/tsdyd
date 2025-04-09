@@ -306,6 +306,62 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(message, reply_markup=reply_markup)
 
+    elif query.data == 'products_menu':
+        keyboard = [
+            [
+                InlineKeyboardButton("إضافة منتج", callback_data='add_product'),
+                InlineKeyboardButton("عرض المنتجات", callback_data='view_products')
+            ],
+            [
+                InlineKeyboardButton("تعديل منتج", callback_data='edit_product'),
+                InlineKeyboardButton("بحث في المنتجات", callback_data='search_products')
+            ],
+            [InlineKeyboardButton("رجوع", callback_data='admin_back')]
+        ]
+        await query.message.edit_text("إدارة المنتجات:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'orders_menu':
+        keyboard = [
+            [
+                InlineKeyboardButton("عرض الطلبات", callback_data='view_orders'),
+                InlineKeyboardButton("طلبات معلقة", callback_data='pending_orders')
+            ],
+            [
+                InlineKeyboardButton("بحث في الطلبات", callback_data='search_orders'),
+                InlineKeyboardButton("تعديل طلب", callback_data='edit_order')
+            ],
+            [InlineKeyboardButton("رجوع", callback_data='admin_back')]
+        ]
+        await query.message.edit_text("إدارة الطلبات:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'users_menu':
+        keyboard = [
+            [
+                InlineKeyboardButton("عرض المستخدمين", callback_data='view_users'),
+                InlineKeyboardButton("تعديل مستخدم", callback_data='edit_user')
+            ],
+            [
+                InlineKeyboardButton("بحث في المستخدمين", callback_data='search_users'),
+                InlineKeyboardButton("حظر/إلغاء حظر", callback_data='toggle_user')
+            ],
+            [InlineKeyboardButton("رجوع", callback_data='admin_back')]
+        ]
+        await query.message.edit_text("إدارة المستخدمين:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif query.data == 'balance_menu':
+        keyboard = [
+            [
+                InlineKeyboardButton("إضافة رصيد", callback_data='add_balance'),
+                InlineKeyboardButton("خصم رصيد", callback_data='deduct_balance')
+            ],
+            [
+                InlineKeyboardButton("عرض الأرصدة", callback_data='view_balances'),
+                InlineKeyboardButton("تعديل رصيد", callback_data='edit_balance')
+            ],
+            [InlineKeyboardButton("رجوع", callback_data='admin_back')]
+        ]
+        await query.message.edit_text("إدارة الأرصدة:", reply_markup=InlineKeyboardMarkup(keyboard))
+
     elif query.data == 'admin_back':
         keyboard = [
             [
