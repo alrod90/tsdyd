@@ -2087,9 +2087,15 @@ def run_bot():
 
 
 
-    # Add handlers
-    application.add_handler(CommandHandler("orders", orders))
-    application.add_handler(CommandHandler("admin", admin_panel_command))
+    try:
+        # Add handlers
+        application.add_handler(CommandHandler("orders", orders))
+        application.add_handler(CommandHandler("admin", admin_panel_command))
+
+        # Run bot
+        application.run_polling()
+    except Exception as e:
+        print(f"Error starting bot: {str(e)}")
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
