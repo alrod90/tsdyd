@@ -1375,26 +1375,28 @@ def send_notification_route():
     user_id = request.form.get('user_id', None)
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
 
-    bot = telegram.Bot(token=bot_token)
+    async def send_notifications():
+        bot = telegram.Bot(token=bot_token)
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
 
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
+        try:
+            if user_id:
+                await bot.send_message(chat_id=int(user_id), text=message)
+            else:
+                c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+                users = c.fetchall()
+                for user in users:
+                    try:
+                        await bot.send_message(chat_id=user[0], text=message)
+                    except Exception as e:
+                        print(f"Error sending message to {user[0]}: {e}")
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+        finally:
+            conn.close()
 
-    try:
-        if user_id:
-            bot.send_message(chat_id=int(user_id), text=message)
-        else:
-            c.execute('SELECT telegram_id FROM users')
-            users = c.fetchall()
-            for user in users:
-                try:
-                    bot.send_message(chat_id=user[0], text=message)
-                except Exception as e:
-                    print(f"Error sending messageto {user[0]}: {e}")
-    except Exception as e:
-        print(f"Error sending notification: {e}")
-
-    conn.close()
+    asyncio.run(send_notifications())
     return redirect(url_for('admin_panel'))
 
 @app.route('/add_order', methods=['POST'])
