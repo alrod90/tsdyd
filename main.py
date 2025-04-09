@@ -429,23 +429,10 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
         
-        # إنشاء أزرار الأقسام
-        keyboard = []
-        row = []
-        for i, category in enumerate(categories):
-            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
-            if len(row) == 3 or i == len(categories) - 1:
-                keyboard.append(row)
-                row = []
-
-        # إضافة أزرار الرصيد والطلبات
-        keyboard.append([
-            InlineKeyboardButton("رصيدي", callback_data='balance'),
-            InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ])
-
-        conn.close()
-
+        # التحقق من صلاحيات الموزع
+        c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        is_distributor = c.fetchone()[0] if c.fetchone() else False
+        
         # إنشاء أزرار الأقسام
         keyboard = []
         row = []
@@ -464,21 +451,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             bottom_row.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
         keyboard.append(bottom_row)
 
-        # إنشاء أزرار الأقسام
-        keyboard = []
-        row = []
-        for i, category in enumerate(categories):
-            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
-            if len(row) == 3 or i == len(categories) - 1:
-                keyboard.append(row)
-                row = []
-
-        # إضافة أزرار الرصيد والطلبات
-        keyboard.append([
-            InlineKeyboardButton("رصيدي", callback_data='balance'),
-            InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ])
-
+        conn.close()
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
 
