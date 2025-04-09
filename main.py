@@ -63,7 +63,8 @@ def init_db():
                  (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
+                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT,
+                  is_distributor BOOLEAN DEFAULT 0)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -412,12 +413,42 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
 
+    elif query.data == 'distributor_panel':
+        await show_distributor_panel(update, context)
+        return
+
+    elif query.data == 'add_user_balance':
+        await query.message.edit_text("الرجاء إدخال معرف المستخدم والمبلغ بالصيغة التالية:\nمعرف المستخدم|المبلغ")
+        return "WAITING_ADD_USER_BALANCE"
+
     elif query.data == 'back':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        # التحقق من صلاحية الموزع
+        c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        is_distributor = c.fetchone()[0] if c.fetchone() else False
+        
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
         conn.close()
+
+        # إنشاء أزرار الأقسام
+        keyboard = []
+        row = []
+        for i, category in enumerate(categories):
+            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
+            if len(row) == 3 or i == len(categories) - 1:
+                keyboard.append(row)
+                row = []
+
+        # إضافة أزرار الرصيد والطلبات والموزع
+        bottom_row = [
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ]
+        if is_distributor:
+            bottom_row.append(InlineKeyboardButton("لوحة الموزع", callback_data='distributor_panel'))
+        keyboard.append(bottom_row)
 
         # إنشاء أزرار الأقسام
         keyboard = []
@@ -2195,3 +2226,61 @@ if __name__ == '__main__':
         sock.close()
         if os.path.exists('bot.lock'):
             os.remove('bot.lock')
+async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
+        [InlineKeyboardButton("رجوع", callback_data='back')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(
+        "مرحباً بك في لوحة الموزع\nالرجاء اختيار العملية المطلوبة:",
+        reply_markup=reply_markup
+    )
+
+async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        user_id, amount = update.message.text.split('|')
+        user_id = int(user_id.strip())
+        amount = float(amount.strip())
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # التحقق من رصيد الموزع
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        distributor_balance = c.fetchone()[0]
+
+        if distributor_balance < amount:
+            await update.message.reply_text("عذراً، رصيدك غير كافي")
+            conn.close()
+            return ConversationHandler.END
+
+        # خصم المبلغ من الموزع وإضافته للمستخدم
+        c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
+                 (amount, update.effective_user.id))
+        c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                 (amount, user_id))
+        conn.commit()
+
+        # إرسال إشعار للمستخدم
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"تم إضافة {amount} ليرة سوري إلى رصيدك من قبل الموزع"
+        )
+
+        conn.close()
+        await update.message.reply_text("تمت العملية بنجاح")
+    except:
+        await update.message.reply_text("حدث خطأ. الرجاء التأكد من صحة المعلومات المدخلة")
+    return ConversationHandler.END
+
+@app.route('/toggle_distributor', methods=['POST'])
+def toggle_distributor():
+    user_id = request.form['user_id']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE users SET is_distributor = NOT is_distributor WHERE telegram_id = ?',
+              (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
