@@ -641,8 +641,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith('add_order_product_'):
         product_id = query.data.split('_')[3]
         context.user_data['new_order_product_id'] = product_id
-        await query.message.edit_text("أدخل معرف المستخدم في تيليجرام:")
-        return "WAITING_NEW_ORDER_USER_ID"
+        await query.message.edit_text("أدخل بيانات الزبون:")
+        return "WAITING_NEW_ORDER_CUSTOMER_INFO"
+
+async def handle_new_order_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    customer_info = update.message.text
+    context.user_data['customer_info'] = customer_info
+    await update.message.reply_text("أدخل معرف المستخدم في تيليجرام:")
+    return "WAITING_NEW_ORDER_USER_ID"
 
     elif query.data == 'edit_order':
         keyboard = [
@@ -1215,6 +1221,7 @@ async def create_new_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = context.user_data.get('new_order_user_id')
     product_id = context.user_data.get('new_order_product_id')
     amount = context.user_data.get('new_order_amount')
+    customer_info = context.user_data.get('customer_info')
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
@@ -1224,7 +1231,8 @@ async def create_new_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         return
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id))
-    c.execute('INSERT INTO orders (user_id, product_id, amount, status) VALUES (?, ?, ?, ?)', (user_id, product_id, amount, 'pending'))
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, status) VALUES (?, ?, ?, ?, ?)', 
+              (user_id, product_id, amount, customer_info, 'pending'))
     order_id = c.lastrowid
     conn.commit()
     conn.close()
@@ -1955,6 +1963,10 @@ def run_bot():
             ],
             "WAITING_EDIT_BALANCE": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_balance),
+                CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            "WAITING_NEW_ORDER_CUSTOMER_INFO": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_new_order_customer_info),
                 CallbackQueryHandler(button_click, pattern="^back$")
             ],
             "WAITING_NEW_ORDER_USER_ID": [
