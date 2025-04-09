@@ -424,12 +424,26 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'back':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        # التحقق من صلاحية الموزع
-        c.execute('SELECT is_distributor FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-        is_distributor = c.fetchone()[0] if c.fetchone() else False
-
+        
+        # جلب معلومات المستخدم والأقسام النشطة
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
+        
+        # إنشاء أزرار الأقسام
+        keyboard = []
+        row = []
+        for i, category in enumerate(categories):
+            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
+            if len(row) == 3 or i == len(categories) - 1:
+                keyboard.append(row)
+                row = []
+
+        # إضافة أزرار الرصيد والطلبات
+        keyboard.append([
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ])
+
         conn.close()
 
         # إنشاء أزرار الأقسام
