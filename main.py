@@ -409,6 +409,87 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_CUSTOMER_INFO"
 
+    elif query.data == 'view_products':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name, category, is_active FROM products')
+        products = c.fetchall()
+        conn.close()
+
+        message = "قائمة المنتجات:\n\n"
+        for product in products:
+            status = "✅ مفعل" if product[2] else "❌ معطل"
+            message += f"الاسم: {product[0]}\nالقسم: {product[1]}\nالحالة: {status}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='products_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'view_orders':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.created_at 
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     ORDER BY o.created_at DESC LIMIT 10''')
+        orders = c.fetchall()
+        conn.close()
+
+        message = "آخر 10 طلبات:\n\n"
+        for order in orders:
+            status = "⏳ قيد المعالجة" if order[3] == "pending" else "✅ مقبول" if order[3] == "accepted" else "❌ مرفوض"
+            message += f"رقم الطلب: {order[0]}\nالشركة: {order[1]}\nالمبلغ: {order[2]} ل.س\nالحالة: {status}\nالتاريخ: {order[4]}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'view_users':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT telegram_id, balance, is_active FROM users')
+        users = c.fetchall()
+        conn.close()
+
+        message = "قائمة المستخدمين:\n\n"
+        for user in users:
+            status = "✅ مفعل" if user[2] else "❌ معطل"
+            message += f"المعرف: {user[0]}\nالرصيد: {user[1]} ل.س\nالحالة: {status}\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='users_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+    elif query.data == 'view_balances':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT telegram_id, balance FROM users ORDER BY balance DESC')
+        balances = c.fetchall()
+        conn.close()
+
+        message = "قائمة الأرصدة:\n\n"
+        for balance in balances:
+            message += f"المعرف: {balance[0]}\nالرصيد: {balance[1]} ل.س\n──────────────\n"
+
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='balance_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
+
+    elif query.data.startswith('buy_'):
+        product_id = int(query.data.split('_')[1])
+        context.user_data['product_id'] = product_id
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
+        product_name = c.fetchone()[0]
+        conn.close()
+
+        context.user_data['product_name'] = product_name
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_CUSTOMER_INFO"
+
 async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
@@ -580,7 +661,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
                      FROM orders o 
                      JOIN products p ON o.product_id = p.id 
                      JOIN users u ON o.user_id = u.telegram_id
-                     WHERE o.customer_info LIKE ? AND o.user_id = ?''', ('%' + customer_info + '%', update.effective_user.id))
+                     WHERE o.customer_info LIKE ? AND o.user_id = ?''', ('%' + customer_info + '%', update.effectiveuser.id))
     orders = c.fetchall()
     conn.close()
 
