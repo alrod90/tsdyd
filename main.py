@@ -570,6 +570,11 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
+        # التحقق من وجود product_id
+        if 'product_id' not in context.user_data:
+            await update.message.reply_text("حدث خطأ، الرجاء بدء العملية من جديد")
+            return ConversationHandler.END
+
         amount = float(update.message.text)
         if amount <= 0:
             await update.message.reply_text("المبلغ يجب أن يكون أكبر من صفر")
