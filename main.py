@@ -181,7 +181,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not c.fetchone():
         c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
         conn.commit()
-    conn.close()
 
     welcome_message = f"""مرحبا بك في نظام تسديد الفواتير
 معرف التيليجرام الخاص بك هو: {user_id}
@@ -189,20 +188,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     await update.message.reply_text(welcome_message)
 
-    keyboard = [
-        [
-            InlineKeyboardButton("إنترنت", callback_data='cat_internet'),
-            InlineKeyboardButton("جوال", callback_data='cat_mobile'),
-            InlineKeyboardButton("خط أرضي", callback_data='cat_landline')
-        ],
-        [
-            InlineKeyboardButton("البنوك", callback_data='cat_banks')
-        ],
-        [
-            InlineKeyboardButton("رصيدي", callback_data='balance'),
-            InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ]
-    ]
+    # جلب الأقسام النشطة من قاعدة البيانات
+    c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
+    categories = c.fetchall()
+    conn.close()
+
+    # إنشاء أزرار الأقسام
+    keyboard = []
+    row = []
+    for i, category in enumerate(categories):
+        row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
+        if len(row) == 3 or i == len(categories) - 1:
+            keyboard.append(row)
+            row = []
+
+    # إضافة أزرار الرصيد والطلبات
+    keyboard.append([
+        InlineKeyboardButton("رصيدي", callback_data='balance'),
+        InlineKeyboardButton("طلباتي", callback_data='my_orders')
+    ])
+
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
 
@@ -408,20 +413,27 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
 
     elif query.data == 'back':
-        keyboard = [
-            [
-                InlineKeyboardButton("إنترنت", callback_data='cat_internet'),
-                InlineKeyboardButton("جوال", callback_data='cat_mobile'),
-                InlineKeyboardButton("خط أرضي", callback_data='cat_landline')
-            ],
-            [
-                InlineKeyboardButton("البنوك", callback_data='cat_banks')
-            ],
-            [
-                InlineKeyboardButton("رصيدي", callback_data='balance'),
-                InlineKeyboardButton("طلباتي", callback_data='my_orders')
-            ]
-        ]
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
+        categories = c.fetchall()
+        conn.close()
+
+        # إنشاء أزرار الأقسام
+        keyboard = []
+        row = []
+        for i, category in enumerate(categories):
+            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
+            if len(row) == 3 or i == len(categories) - 1:
+                keyboard.append(row)
+                row = []
+
+        # إضافة أزرار الرصيد والطلبات
+        keyboard.append([
+            InlineKeyboardButton("رصيدي", callback_data='balance'),
+            InlineKeyboardButton("طلباتي", callback_data='my_orders')
+        ])
+
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
 
