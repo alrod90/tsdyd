@@ -1353,13 +1353,25 @@ def toggle_product():
 
 @app.route('/delete_product', methods=['POST'])
 def delete_product():
-    product_id = request.form['product_id']
-    conn = sqlite3.connect('storedb')
-    c = conn.cursor()
-    c.execute('DELETE FROM products WHERE id = ?', (product_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
+    try:
+        product_id = request.form['product_id']
+        conn = sqlite3.connect('store.db')  # تصحيح اسم قاعدة البيانات
+        c = conn.cursor()
+        
+        # التحقق من وجود الجدول
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products'")
+        if not c.fetchone():
+            c.execute('''CREATE TABLE IF NOT EXISTS products 
+                     (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
+            conn.commit()
+            
+        c.execute('DELETE FROM products WHERE id = ?', (product_id,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in delete_product: {str(e)}")
+        return "حدث خطأ في حذف المنتج", 500
 
 @app.route('/edit_product', methods=['POST'])
 def edit_product():
