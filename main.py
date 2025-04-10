@@ -48,6 +48,21 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
+    
+    # إنشاء جداول العلاقات بين المنتجات والسرعات/الباقات
+    c.execute('''CREATE TABLE IF NOT EXISTS speed_products
+                 (speed_id INTEGER, 
+                  product_id INTEGER,
+                  FOREIGN KEY(speed_id) REFERENCES speeds(id),
+                  FOREIGN KEY(product_id) REFERENCES products(id),
+                  PRIMARY KEY(speed_id, product_id))''')
+                  
+    c.execute('''CREATE TABLE IF NOT EXISTS package_products
+                 (package_id INTEGER,
+                  product_id INTEGER,
+                  FOREIGN KEY(package_id) REFERENCES packages(id),
+                  FOREIGN KEY(product_id) REFERENCES products(id),
+                  PRIMARY KEY(package_id, product_id))''')
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -1408,15 +1423,23 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
-        product_id = request.form['product_id']
+        product_ids = request.form.getlist('product_ids')
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
-                 (product_id, name, price, is_active))
+        
+        # إضافة السرعة
+        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
+                 (name, price, is_active))
+        speed_id = c.lastrowid
+        
+        # ربط السرعة بالمنتجات المختارة
+        for product_id in product_ids:
+            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
+                     (speed_id, product_id))
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
@@ -1444,6 +1467,9 @@ def delete_speed():
         speed_id = request.form['speed_id']
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        # حذف العلاقات أولاً
+        c.execute('DELETE FROM speed_products WHERE speed_id = ?', (speed_id,))
+        # ثم حذف السرعة
         c.execute('DELETE FROM speeds WHERE id = ?', (speed_id,))
         conn.commit()
         conn.close()

@@ -260,11 +260,12 @@
         <div>
             <h3>إضافة سرعة جديدة</h3>
             <form action="/add_speed" method="post">
-                <select name="product_id" required>
+                <select name="product_ids" multiple required style="height: 100px;">
                     {% for product in products %}
                     <option value="{{ product[0] }}">{{ product[1] }}</option>
                     {% endfor %}
                 </select>
+                <small>يمكنك اختيار عدة منتجات باستخدام Ctrl + النقر</small>
                 <input type="text" name="name" placeholder="اسم السرعة" required>
                 <input type="number" name="price" placeholder="السعر" step="0.01" required>
                 <label class="switch">
@@ -319,11 +320,12 @@
         <div>
             <h3>إضافة باقة جديدة</h3>
             <form action="/add_mega" method="post">
-                <select name="product_id" required>
+                <select name="product_ids" multiple required style="height: 100px;">
                     {% for product in products %}
                     <option value="{{ product[0] }}">{{ product[1] }}</option>
                     {% endfor %}
                 </select>
+                <small>يمكنك اختيار عدة منتجات باستخدام Ctrl + النقر</small>
                 <input type="text" name="name" placeholder="اسم الباقة" required>
                 <input type="number" name="price" placeholder="السعر" step="0.01" required>
                 <label class="switch">
@@ -711,7 +713,7 @@
                     <textarea name="note" placeholder="ملاحظة إضافية (اختياري)" style="width: 100%; height: 100px; margin-top: 10px;"></textarea>
                     <div style="margin-top: 20px;">
                         <button type="submit" style="background-color: #f44336;">تأكيد الرفض</button>
-                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاءbutton">إلغاء</button>
                     </div>
                 </form>
             `;
