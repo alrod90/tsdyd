@@ -259,6 +259,45 @@
     </script>
 
     <div class="section">
+        <h2>الباقات</h2>
+        <table>
+            <tr>
+                <th>الرقم</th>
+                <th>اسم الباقة</th>
+                <th>المنتج</th>
+                <th>السعر</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
+            {% for package in packages %}
+            <tr>
+                <td>{{ package.id }}</td>
+                <td>{{ package.name }}</td>
+                <td>{{ package.product_name }}</td>
+                <td>{{ package.price }}</td>
+                <td class="status-{{ 'active' if package.is_active else 'inactive' }}">
+                    {{ 'مفعل' if package.is_active else 'غير مفعل' }}
+                </td>
+                <td>
+                    <form action="/toggle_package" method="post" style="display: inline;">
+                        <input type="hidden" name="package_id" value="{{ package.id }}">
+                        <button type="submit" style="background-color: {{ '#ff4444' if package.is_active else '#4CAF50' }}">
+                            {{ 'تعطيل' if package.is_active else 'تفعيل' }}
+                        </button>
+                    </form>
+                    <form action="/delete_package" method="post" style="display: inline;">
+                        <input type="hidden" name="package_id" value="{{ package.id }}">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذه الباقة؟')" style="background-color: #ff4444;">
+                            حذف
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="section">
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
