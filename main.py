@@ -49,6 +49,25 @@ def init_db():
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
     
+    # إنشاء جداول العلاقات
+    c.execute('''CREATE TABLE IF NOT EXISTS speeds
+                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1)''')
+                 
+    c.execute('''CREATE TABLE IF NOT EXISTS speed_products
+                 (speed_id INTEGER, product_id INTEGER,
+                  PRIMARY KEY (speed_id, product_id),
+                  FOREIGN KEY (speed_id) REFERENCES speeds(id),
+                  FOREIGN KEY (product_id) REFERENCES products(id))''')
+                  
+    c.execute('''CREATE TABLE IF NOT EXISTS megas
+                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1)''')
+                 
+    c.execute('''CREATE TABLE IF NOT EXISTS mega_products
+                 (mega_id INTEGER, product_id INTEGER,
+                  PRIMARY KEY (mega_id, product_id),
+                  FOREIGN KEY (mega_id) REFERENCES megas(id),
+                  FOREIGN KEY (product_id) REFERENCES products(id))''')
+    
     # إنشاء جداول العلاقات المتعددة
     c.execute('''CREATE TABLE IF NOT EXISTS speed_products
                  (speed_id INTEGER, product_id INTEGER,
@@ -1375,9 +1394,10 @@ def admin_panel():
 
         # Fetch speeds with product names
         c.execute('''
-            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
+            SELECT s.id, s.name, s.price, sp.product_id, p.name as product_name, s.is_active
             FROM speeds s
-            JOIN products p ON s.product_id = p.id
+            JOIN speed_products sp ON s.id = sp.speed_id
+            JOIN products p ON sp.product_id = p.id
             ORDER BY s.id DESC
         ''')
         speeds = [
@@ -1394,9 +1414,10 @@ def admin_panel():
 
         # Fetch megas with product names
         c.execute('''
-            SELECT m.id, m.name, m.price, m.product_id, p.name as product_name, m.is_active
+            SELECT m.id, m.name, m.price, mp.product_id, p.name as product_name, m.is_active
             FROM megas m
-            JOIN products p ON m.product_id = p.id
+            JOIN mega_products mp ON m.id = mp.mega_id
+            JOIN products p ON mp.product_id = p.id
             ORDER BY m.id DESC
         ''')
         megas = [
