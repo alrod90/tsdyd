@@ -543,10 +543,10 @@
                 <td>{{ order[2] }}</td>
                 <td>{{ order[3] }}</td>
                 <td>
-                    {% if order[8] == 'package' %}
-                        <span class="badge bg-success">باقة</span>
+                    {% if order[8] == 'mega' %}
+                        <span class="badge bg-success">باقة: {{ order[9] if order[9] else '' }}</span>
                     {% elif order[8] == 'speed' %}
-                        <span class="badge bg-primary">سرعة</span>
+                        <span class="badge bg-primary">سرعة: {{ order[9] if order[9] else '' }}</span>
                     {% else %}
                         <span class="badge bg-warning">مبلغ مخصص</span>
                     {% endif %}
