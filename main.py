@@ -481,16 +481,16 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
         has_speeds = c.fetchone()[0] > 0
 
-        keyboard = []
-        
-        if has_megas:
-            keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}')])
-            
-        if has_speeds:
-            keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}')])
-            
-        keyboard.append([InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data=f'manual_{product_id}')])
-        keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
+        keyboard = [
+            [InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data=f'manual_{product_id}')],
+            [
+                InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}'),
+                InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}')
+            ] if has_megas or has_speeds else [],
+            [InlineKeyboardButton("رجوع", callback_data='back')]
+        ]
+        # إزالة الصفوف الفارغة
+        keyboard = [row for row in keyboard if row]
         
         context.user_data['product_name'] = product[0]
         
@@ -582,6 +582,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith('manual_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
+        context.user_data['input_type'] = 'manual'  # تحديد نوع الإدخال كيدوي
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
@@ -698,8 +699,12 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
     
-    # إذا كان المبلغ محدد مسبقاً (من اختيار باقة أو سرعة)
-    if 'amount' in context.user_data:
+    if context.user_data.get('input_type') == 'manual':
+        # في حالة الإدخال اليدوي للمبلغ
+        await update.message.reply_text("الرجاء إدخال المبلغ:")
+        return "WAITING_AMOUNT"
+    else:
+        # في حالة اختيار باقة أو سرعة
         amount = context.user_data['amount']
         await update.message.reply_text(
             f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
@@ -710,10 +715,6 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
             ]])
         )
         return "WAITING_CONFIRMATION"
-    else:
-        # في حالة الإدخال اليدوي للمبلغ
-        await update.message.reply_text("الرجاء إدخال المبلغ:")
-        return "WAITING_AMOUNT"
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
