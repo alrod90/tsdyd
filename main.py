@@ -488,22 +488,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         
-        # إضافة أزرار السرعات
+        # إضافة الأزرار الرئيسية
         if speeds:
-            for speed in speeds:
-                keyboard.append([InlineKeyboardButton(
-                    f"سرعة: {speed[1]} - {speed[2]} ل.س",
-                    callback_data=f'select_speed_{speed[0]}_{speed[2]}'
-                )])
-
-        # إضافة أزرار الباقات
+            keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'show_speeds_{product_id}')])
         if packages:
-            for package in packages:
-                keyboard.append([InlineKeyboardButton(
-                    f"باقة: {package[1]} - {package[2]} ل.س",
-                    callback_data=f'select_package_{package[0]}_{package[2]}'
-                )])
-
+            keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'show_packages_{product_id}')])
+            
         # إضافة زر للإدخال اليدوي
         keyboard.append([InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data='manual_amount')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
@@ -515,6 +505,48 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"الرجاء اختيار السرعة أو الباقة المطلوبة للمنتج: {product_name}",
             reply_markup=reply_markup
         )
+        return "WAITING_SELECTION"
+
+    elif query.data.startswith('show_speeds_'):
+        product_id = query.data.split('_')[2]
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT id, name, price FROM speeds 
+                     WHERE product_id = ? AND is_active = 1''', (product_id,))
+        speeds = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for speed in speeds:
+            keyboard.append([InlineKeyboardButton(
+                f"{speed[1]} - {speed[2]} ل.س",
+                callback_data=f'select_speed_{speed[0]}_{speed[2]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر السرعة المطلوبة:", reply_markup=reply_markup)
+        return "WAITING_SELECTION"
+
+    elif query.data.startswith('show_packages_'):
+        product_id = query.data.split('_')[2]
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('''SELECT id, name, price FROM megas 
+                     WHERE product_id = ? AND is_active = 1''', (product_id,))
+        packages = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for package in packages:
+            keyboard.append([InlineKeyboardButton(
+                f"{package[1]} - {package[2]} ل.س",
+                callback_data=f'select_package_{package[0]}_{package[2]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر الباقة المطلوبة:", reply_markup=reply_markup)
         return "WAITING_SELECTION"
 
     elif query.data.startswith('select_speed_') or query.data.startswith('select_package_'):
