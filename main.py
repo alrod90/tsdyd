@@ -672,7 +672,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("قيد المعالجة", callback_data=f'set_order_status_pending_{order_id}')],
             [InlineKeyboardButton("مقبول", callback_data=f'set_order_status_accepted_{order_id}')],
             [InlineKeyboardButton("مرفوض", callback_data=f'set_order_status_rejected_{order_id}')],
-            [InlineKeyboardButton("رجوع', callback_data='orders_menu')]
+            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر الحالة الجديدة:", reply_markup=reply_markup)
