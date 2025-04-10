@@ -66,12 +66,8 @@ def init_db():
                   enable_custom_amount BOOLEAN DEFAULT 1)''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS speeds
-                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS speed_products
-                 (speed_id INTEGER, product_id INTEGER,
-                  PRIMARY KEY (speed_id, product_id),
-                  FOREIGN KEY(speed_id) REFERENCES speeds(id),
-                  FOREIGN KEY(product_id) REFERENCES products(id))''')
+                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
+                 FOREIGN KEY(product_id) REFERENCES products(id))''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS packages
                  (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
@@ -1317,20 +1313,11 @@ def admin_panel():
                       created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
         conn.commit()
 
-        c.execute('SELECT id, name, identifier, is_active FROM categories')
+        c.execute('SELECT * FROM categories')
         categories = c.fetchall()
-        c.execute('SELECT id, name, category, is_active FROM products')
+        c.execute('SELECT * FROM products')
         products = c.fetchall()
-        # Check if phone_number column exists
-        c.execute("PRAGMA table_info(users)")
-        columns = [col[1] for col in c.fetchall()]
-        
-        if 'phone_number' in columns:
-            c.execute('SELECT id, telegram_id, balance, is_active, phone_number, note FROM users')
-        else:
-            # Add phone_number column if it doesn't exist
-            c.execute('ALTER TABLE users ADD COLUMN phone_number TEXT')
-            c.execute('SELECT id, telegram_id, balance, is_active, phone_number, note FROM users')
+        c.execute('SELECT * FROM users')
         users = c.fetchall()
 
         try:
@@ -1375,11 +1362,9 @@ def admin_panel():
 
         # Fetch speeds with product names
         c.execute('''
-            SELECT s.id, s.name, s.price, GROUP_CONCAT(p.name) as product_names, s.is_active
+            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
             FROM speeds s
-            JOIN speed_products sp ON s.id = sp.speed_id
-            JOIN products p ON sp.product_id = p.id
-            GROUP BY s.id
+            JOIN products p ON s.product_id = p.id
             ORDER BY s.id DESC
         ''')
         speeds = [
@@ -1423,24 +1408,15 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
-        product_ids = request.form.getlist('product_ids[]')
+        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
-        # إضافة السرعة
-        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
-                 (name, price, is_active))
-        speed_id = c.lastrowid
-        
-        # ربط السرعة مع المنتجات المختارة
-        for product_id in product_ids:
-            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
-                     (speed_id, product_id))
-        
+        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
+                 (product_id, name, price, is_active))
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
