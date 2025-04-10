@@ -557,6 +557,19 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
             
+            # التحقق من الرصيد مباشرة
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+            user_balance = c.fetchone()[0]
+            
+            if user_balance < item[1]:
+                await query.message.edit_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
+                conn.close()
+                return
+            
+            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+            conn.close()
+            return "WAITING_CUSTOMER_INFO"
+            
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
             user_balance = c.fetchone()[0]
