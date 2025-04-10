@@ -597,35 +597,6 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-
-@app.route('/toggle_speed', methods=['POST'])
-def toggle_speed():
-    try:
-        speed_id = request.form['speed_id']
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        c.execute('UPDATE speeds SET is_active = NOT is_active WHERE id = ?', (speed_id,))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_panel'))
-    except Exception as e:
-        print(f"خطأ في تفعيل/تعطيل السرعة: {str(e)}")
-        return "حدث خطأ في تفعيل/تعطيل السرعة", 500
-
-@app.route('/delete_speed', methods=['POST'])
-def delete_speed():
-    try:
-        speed_id = request.form['speed_id']
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        c.execute('DELETE FROM speeds WHERE id = ?', (speed_id,))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_panel'))
-    except Exception as e:
-        print(f"خطأ في حذف السرعة: {str(e)}")
-        return "حدث خطأ في حذف السرعة", 500
-
         user_balance = c.fetchone()[0]
 
         if amount > user_balance:
