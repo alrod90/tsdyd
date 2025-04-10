@@ -1489,6 +1489,52 @@ def add_mega():
         print(f"Error in add_mega: {str(e)}")
         return "حدث خطأ في إضافة الميغا", 500
 
+@app.route('/edit_mega', methods=['POST'])
+def edit_mega():
+    try:
+        mega_id = request.form['mega_id']
+        name = request.form['name']
+        price = float(request.form['price'])
+        product_id = request.form['product_id']
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('UPDATE megas SET name = ?, price = ?, product_id = ? WHERE id = ?',
+                 (name, price, product_id, mega_id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in edit_mega: {str(e)}")
+        return "حدث خطأ في تعديل الميغا", 500
+
+@app.route('/toggle_mega', methods=['POST'])
+def toggle_mega():
+    try:
+        mega_id = request.form['mega_id']
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('UPDATE megas SET is_active = NOT is_active WHERE id = ?', (mega_id,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in toggle_mega: {str(e)}")
+        return "حدث خطأ في تفعيل/تعطيل الميغا", 500
+
+@app.route('/delete_mega', methods=['POST'])
+def delete_mega():
+    try:
+        mega_id = request.form['mega_id']
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('DELETE FROM megas WHERE id = ?', (mega_id,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in delete_mega: {str(e)}")
+        return "حدث خطأ في حذف الميغا", 500
+
 @app.route('/add_package', methods=['POST'])
 def add_package():
     try:
