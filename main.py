@@ -1362,7 +1362,6 @@ def admin_panel():
 
         # Fetch speeds with product names
         c.execute('''
-            ```python
             SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
             FROM speeds s
             JOIN products p ON s.product_id = p.id
