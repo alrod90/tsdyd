@@ -8,97 +8,19 @@ from telegram.ext import (
 )
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
-import shutil
+import requests
+from datetime import datetime
 
+# تهيئة Flask
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # مفتاح سري للجلسة
-from threading import Thread
-from functools import wraps
-# Added for SMS functionality.  Replace with your actual gateway library.
-import requests # Example using requests library. You might need a different library.
+app.secret_key = 'your_secret_key_here'
 
-# Initialize Flask app
-app = Flask(__name__)
+# الحالات المستخدمة في المحادثة
+SELECTING_PRODUCT = 1
+ENTERING_AMOUNT = 2 
+ENTERING_CUSTOMER_INFO = 3
+CONFIRMING_PURCHASE = 4
 
-# Database setup
-def sync_deployed_db():
-    """التحقق من وجود قاعدة البيانات"""
-    try:
-        if not os.path.exists('store.db'):
-            # إنشاء قاعدة بيانات جديدة فقط إذا لم تكن موجودة
-            conn = sqlite3.connect('store.db')
-            c = conn.cursor()
-            c.execute('''CREATE TABLE IF NOT EXISTS products 
-                     (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
-            c.execute('''CREATE TABLE IF NOT EXISTS users
-                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
-            c.execute('''CREATE TABLE IF NOT EXISTS orders
-                     (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
-                      customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
-            conn.commit()
-            conn.close()
-            print("تم إنشاء قاعدة بيانات جديدة")
-    except Exception as e:
-        print(f"خطأ في التحقق من قاعدة البيانات: {str(e)}")
-
-def init_db():
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
-    c.execute("PRAGMA timezone = '+03:00'")
-    c.execute("""
-        CREATE TRIGGER IF NOT EXISTS update_timestamp 
-        AFTER INSERT ON orders 
-        BEGIN 
-            UPDATE orders 
-            SET created_at = datetime(datetime('now', '+3 hours')) 
-            WHERE id = NEW.id; 
-        END;
-    """)
-
-    # إنشاء الجداول إذا لم تكن موجودة
-    c.execute('''CREATE TABLE IF NOT EXISTS products 
-                 (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1,
-                  enable_speeds BOOLEAN DEFAULT 0,
-                  enable_packages BOOLEAN DEFAULT 0,
-                  enable_custom_amount BOOLEAN DEFAULT 1)''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS speeds
-                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
-                 FOREIGN KEY(product_id) REFERENCES products(id))''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS packages
-                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
-                 FOREIGN KEY(product_id) REFERENCES products(id))''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS orders
-                 (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
-                  customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS categories
-                     (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS megas
-                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
-                 FOREIGN KEY(product_id) REFERENCES products(id))''')
-
-    # تحديث حالة المنتجات عند تغيير حالة القسم
-    c.execute('''CREATE TRIGGER IF NOT EXISTS update_products_status 
-                 AFTER UPDATE ON categories
-                 FOR EACH ROW
-                 BEGIN
-                     UPDATE products SET is_active = NEW.is_active 
-                     WHERE category = NEW.identifier;
-                 END;''')
-
-    conn.commit()
-    conn.close()
-
-# Telegram bot commands
 async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     conn = sqlite3.connect('store.db')
@@ -545,8 +467,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return "WAITING_CUSTOMER_INFO"
 
     elif query.data == 'manual_amount':
-        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
-        return "WAITING_CUSTOMER_INFO"
+        await query.message.edit_text("الرجاء إدخال المبلغ:")
+        return "WAITING_AMOUNT"
     elif query.data == 'add_new_order':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
@@ -562,7 +484,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر المنتج للطلب الجديد:", reply_markup=reply_markup)
         return
-
     elif query.data.startswith('add_order_product_'):
         product_id = query.data.split('_')[3]
         context.user_data['new_order_product_id'] = product_id
@@ -578,7 +499,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup =InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر طريقة البحث عن الطلب:", reply_markup=reply_markup)
         return
-
     elif query.data == 'search_order_for_edit':
         await query.message.edit_text("الرجاء إدخال رقم الطلب:")
         return "WAITING_SEARCH_ORDER_FOR_EDIT"
@@ -587,19 +507,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_SEARCH_CUSTOMER_FOR_EDIT"
 
-        if not orders:
-            keyboard = []
-            for order in orders:
-                keyboard.append([InlineKeyboardButton(
-                    f"طلب #{order[0]} - {order[1]} - {order[2]} ل.س",
-                    callback_data=f'edit_order_{order[0]}'
-                )])
-            keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
-
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.message.edit_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
-            return
-
+    
     elif query.data.startswith('edit_order_'):
         order_id = query.data.split('_')[2]
         context.user_data['editing_order_id'] = order_id
@@ -931,7 +839,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
             status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
             message += f"""
 رقم الطلب: {order[0]}
-الشركة: {order[1]} # Changed from المنتج to الشركة
+الشركة: {order[1]} 
 المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
@@ -2218,10 +2126,9 @@ def run_bot():
     print("جاري تشغيل البوت...")
     application = Application.builder().token(bot_token).build()
 
-
-
     # Add handlers
     application.add_handler(CommandHandler("orders", orders))
+    application.add_handler(CommandHandler("admin_panel", admin_panel_command))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
@@ -2312,8 +2219,28 @@ def run_bot():
             "WAITING_SEARCH_CUSTOMER_FOR_EDIT": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_customer_for_edit),
                 CallbackQueryHandler(button_click, pattern="^back$")
+            ],
+            SELECTING_PRODUCT: [
+                CallbackQueryHandler(handle_category_selection, pattern='^cat_'),
+                CallbackQueryHandler(handle_product_selection, pattern='^product_'),
+                CallbackQueryHandler(handle_speed_selection, pattern='^speeds_'),
+                CallbackQueryHandler(handle_package_selection, pattern='^packages_'),
+                CallbackQueryHandler(handle_selection_confirm, pattern='^(speed|package)_select_'),
+                CallbackQueryHandler(handle_manual_amount, pattern='^manual_amount$'),
+                CallbackQueryHandler(start, pattern='^back$')
+            ],
+            ENTERING_AMOUNT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount_input),
+                CallbackQueryHandler(start, pattern='^back$')
+            ],
+            ENTERING_CUSTOMER_INFO: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info),
+                CallbackQueryHandler(start, pattern='^back$')
+            ],
+            CONFIRMING_PURCHASE: [
+                CallbackQueryHandler(handle_purchase_confirmation, pattern='^(confirm|cancel)_purchase$'),
+                CallbackQueryHandler(start, pattern='^back$')
             ]
-
         },
         fallbacks=[
             CommandHandler("cancel", lambda u, c: ConversationHandler.END),
@@ -2328,62 +2255,6 @@ def run_bot():
     # Run bot
     application.run_polling()
 
-if __name__ == '__main__':
-    # ضبط المنطقة الزمنية
-    os.environ['TZ'] = 'Asia/Damascus'
-    try:
-        import time
-        time.tzset()
-    except AttributeError:
-        pass  # للتوافق مع أنظمة Windows
-
-    # تهيئة قاعدة البيانات
-    init_db()
-
-    # التحقق من عدم وجود نسخة أخرى من البوت
-    import socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    try:
-        # استخدام ملف قفل لمنع تشغيل نسخ متعددة
-        if os.path.exists('bot.lock'):
-            try:
-                with open('bot.lock', 'r') as f:
-                    pid = int(f.read().strip())
-                try:
-                    os.kill(pid, 0)  # اختبار إذا كانت العملية نشطة
-                    print("هناك نسخة أخرى من البوت قيد التشغيل")
-                    exit(1)
-                except OSError:
-                    pass  # العملية غير موجودة
-            except:
-                pass
-
-        # تسجيل PID العملية الحالية
-        with open('bot.lock', 'w') as f:
-            f.write(str(os.getpid()))
-
-        sock.bind(('0.0.0.0', 5001))  # منفذ للتحقق فقط
-
-        # تشغيل التطبيق
-        app.config['TEMPLATES_AUTO_RELOAD'] = True
-        app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # مدة الجلسة يوم كامل
-        flask_thread = Thread(target=run_flask)
-        flask_thread.start()
-        run_bot()
-
-    except socket.error:
-        print("هناك نسخة أخرى من البوت قيد التشغيل")
-        exit(1)
-    except Exception as e:
-        print(f"خطأ: {str(e)}")
-        if os.path.exists('bot.lock'):
-            os.remove('bot.lock')
-        exit(1)
-    finally:
-        sock.close()
-        if os.path.exists('bot.lock'):
-            os.remove('bot.lock')
 async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
@@ -2442,3 +2313,53 @@ def toggle_distributor():
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
+
+def main():
+    """تشغيل البوت"""
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+    # إعداد البوت
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    application = Application.builder().token(bot_token).build()
+
+    # إضافة المعالجات
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            SELECTING_PRODUCT: [
+                CallbackQueryHandler(handle_category_selection, pattern='^cat_'),
+                CallbackQueryHandler(handle_product_selection, pattern='^product_'),
+                CallbackQueryHandler(handle_speed_selection, pattern='^speeds_'),
+                CallbackQueryHandler(handle_package_selection, pattern='^packages_'),
+                CallbackQueryHandler(handle_selection_confirm, pattern='^(speed|package)_select_'),
+                CallbackQueryHandler(handle_manual_amount, pattern='^manual_amount$'),
+                CallbackQueryHandler(start, pattern='^back$')
+            ],
+            ENTERING_AMOUNT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount_input),
+                CallbackQueryHandler(start, pattern='^back$')
+            ],
+            ENTERING_CUSTOMER_INFO: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_info),
+                CallbackQueryHandler(start, pattern='^back$')
+            ],
+            CONFIRMING_PURCHASE: [
+                CallbackQueryHandler(handle_purchase_confirmation, pattern='^(confirm|cancel)_purchase$'),
+                CallbackQueryHandler(start, pattern='^back$')
+            ]
+        },
+        fallbacks=[CommandHandler('start', start)]
+    )
+
+    application.add_handler(conv_handler)
+    application.add_handler(CommandHandler("admin_panel", admin_panel_command))
+    application.add_handler(CommandHandler("orders", orders))
+
+    # تشغيل البوت
+    application.run_polling()
+
+if __name__ == '__main__':
+    print("جاري تشغيل البوت...")
+    init_db()
+    sync_deployed_db()
+    main()
