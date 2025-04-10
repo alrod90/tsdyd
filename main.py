@@ -36,8 +36,7 @@ def sync_deployed_db():
             c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT,
-                      order_type TEXT)''')
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
             conn.commit()
             conn.close()
             print("تم إنشاء قاعدة بيانات جديدة")
@@ -80,8 +79,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT,
-                  order_type TEXT)''')
+                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS megas
@@ -112,14 +110,14 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if is_admin:
         # المدير يمكنه رؤية جميع الطلبات
-        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note, u.telegram_id, o.order_type
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note, u.telegram_id
                      FROM orders o 
                      JOIN products p ON o.product_id = p.id 
                      JOIN users u ON o.user_id = u.telegram_id
                      ORDER BY o.created_at DESC''')
     else:
         # المستخدم العادي يرى طلباته فقط
-        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note, u.telegram_id, o.order_type
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.rejection_note, o.created_at, o.note, u.telegram_id
                      FROM orders o 
                      JOIN products p ON o.product_id = p.id 
                      JOIN users u ON o.user_id = u.telegram_id
@@ -140,7 +138,6 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = f"رقم الطلب: {order[0]}\n"
         message += f"الشركة: {order[1]}\n"
         message += f"المبلغ: {order[2]} ليرة سوري\n"
-        message += f"نوع الطلب: {order[8]}\n" #added order type
         if user_id == 1:  # إذا كان المستخدم هو المدير
             message += f"معرف المستخدم: {order[7]}\n"
         message += f"الحالة: {status_text}\n"
@@ -341,7 +338,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'admin_orders':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('''SELECT o.id, u.telegram_id, p.name, o.amount, o.status, o.created_at, o.order_type 
+        c.execute('''SELECT o.id, u.telegram_id, p.name, o.amount, o.status, o.created_at 
                      FROM orders o 
                      JOIN users u ON o.user_id = u.telegram_id 
                      JOIN products p ON o.product_id = p.id 
@@ -352,7 +349,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = "آخر 10 طلبات:\n\n"
         for order in orders:
             status = "⏳ قيد المعالجة" if order[4] == "pending" else "✅ مقبول" if order[4] == "accepted" else "❌ مرفوض"
-            message += f"رقم الطلب: {order[0]}\nالمستخدم: {order[1]}\nالشركة: {order[2]}\nالمبلغ: {order[3]} ل.س\nالحالة: {status}\nالتاريخ: {order[5]}\nنوع الطلب: {order[6]}\n──────────────\n" #added order type
+            message += f"رقم الطلب: {order[0]}\nالمستخدم: {order[1]}\nالشركة: {order[2]}\nالمبلغ: {order[3]} ل.س\nالحالة: {status}\nالتاريخ: {order[5]}\n──────────────\n"
 
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='admin_back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -473,30 +470,30 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-
+        
         # التحقق من وجود باقات أو سرعات للمنتج
         c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
         product = c.fetchone()
-
+        
         c.execute('SELECT COUNT(*) FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
         has_megas = c.fetchone()[0] > 0
-
+        
         c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
         has_speeds = c.fetchone()[0] > 0
 
         keyboard = []
-
+        
         if has_megas:
             keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}')])
-
+            
         if has_speeds:
             keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}')])
-
+            
         keyboard.append([InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data=f'manual_{product_id}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
-
+        
         context.user_data['product_name'] = product[0]
-
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(f"اختر نوع الخدمة لـ {product[0]}:", reply_markup=reply_markup)
         conn.close()
@@ -517,7 +514,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data=f'select_mega_{mega[0]}_{product_id}'
             )])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
-
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر الباقة المناسبة:", reply_markup=reply_markup)
         return
@@ -537,7 +534,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data=f'select_speed_{speed[0]}_{product_id}'
             )])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
-
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر السرعة المناسبة:", reply_markup=reply_markup)
         return
@@ -547,33 +544,32 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         item_type = parts[1]  # mega or speed
         item_id = int(parts[2])
         product_id = int(parts[3])
-
+        
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-
+        
         table_name = 'megas' if item_type == 'mega' else 'speeds'
         c.execute(f'SELECT name, price FROM {table_name} WHERE id = ?', (item_id,))
         item = c.fetchone()
-
+        
         if item:
             context.user_data['product_id'] = product_id
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
-            context.user_data['order_type'] = item_type #add order type
-
+            
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
             user_balance = c.fetchone()[0]
-
+            
             if user_balance < item[1]:
                 await query.message.edit_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
                 conn.close()
                 return
-
+            
             await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
             conn.close()
             return "WAITING_CUSTOMER_INFO"
-
+        
         conn.close()
         await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
         return
@@ -672,7 +668,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("قيد المعالجة", callback_data=f'set_order_status_pending_{order_id}')],
             [InlineKeyboardButton("مقبول", callback_data=f'set_order_status_accepted_{order_id}')],
             [InlineKeyboardButton("مرفوض", callback_data=f'set_order_status_rejected_{order_id}')],
-            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
+            [InlineKeyboardButton("رجوع", callback_data='orders_menu')]
+        ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر الحالة الجديدة:", reply_markup=reply_markup)
         return
@@ -779,7 +776,7 @@ async def handle_search_order_for_edit(update: Update, context: ContextTypes.DEF
     order_number = update.message.text
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.order_type 
+    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info 
                  FROM orders o 
                  JOIN products p ON o.product_id = p.id 
                  WHERE o.id = ?''', (order_number,))
@@ -798,7 +795,6 @@ async def handle_search_order_for_edit(update: Update, context: ContextTypes.DEF
 المبلغ: {order[2]} ل.س
 الحالة: {order[3]}
 بيانات الزبون: {order[4]}
-نوع الطلب: {order[5]}
 """
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(message, reply_markup=reply_markup)
@@ -810,7 +806,7 @@ async def handle_search_customer_for_edit(update: Update, context: ContextTypes.
     customer_info = update.message.text
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.order_type 
+    c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info 
                  FROM orders o 
                  JOIN products p ON o.product_id = p.id 
                  WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
@@ -844,14 +840,14 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         try:
             if is_admin:
                 # المدير يمكنه البحث في جميع الطلبات
-                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id, o.order_type
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
                             WHERE o.id = ?''', (order_number,))
             else:
                 # المستخدم العادي يبحث في طلباته فقط
-                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id, o.order_type
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
@@ -867,9 +863,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
-التاريخ: {order[5]}
-نوع الطلب: {order[9]}
-"""
+التاريخ: {order[5]}"""
 
                 if order[3] == "rejected" and order[7]:  # إضافة سبب الرفض
                     message += f"\nسبب الرفض: {order[7]}"
@@ -956,14 +950,14 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
 
     if is_admin:
         # المدير يمكنه البحث في جميع الطلبات
-        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, u.telegram_id, o.order_type
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, u.telegram_id
                      FROM orders o 
                      JOIN products p ON o.product_id = p.id 
                      JOIN users u ON o.user_id = u.telegram_id
                      WHERE o.customer_info LIKE ?''', ('%' + customer_info + '%',))
     else:
         # المستخدم العادي يبحث في طلباته فقط
-        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, u.telegram_id, o.order_type
+        c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, u.telegram_id
                      FROM orders o 
                      JOIN products p ON o.product_id = p.id 
                      JOIN users u ON o.user_id = u.telegram_id
@@ -982,7 +976,6 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}
-نوع الطلب: {order[8]}
 """
             message += "──────────────\n"
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
@@ -1156,13 +1149,12 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     product_name = c.fetchone()[0]
     amount = context.user_data['amount']
     customer_info = context.user_data['customer_info']
-    order_type = context.user_data.get('order_type', 'custom') #default to custom if not set
 
     # خصم المبلغ من رصيد المستخدم وإنشاء الطلب
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
               (amount, update.effective_user.id))
-    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, order_type) VALUES (?, ?, ?, ?, ?)',
-              (update.effective_user.id, context.user_data['product_id'], amount, customer_info, order_type))
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info) VALUES (?, ?, ?, ?)',
+              (update.effective_user.id, context.user_data['product_id'], amount, customer_info))
     order_id = c.lastrowid
     conn.commit()
 
@@ -1174,7 +1166,6 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
-نوع الطلب: {order_type}
 """
     #Send SMS -  Replace with your SMS gateway API call
     try:
@@ -1199,7 +1190,6 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
-نوع الطلب: {order_type}
 """
     keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1258,7 +1248,7 @@ async def create_new_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         return
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id))
-    c.execute('INSERT INTO orders (user_id, product_id, amount, status, order_type) VALUES (?, ?, ?, ?, ?)', (user_id, product_id, amount, 'pending', 'custom')) #added order_type
+    c.execute('INSERT INTO orders (user_id, product_id, amount, status) VALUES (?, ?, ?, ?)', (user_id, product_id, amount, 'pending'))
     order_id = c.lastrowid
     conn.commit()
     conn.close()
@@ -1338,7 +1328,7 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
 def add_category():
     name = request.form['name']
     identifier = request.form['identifier']
-    is_active = 'is_active' in requestform
+    is_active = 'is_active' in request.form
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     c.execute('INSERT INTO categories (name, identifier, is_active) VALUES (?, ?, ?)',
@@ -1430,8 +1420,7 @@ def admin_panel():
         c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT,
-                      order_type TEXT)''')
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
         conn.commit()
 
         c.execute('SELECT * FROM categories')
@@ -1468,13 +1457,13 @@ def admin_panel():
         admin_id = c.fetchone()
 
         if admin_id and admin_id[0]:
-            c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note, o.order_type
+            c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
                          FROM orders o 
                          JOIN products p ON o.product_id = p.id 
                          ORDER BY o.created_at DESC''')
         else:
             user_telegram_id = session.get('user_telegram_id')
-            c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note, o.order_type
+            c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
                          FROM orders o 
                          JOIN products p ON o.product_id = p.id 
                          WHERE o.user_id = ?
@@ -1821,7 +1810,6 @@ def add_order():
         product_id = int(request.form['product_id'])
         amount = float(request.form['amount'])
         customer_info = request.form['customer_info']
-        order_type = request.form.get('order_type', 'custom') # Added order_type
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
@@ -1843,9 +1831,9 @@ def add_order():
                  (amount, user_id))
 
         # إنشاء الطلب
-        c.execute('''INSERT INTO orders (user_id, product_id, amount, customer_info, status, order_type) 
-                     VALUES (?, ?, ?, ?, ?, ?)''',
-                 (user_id, product_id, amount, customer_info, 'pending', order_type))
+        c.execute('''INSERT INTO orders (user_id, product_id, amount, customer_info, status) 
+                     VALUES (?, ?, ?, ?, ?)''',
+                 (user_id, product_id, amount, customer_info, 'pending'))
 
         order_id = c.lastrowid
 
@@ -1864,8 +1852,7 @@ def add_order():
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري
-بيانات الزبون: {customer_info}
-نوع الطلب: {order_type}"""
+بيانات الزبون: {customer_info}"""
 
         try:
             asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
@@ -2093,7 +2080,7 @@ def handle_order():
 
         # استرجاع معلومات الطلب والمنتج
         c.execute('''
-            SELECT o.user_id, o.amount, p.name, u.balance, o.order_type 
+            SELECT o.user_id, o.amount, p.name, u.balance 
             FROM orders o 
             JOIN products p ON o.product_id = p.id 
             JOIN users u ON o.user_id = u.telegram_id 
@@ -2110,8 +2097,6 @@ def handle_order():
         amount = order[1]
         product_name = order[2]
         current_balance = order[3]
-        order_type = order[4]
-
 
         if action == 'reject':
             if not rejection_note and action == 'reject':
@@ -2134,7 +2119,6 @@ def handle_order():
 الشركة: {product_name}
 المبلغ المعاد لرصيدك: {amount} ليرة سوري
 سبب الرفض: {rejection_note}
-نوع الطلب: {order_type}
 رصيدك الحالي: {current_balance + amount} ليرة سوري"""
 
         elif action == 'accept':
@@ -2145,8 +2129,7 @@ def handle_order():
             notification_message = f"""✅ تم قبول طلبك!
 رقم الطلب: {order_id}
 الشركة: {product_name}
-المبلغ: {amount} ليرة سوري
-نوع الطلب: {order_type}"""
+المبلغ: {amount} ليرة سوري"""
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -2180,7 +2163,7 @@ def edit_order_amount():
         c = conn.cursor()
 
         # استرجاع معلومات الطلب الحالية
-        c.execute('SELECT amount, user_id, status, order_type FROM orders WHERE id = ?', (order_id,))
+        c.execute('SELECT amount, user_id, status FROM orders WHERE id = ?', (order_id,))
         current_order = c.fetchone()
 
         if not current_order:
@@ -2190,7 +2173,6 @@ def edit_order_amount():
         current_amount = current_order[0]
         user_id = current_order[1]
         status = current_order[2]
-        order_type = current_order[3]
 
         # إذا كان الطلب مقبولاً أو قيد المعالجة، نتعامل مع الرصيد
         if status != 'rejected':
@@ -2217,7 +2199,7 @@ def edit_order_amount():
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
 
         # إرسال إشعار للمستخدم
-        notification_message = f"تم تعديل مبلغ الطلب رقم {order_id}\nالمبلغ الجديد: {new_amount} ليرة سوري\nنوع الطلب: {order_type}"
+        notification_message = f"تم تعديل مبلغ الطلب رقم {order_id}\nالمبلغ الجديد: {new_amount} ليرة سوري"
 
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
@@ -2256,8 +2238,7 @@ def get_db_connection():
         c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT,
-                      order_type TEXT)''')
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
         conn.commit()
         return conn
     except Exception as e:
