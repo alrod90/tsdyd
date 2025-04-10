@@ -470,11 +470,60 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # جلب معلومات المنتج
         c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
         product_name = c.fetchone()[0]
+        context.user_data['product_name'] = product_name
+
+        # جلب السرعات المتاحة
+        c.execute('''SELECT id, name, price FROM speeds 
+                     WHERE product_id = ? AND is_active = 1''', (product_id,))
+        speeds = c.fetchall()
+
+        # جلب الباقات المتاحة
+        c.execute('''SELECT id, name, price FROM megas 
+                     WHERE product_id = ? AND is_active = 1''', (product_id,))
+        packages = c.fetchall()
+
+        keyboard = []
+        
+        # إضافة أزرار السرعات
+        if speeds:
+            for speed in speeds:
+                keyboard.append([InlineKeyboardButton(
+                    f"سرعة: {speed[1]} - {speed[2]} ل.س",
+                    callback_data=f'select_speed_{speed[0]}_{speed[2]}'
+                )])
+
+        # إضافة أزرار الباقات
+        if packages:
+            for package in packages:
+                keyboard.append([InlineKeyboardButton(
+                    f"باقة: {package[1]} - {package[2]} ل.س",
+                    callback_data=f'select_package_{package[0]}_{package[2]}'
+                )])
+
+        # إضافة زر للإدخال اليدوي
+        keyboard.append([InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data='manual_amount')])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
+
         conn.close()
 
-        context.user_data['product_name'] = product_name
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(
+            f"الرجاء اختيار السرعة أو الباقة المطلوبة للمنتج: {product_name}",
+            reply_markup=reply_markup
+        )
+        return "WAITING_SELECTION"
+
+    elif query.data.startswith('select_speed_') or query.data.startswith('select_package_'):
+        _, item_id, amount = query.data.split('_')
+        context.user_data['amount'] = float(amount)
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_CUSTOMER_INFO"
+
+    elif query.data == 'manual_amount':
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_CUSTOMER_INFO"
     elif query.data == 'add_new_order':
