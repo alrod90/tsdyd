@@ -64,15 +64,15 @@ def init_db():
                   enable_speeds BOOLEAN DEFAULT 0,
                   enable_packages BOOLEAN DEFAULT 0,
                   enable_custom_amount BOOLEAN DEFAULT 1)''')
-                 
+
     c.execute('''CREATE TABLE IF NOT EXISTS speeds
                  (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
                  FOREIGN KEY(product_id) REFERENCES products(id))''')
-                 
+
     c.execute('''CREATE TABLE IF NOT EXISTS packages
                  (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
                  FOREIGN KEY(product_id) REFERENCES products(id))''')
-                 
+
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
                   phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
@@ -1356,8 +1356,27 @@ def admin_panel():
                          WHERE o.user_id = ?
                          ORDER BY o.created_at DESC''', (user_telegram_id,))
         orders = c.fetchall()
+
+        # Fetch speeds with product names
+        c.execute('''
+            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active```python
+            FROM speeds s
+            JOIN products p ON s.product_id = p.id
+            ORDER BY s.id DESC
+        ''')
+        speeds = [
+            {
+                'id': row[0],
+                'name': row[1],
+                'price': row[2],
+                'product_id': row[3],
+                'product_name': row[4],
+                'is_active': row[5]
+            }
+            for row in c.fetchall()
+        ]
         conn.close()
-        return render_template('admin.html', categories=categories, products=products, users=users, orders=orders)
+        return render_template('admin.html', categories=categories, products=products, users=users, orders=orders, speeds=speeds)
     except Exception as e:
         print(f"Error in admin_panel: {str(e)}")
         if conn:
@@ -1370,7 +1389,7 @@ def add_package():
         product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('INSERT INTO packages (product_id, name, price, is_active) VALUES (?, ?, ?, 1)',
