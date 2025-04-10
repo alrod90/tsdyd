@@ -191,20 +191,25 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("حدث خطأ في الوصول للوحة التحكم، الرجاء المحاولة مرة أخرى")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
-    user_id = update.effective_user.id
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE telegram_id = ?', (user_id,))
-    if not c.fetchone():
-        c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
-        conn.commit()
+    conn = None
+    try:
+        # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
+        user_id = update.effective_user.id
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT * FROM users WHERE telegram_id = ?', (user_id,))
+        if not c.fetchone():
+            c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
+            conn.commit()
 
-    welcome_message = f"""مرحبا بك في نظام تسديد الفواتير
+        welcome_message = f"""مرحبا بك في نظام تسديد الفواتير
 معرف التيليجرام الخاص بك هو: {user_id}
 يمكنك استخدام هذا المعرف للتواصل مع الإدارة.
 """
-    await update.message.reply_text(welcome_message)
+        await update.message.reply_text(welcome_message)
+    finally:
+        if conn:
+            conn.close()
 
     # جلب الأقسام النشطة من قاعدة البيانات
     c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
@@ -558,7 +563,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if item:
             context.user_data['product_id'] = product_id
             context.user_data['amount'] = item[1]  # السعر
-            context.user_data['order_type'] = item_type
+            context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
+            context.user_data['order_type'] = item_type #add order type
 
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
@@ -569,20 +575,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 conn.close()
                 return
 
-            keyboard = [
-                [InlineKeyboardButton("تأكيد الطلب", callback_data='confirm_purchase')],
-                [InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            await query.message.edit_text(
-                f"تفاصيل الطلب:\n"
-                f"النوع: {item[0]}\n"
-                f"السعر: {item[1]} ليرة سوري\n\n"
-                "هل تريد تأكيد الطلب؟",
-                reply_markup=reply_markup
-            )
-            
+            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+            conn.close()
             return "WAITING_CUSTOMER_INFO"
 
         conn.close()
