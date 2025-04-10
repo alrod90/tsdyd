@@ -1383,6 +1383,25 @@ def admin_panel():
             conn.close()
         return "حدث خطأ في الوصول إلى لوحة التحكم. الرجاء المحاولة مرة أخرى.", 500
 
+@app.route('/add_speed', methods=['POST'])
+def add_speed():
+    try:
+        product_id = request.form['product_id']
+        name = request.form['name']
+        price = float(request.form['price'])
+        is_active = 'is_active' in request.form
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
+                 (product_id, name, price, is_active))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in add_speed: {str(e)}")
+        return "حدث خطأ في إضافة السرعة", 500
+
 @app.route('/add_package', methods=['POST'])
 def add_package():
     try:
