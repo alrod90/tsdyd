@@ -1334,6 +1334,24 @@ def admin_panel():
             conn.close()
         return "حدث خطأ في الوصول إلى لوحة التحكم. الرجاء المحاولة مرة أخرى.", 500
 
+@app.route('/add_package', methods=['POST'])
+def add_package():
+    try:
+        product_id = request.form['product_id']
+        name = request.form['name']
+        price = float(request.form['price'])
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('INSERT INTO packages (product_id, name, price, is_active) VALUES (?, ?, ?, 1)',
+                 (product_id, name, price))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in add_package: {str(e)}")
+        return "حدث خطأ في إضافة الباقة", 500
+
 @app.route('/add_product', methods=['POST'])
 def add_product():
     name = request.form['name']
