@@ -470,11 +470,81 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # التحقق من وجود باقات وسرعات للمنتج
         c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
         product_name = c.fetchone()[0]
+        
+        c.execute('SELECT COUNT(*) FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
+        has_packages = c.fetchone()[0] > 0
+        
+        c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
+        has_speeds = c.fetchone()[0] > 0
+        
         conn.close()
 
         context.user_data['product_name'] = product_name
+        keyboard = []
+        
+        if has_packages:
+            keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'packages_{product_id}')])
+        if has_speeds:
+            keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}')])
+            
+        keyboard.append([InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data='manual_amount')])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(f"اختر من القائمة التالية للمنتج {product_name}:", reply_markup=reply_markup)
+        return "WAITING_SELECTION"
+
+    elif query.data.startswith('packages_'):
+        product_id = int(query.data.split('_')[1])
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name, price FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
+        packages = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for package in packages:
+            keyboard.append([InlineKeyboardButton(
+                f"{package[1]} - {package[2]} ل.س",
+                callback_data=f'select_package_{package[0]}_{package[2]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر الباقة المناسبة:", reply_markup=reply_markup)
+        return "WAITING_SELECTION"
+
+    elif query.data.startswith('speeds_'):
+        product_id = int(query.data.split('_')[1])
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name, price FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
+        speeds = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for speed in speeds:
+            keyboard.append([InlineKeyboardButton(
+                f"{speed[1]} - {speed[2]} ل.س",
+                callback_data=f'select_speed_{speed[0]}_{speed[2]}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر السرعة المناسبة:", reply_markup=reply_markup)
+        return "WAITING_SELECTION"
+
+    elif query.data.startswith('select_package_') or query.data.startswith('select_speed_'):
+        _, item_id, amount = query.data.split('_')
+        context.user_data['amount'] = float(amount)
+        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        return "WAITING_CUSTOMER_INFO"
+
+    elif query.data == 'manual_amount':
         await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
         return "WAITING_CUSTOMER_INFO"
     elif query.data == 'add_new_order':
