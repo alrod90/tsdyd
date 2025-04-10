@@ -199,22 +199,23 @@
                         <td>
                             <button onclick="showEditPackageForm('{{ package.id }}', '{{ package.name }}', '{{ package.price }}')" style="background-color: #2196F3;">
                             تعديل
-                        </button>
-                        <form action="/toggle_package" method="post" style="display: inline;">
-                            <input type="hidden" name="package_id" value="{{ package.id }}">
-                            <button type="submit" style="background-color: {{ '#ff4444' if package.is_active else '#4CAF50' }}">
-                                {{ 'تعطيل' if package.is_active else 'تفعيل' }}
                             </button>
-                        </form>
-                        <form action="/delete_package" method="post" style="display: inline;">
-                            <input type="hidden" name="package_id" value="{{ package.id }}">
-                            <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذه الباقة؟')" style="background-color: #ff4444;">
-                                حذف
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
+                            <form action="/toggle_package" method="post" style="display: inline;">
+                                <input type="hidden" name="package_id" value="{{ package.id }}">
+                                <button type="submit" style="background-color: {{ '#ff4444' if package.is_active else '#4CAF50' }}">
+                                    {{ 'تعطيل' if package.is_active else 'تفعيل' }}
+                                </button>
+                            </form>
+                            <form action="/delete_package" method="post" style="display: inline;">
+                                <input type="hidden" name="package_id" value="{{ package.id }}">
+                                <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذه الباقة؟')" style="background-color: #ff4444;">
+                                    حذف
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
             </table>
             <div class="pagination" style="margin-top: 10px; text-align: center;">
                 {% for i in range((packages|length + 4) // 5) %}
