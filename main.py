@@ -475,16 +475,16 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
         product = c.fetchone()
         
-        c.execute('SELECT COUNT(*) FROM packages WHERE product_id = ? AND is_active = 1', (product_id,))
-        has_packages = c.fetchone()[0] > 0
+        c.execute('SELECT COUNT(*) FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
+        has_megas = c.fetchone()[0] > 0
         
         c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
         has_speeds = c.fetchone()[0] > 0
 
         keyboard = []
         
-        if has_packages:
-            keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'packages_{product_id}')])
+        if has_megas:
+            keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}')])
             
         if has_speeds:
             keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}')])
@@ -499,19 +499,19 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         return
 
-    elif query.data.startswith('packages_'):
+    elif query.data.startswith('megas_'):
         product_id = int(query.data.split('_')[1])
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT id, name, price FROM packages WHERE product_id = ? AND is_active = 1', (product_id,))
-        packages = c.fetchall()
+        c.execute('SELECT id, name, price FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
+        megas = c.fetchall()
         conn.close()
 
         keyboard = []
-        for package in packages:
+        for mega in megas:
             keyboard.append([InlineKeyboardButton(
-                f"{package[1]} - {package[2]} ل.س",
-                callback_data=f'select_package_{package[0]}_{product_id}'
+                f"{mega[1]} - {mega[2]} ل.س",
+                callback_data=f'select_mega_{mega[0]}_{product_id}'
             )])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
         
@@ -539,16 +539,16 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("اختر السرعة المناسبة:", reply_markup=reply_markup)
         return
 
-    elif query.data.startswith('select_package_') or query.data.startswith('select_speed_'):
+    elif query.data.startswith('select_mega_') or query.data.startswith('select_speed_'):
         parts = query.data.split('_')
-        item_type = parts[1]  # package or speed
+        item_type = parts[1]  # mega or speed
         item_id = int(parts[2])
         product_id = int(parts[3])
         
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        table_name = 'packages' if item_type == 'package' else 'speeds'
+        table_name = 'megas' if item_type == 'mega' else 'speeds'
         c.execute(f'SELECT name, price FROM {table_name} WHERE id = ?', (item_id,))
         item = c.fetchone()
         
