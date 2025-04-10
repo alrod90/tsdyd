@@ -2303,16 +2303,7 @@ async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text("حدث خطأ. الرجاء التأكد من صحة المعلومات المدخلة")
     return ConversationHandler.END
 
-@app.route('/toggle_distributor', methods=['POST'])
-def toggle_distributor():
-    user_id = request.form['user_id']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE users SET is_distributor = NOT is_distributor WHERE telegram_id = ?',
-              (user_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
+
 
 def main():
     """تشغيل البوت"""
