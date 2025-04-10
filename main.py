@@ -48,6 +48,12 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
+    
+    # إضافة عمود order_type إذا لم يكن موجوداً
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN order_type TEXT")
+    except sqlite3.OperationalError:
+        pass  # العمود موجود بالفعل
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -553,10 +559,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         item = c.fetchone()
         
         if item:
-            context.user_data['product_id'] = product_id
-            context.user_data['amount'] = item[1]  # السعر
-            context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
-            
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
             user_balance = c.fetchone()[0]
@@ -565,8 +567,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.edit_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
                 conn.close()
                 return
+
+            context.user_data['product_id'] = product_id
+            context.user_data['amount'] = item[1]  # السعر
+            context.user_data['order_type'] = 'package' if item_type == 'mega' else 'speed'
             
-            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+            await query.message.edit_text(
+                f"سعر {item[0]}: {item[1]} ليرة سوري\n"
+                "الرجاء إدخال بيانات الزبون:")
             conn.close()
             return "WAITING_CUSTOMER_INFO"
         
@@ -692,8 +700,22 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
-    await update.message.reply_text("الرجاء إدخال المبلغ:")
-    return "WAITING_AMOUNT"
+    
+    # إذا كان هناك مبلغ محدد مسبقاً (باقة أو سرعة)
+    if 'amount' in context.user_data:
+        amount = context.user_data['amount']
+        await update.message.reply_text(
+            f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
+            f"اضغط على تأكيد لإتمام العملية.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("تأكيد", callback_data='confirm_purchase'),
+                InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')
+            ]])
+        )
+        return "WAITING_CONFIRMATION"
+    else:
+        await update.message.reply_text("الرجاء إدخال المبلغ:")
+        return "WAITING_AMOUNT"
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
