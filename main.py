@@ -496,11 +496,15 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = []
         keyboard.append([InlineKeyboardButton("إضافة دفعة", callback_data=f'manual_{product_id}')])
         
+        row = []
         if has_megas:
-            keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}')])
+            row.append(InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}'))
             
         if has_speeds:
-            keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}')])
+            row.append(InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}'))
+            
+        if row:
+            keyboard.append(row)
             
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
         
