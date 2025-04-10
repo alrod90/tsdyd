@@ -560,6 +560,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
             context.user_data['order_type'] = item_type #add order type
+            context.user_data['selected_item_id'] = item_id #add selected item id
 
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
@@ -671,7 +672,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("قيد المعالجة", callback_data=f'set_order_status_pending_{order_id}')],
             [InlineKeyboardButton("مقبول", callback_data=f'set_order_status_accepted_{order_id}')],
-            [InlineKeyboardButton("مرفوض", callback_data=f'set_order_status_rejected_{order_id}')],
+            [InlineKeyboardButton("مرفوض", callback_data=f'set_orderstatus_rejected_{order_id}')],
             [InlineKeyboardButton("رجوع", callback_data='orders_menu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر الحالة الجديدة:", reply_markup=reply_markup)
@@ -1166,15 +1167,27 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     order_id = c.lastrowid
     conn.commit()
 
-    # إرسال إشعار للمدير
+    # إرسال إشعار للمدير مع تفاصيل إضافية حسب نوع الطلب
+    order_type_details = ""
+    if order_type == 'mega':
+        c.execute('SELECT name FROM megas WHERE id = ?', (context.user_data.get('selected_item_id'),))
+        item_name = c.fetchone()[0]
+        order_type_details = f"باقة: {item_name}"
+    elif order_type == 'speed':
+        c.execute('SELECT name FROM speeds WHERE id = ?', (context.user_data.get('selected_item_id'),))
+        item_name = c.fetchone()[0]
+        order_type_details = f"سرعة: {item_name}"
+    else:
+        order_type_details = "نوع الطلب: مبلغ مخصص"
+
     admin_message = f"""
 طلب جديد
 رقم الطلب: {order_id}
 معرف المشتري: {update.effective_user.id}
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري
+{order_type_details}
 بيانات الزبون: {customer_info}
-نوع الطلب: {order_type}
 """
     #Send SMS -  Replace with your SMS gateway API call
     try:
@@ -1321,7 +1334,7 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
         user_balance = c.fetchone()[0]
         if user_balance < amount:
-            await update.message.reply_text(f"رصيد المستخدم غير كافٍ، رصيده الحالي {user_balance}")
+            await update.message.reply_text(f"رصيد المستخدم غير كافٍ، رافٍ، رصيده الحالي {user_balance}")
             conn.close()
             return
         c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id))
