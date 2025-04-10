@@ -1436,10 +1436,11 @@ def edit_speed():
         speed_id = request.form['speed_id']
         name = request.form['name']
         price = float(request.form['price'])
+        product_id = request.form['product_id'] # Added product_id
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('UPDATE speeds SET name = ?, price = ? WHERE id = ?',
-                 (name, price, speed_id))
+        c.execute('UPDATE speeds SET name = ?, price = ?, product_id = ? WHERE id = ?',
+                 (name, price, product_id, speed_id)) # Updated query to include product_id
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
