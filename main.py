@@ -470,6 +470,105 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # التحقق من وجود باقات أو سرعات للمنتج
+        c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
+        product = c.fetchone()
+        
+        c.execute('SELECT COUNT(*) FROM packages WHERE product_id = ? AND is_active = 1', (product_id,))
+        has_packages = c.fetchone()[0] > 0
+        
+        c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
+        has_speeds = c.fetchone()[0] > 0
+
+        keyboard = []
+        
+        if has_packages:
+            keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'packages_{product_id}')])
+            
+        if has_speeds:
+            keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}')])
+            
+        keyboard.append([InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data=f'manual_{product_id}')])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
+        
+        context.user_data['product_name'] = product[0]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(f"اختر نوع الخدمة لـ {product[0]}:", reply_markup=reply_markup)
+        conn.close()
+        return
+
+    elif query.data.startswith('packages_'):
+        product_id = int(query.data.split('_')[1])
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name, price FROM packages WHERE product_id = ? AND is_active = 1', (product_id,))
+        packages = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for package in packages:
+            keyboard.append([InlineKeyboardButton(
+                f"{package[1]} - {package[2]} ل.س",
+                callback_data=f'select_package_{package[0]}_{product_id}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر الباقة المناسبة:", reply_markup=reply_markup)
+        return
+
+    elif query.data.startswith('speeds_'):
+        product_id = int(query.data.split('_')[1])
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name, price FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
+        speeds = c.fetchall()
+        conn.close()
+
+        keyboard = []
+        for speed in speeds:
+            keyboard.append([InlineKeyboardButton(
+                f"{speed[1]} - {speed[2]} ل.س",
+                callback_data=f'select_speed_{speed[0]}_{product_id}'
+            )])
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("اختر السرعة المناسبة:", reply_markup=reply_markup)
+        return
+
+    elif query.data.startswith('select_package_') or query.data.startswith('select_speed_'):
+        parts = query.data.split('_')
+        item_type = parts[1]  # package or speed
+        item_id = int(parts[2])
+        product_id = int(parts[3])
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        table_name = 'packages' if item_type == 'package' else 'speeds'
+        c.execute(f'SELECT name, price FROM {table_name} WHERE id = ?', (item_id,))
+        item = c.fetchone()
+        
+        if item:
+            context.user_data['product_id'] = product_id
+            context.user_data['amount'] = item[1]  # السعر
+            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+            conn.close()
+            return "WAITING_CUSTOMER_INFO"
+        
+        conn.close()
+        await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
+        return
+
+    elif query.data.startswith('manual_'):
+        product_id = int(query.data.split('_')[1])
+        context.user_data['product_id'] = product_id
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
         c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
         product_name = c.fetchone()[0]
         conn.close()
