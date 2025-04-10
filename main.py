@@ -482,6 +482,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         has_speeds = c.fetchone()[0] > 0
 
         keyboard = []
+        keyboard.append([InlineKeyboardButton("إضافة رصيد", callback_data=f'add_balance_{product_id}')])
         
         if has_megas:
             keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}')])
@@ -579,7 +580,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
         return
 
-    elif query.data.startswith('manual_'):
+    elif query.data.startswith('add_balance_') or query.data.startswith('manual_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
 
