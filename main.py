@@ -1921,7 +1921,6 @@ def run_bot():
 
     # Add handlers
     application.add_handler(CommandHandler("orders", orders))
-    application.add_handler(CommandHandler("admin", admin_panel_command))
 
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
