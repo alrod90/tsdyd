@@ -162,21 +162,7 @@
 </div>
 
 <div class="section">
-        <h2>إدارة السرعات والباقات</h2>
-        <div>
-            <h3>إضافة سرعة جديدة</h3>
-            <form action="/add_speed" method="post">
-                <select name="product_id" required>
-                    {% for product in products %}
-                    <option value="{{ product[0] }}">{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
-                <input type="text" name="name" placeholder="اسم السرعة" required>
-                <input type="number" name="price" placeholder="السعر" step="0.01" required>
-                <input type="submit" value="إضافة سرعة">
-            </form>
-        </div>
-        
+        <h2>إدارة الباقات والأسعار</h2>
         <div>
             <h3>إضافة باقة جديدة</h3>
             <form action="/add_package" method="post">
@@ -190,7 +176,87 @@
                 <input type="submit" value="إضافة باقة">
             </form>
         </div>
+
+        <div style="margin-top: 20px;">
+            <h3>إدارة الباقات</h3>
+            <table>
+                <tr>
+                    <th>الباقة</th>
+                    <th>المنتج</th>
+                    <th>السعر</th>
+                    <th>الحالة</th>
+                    <th>الإجراءات</th>
+                </tr>
+                {% for i in range(0, packages|length, 5) %}
+                <tr class="package-row page-{{ (i // 5) + 1 }}" {% if (i // 5) + 1 != 1 %}style="display: none;"{% endif %}>
+                    <td>{{ packages[i].name }}</td>
+                    <td>{{ packages[i].product_name }}</td>
+                    <td>{{ packages[i].price }}</td>
+                    <td class="status-{{ 'active' if packages[i].is_active else 'inactive' }}">
+                        {{ 'مفعل' if packages[i].is_active else 'غير مفعل' }}
+                    </td>
+                    <td>
+                        <button onclick="showEditPackageForm('{{ packages[i].id }}', '{{ packages[i].name }}', '{{ packages[i].price }}')" style="background-color: #2196F3;">
+                            تعديل
+                        </button>
+                        <form action="/toggle_package" method="post" style="display: inline;">
+                            <input type="hidden" name="package_id" value="{{ packages[i].id }}">
+                            <button type="submit" style="background-color: {{ '#ff4444' if packages[i].is_active else '#4CAF50' }}">
+                                {{ 'تعطيل' if packages[i].is_active else 'تفعيل' }}
+                            </button>
+                        </form>
+                        <form action="/delete_package" method="post" style="display: inline;">
+                            <input type="hidden" name="package_id" value="{{ packages[i].id }}">
+                            <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذه الباقة؟')" style="background-color: #ff4444;">
+                                حذف
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            <div class="pagination" style="margin-top: 10px; text-align: center;">
+                {% for i in range((packages|length + 4) // 5) %}
+                <button onclick="showPackagePage({{ i + 1 }})" style="margin: 0 5px;">{{ i + 1 }}</button>
+                {% endfor %}
+            </div>
+        </div>
     </div>
+    
+    <script>
+    function showPackagePage(pageNum) {
+        document.querySelectorAll('.package-row').forEach(row => {
+            row.style.display = 'none';
+        });
+        document.querySelectorAll('.page-' + pageNum).forEach(row => {
+            row.style.display = '';
+        });
+    }
+    
+    function showEditPackageForm(id, name, price) {
+        var modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+        
+        var content = document.createElement('div');
+        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+        
+        content.innerHTML = `
+            <h3>تعديل الباقة</h3>
+            <form action="/edit_package" method="post">
+                <input type="hidden" name="package_id" value="${id}">
+                <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
+                <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
+                <div style="margin-top: 20px;">
+                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                </div>
+            </form>
+        `;
+        
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    }
+    </script>
 
     <div class="section">
         <h2>إضافة منتج</h2>
