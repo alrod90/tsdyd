@@ -1366,9 +1366,11 @@ def admin_panel():
 
         # Fetch speeds with product names
         c.execute('''
-            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
+            SELECT s.id, s.name, s.price, GROUP_CONCAT(p.name) as product_names, s.is_active
             FROM speeds s
-            JOIN products p ON s.product_id = p.id
+            JOIN speed_products sp ON s.id = sp.speed_id
+            JOIN products p ON sp.product_id = p.id
+            GROUP BY s.id
             ORDER BY s.id DESC
         ''')
         speeds = [

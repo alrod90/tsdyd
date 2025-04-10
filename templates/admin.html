@@ -287,7 +287,7 @@
             </tr>
             {% for speed in speeds %}
             <tr>
-                <td>{{ speed.product_name }}</td>
+                <td>{{ speed.product_names }}</td>
                 <td>{{ speed.name }}</td>
                 <td>{{ speed.price }}</td>
                 <td class="status-{{ 'active' if speed.is_active else 'inactive' }}">
