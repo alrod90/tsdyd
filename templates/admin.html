@@ -374,6 +374,68 @@
     </div>
 
     <div class="section">
+        <h2>إدارة الباقات</h2>
+        <form action="/add_mega" method="post">
+            <select name="product_id" required>
+                {% for product in products %}
+                <option value="{{ product[0] }}">{{ product[1] }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="name" placeholder="اسم الباقة" required>
+            <input type="number" name="price" placeholder="السعر" step="0.01" required>
+            <label class="switch">
+                <input type="checkbox" name="is_active" checked>
+                <span class="slider"></span>
+            </label>
+            <span>تفعيل الباقة</span>
+            <input type="submit" value="إضافة باقة">
+        </form>
+
+        <table>
+            <tr>
+                <th>الرقم</th>
+                <th>اسم الباقة</th>
+                <th>المنتج</th>
+                <th>السعر</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
+            {% for mega in megas %}
+            <tr>
+                <td>{{ mega.id }}</td>
+                <td>{{ mega.name }}</td>
+                <td>{{ mega.product_name }}</td>
+                <td>{{ mega.price }}</td>
+                <td class="status-{{ 'active' if mega.is_active else 'inactive' }}">
+                    {{ 'مفعل' if mega.is_active else 'معطل' }}
+                </td>
+                <td>
+                    <form action="/edit_mega" method="post" style="display: inline;">
+                        <input type="hidden" name="mega_id" value="{{ mega.id }}">
+                        <select name="product_id" required>
+                            {% for product in products %}
+                            <option value="{{ product[0] }}" {% if product[0] == mega.product_id %}selected{% endif %}>{{ product[1] }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="name" value="{{ mega.name }}" required>
+                        <input type="number" name="price" value="{{ mega.price }}" step="0.01" required>
+                        <button type="submit">تعديل</button>
+                    </form>
+                    <form action="/toggle_mega" method="post" style="display: inline;">
+                        <input type="hidden" name="mega_id" value="{{ mega.id }}">
+                        <button type="submit">{{ 'تعطيل' if mega.is_active else 'تفعيل' }}</button>
+                    </form>
+                    <form action="/delete_mega" method="post" style="display: inline;">
+                        <input type="hidden" name="mega_id" value="{{ mega.id }}">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذه الباقة؟')" style="background-color: #ff4444;">حذف</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="section">
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
