@@ -566,7 +566,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 conn.close()
                 return
             
-            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+            # عرض تأكيد الطلب مباشرة مع تفاصيل السعر
+            confirmation_message = f"""
+سيتم خصم {item[1]} ليرة سوري من رصيدك مقابل {item[0]}.
+الرجاء إدخال بيانات الزبون:"""
+            
+            await query.message.edit_text(confirmation_message)
             conn.close()
             return "WAITING_CUSTOMER_INFO"
         
@@ -692,8 +697,23 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
-    await update.message.reply_text("الرجاء إدخال المبلغ:")
-    return "WAITING_AMOUNT"
+    
+    # إذا كان المبلغ محدد مسبقاً (من اختيار باقة أو سرعة)
+    if 'amount' in context.user_data:
+        amount = context.user_data['amount']
+        await update.message.reply_text(
+            f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
+            f"اضغط على تأكيد لإتمام العملية.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("تأكيد", callback_data='confirm_purchase'),
+                InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')
+            ]])
+        )
+        return "WAITING_CONFIRMATION"
+    else:
+        # في حالة الإدخال اليدوي للمبلغ
+        await update.message.reply_text("الرجاء إدخال المبلغ:")
+        return "WAITING_AMOUNT"
 
 async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
