@@ -488,13 +488,22 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         
-        # إضافة الأزرار الرئيسية
+        # إضافة الأزرار فقط إذا كانت هناك باقات أو سرعات متاحة
         if speeds:
-            keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'show_speeds_{product_id}')])
+            for speed in speeds:
+                keyboard.append([InlineKeyboardButton(
+                    f"{speed[1]} - {speed[2]} ل.س",
+                    callback_data=f'select_speed_{speed[0]}_{speed[2]}'
+                )])
+        
         if packages:
-            keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'show_packages_{product_id}')])
+            for package in packages:
+                keyboard.append([InlineKeyboardButton(
+                    f"{package[1]} - {package[2]} ل.س",
+                    callback_data=f'select_package_{package[0]}_{package[2]}'
+                )])
             
-        # إضافة زر للإدخال اليدوي
+        # إضافة زر للإدخال اليدوي والرجوع
         keyboard.append([InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data='manual_amount')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
 
