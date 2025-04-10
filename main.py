@@ -582,6 +582,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith('manual_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
+        context.user_data['manual_entry'] = True  # علامة للإدخال اليدوي
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
@@ -698,8 +699,8 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
     
-    # إذا كان المبلغ محدد مسبقاً (من اختيار باقة أو سرعة)
-    if 'amount' in context.user_data:
+    # إذا كان المستخدم اختار باقة أو سرعة
+    if 'amount' in context.user_data and not context.user_data.get('manual_entry', False):
         amount = context.user_data['amount']
         await update.message.reply_text(
             f"سيتم خصم {amount} ليرة سوري من رصيدك.\n"
