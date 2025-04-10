@@ -558,7 +558,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if item:
             context.user_data['product_id'] = product_id
             context.user_data['amount'] = item[1]  # السعر
-            context.user_data['order_type'] = item_type
+            context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
+            context.user_data['order_type'] = item_type #add order type
 
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
@@ -569,15 +570,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 conn.close()
                 return
 
-            # عرض تفاصيل الطلب مباشرة للتأكيد
-            message = f"""
-تفاصيل الطلب:
-النوع: {item_type}
-الاسم: {item[0]}
-المبلغ: {item[1]} ليرة سوري
-
-الرجاء إدخال بيانات الزبون:"""
-            await query.message.edit_text(message)
+            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
             conn.close()
             return "WAITING_CUSTOMER_INFO"
 
