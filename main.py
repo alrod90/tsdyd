@@ -494,7 +494,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         has_speeds = c.fetchone()[0] > 0
 
         keyboard = []
-        keyboard.append([InlineKeyboardButton("إضافة رصيد", callback_data=f'add_balance_{product_id}')])
+        keyboard.append([InlineKeyboardButton("إضافة دفعة", callback_data=f'manual_{product_id}')])
         
         if has_megas:
             keyboard.append([InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}')])
