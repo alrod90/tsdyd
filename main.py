@@ -1317,24 +1317,28 @@ def admin_panel():
         c.execute('SELECT * FROM users')
         users = c.fetchall()
 
-        # استرجاع الباقات مع أسماء المنتجات
-        c.execute('''
-            SELECT p.id, p.name, p.price, p.product_id, pr.name as product_name, p.is_active 
-            FROM packages p
-            JOIN products pr ON p.product_id = pr.id
-            ORDER BY p.id DESC
-        ''')
-        packages = [
-            {
-                'id': row[0],
-                'name': row[1],
-                'price': row[2],
-                'product_id': row[3],
-                'product_name': row[4],
-                'is_active': row[5]
-            }
-            for row in c.fetchall()
-        ]
+        try:
+            # استرجاع الباقات مع أسماء المنتجات
+            c.execute('''
+                SELECT p.id, p.name, p.price, p.product_id, pr.name as product_name, p.is_active 
+                FROM packages p
+                JOIN products pr ON p.product_id = pr.id
+                ORDER BY p.id DESC
+            ''')
+            packages = [
+                {
+                    'id': row[0],
+                    'name': row[1],
+                    'price': row[2],
+                    'product_id': row[3],
+                    'product_name': row[4],
+                    'is_active': row[5]
+                }
+                for row in c.fetchall()
+            ]
+        except Exception as e:
+            print(f"Error fetching packages: {str(e)}")
+            packages = []
 
         c.execute('SELECT telegram_id FROM users WHERE id = 1')
         admin_id = c.fetchone()

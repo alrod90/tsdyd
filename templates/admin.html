@@ -187,16 +187,17 @@
                     <th>الحالة</th>
                     <th>الإجراءات</th>
                 </tr>
-                {% for package in packages %}
-                <tr>
-                    <td>{{ package.name }}</td>
-                    <td>{{ package.product_name }}</td>
-                    <td>{{ package.price }}</td>
-                    <td class="status-{{ 'active' if package.is_active else 'inactive' }}">
-                        {{ 'مفعل' if package.is_active else 'غير مفعل' }}
-                    </td>
-                    <td>
-                        <button onclick="showEditPackageForm('{{ package.id }}', '{{ package.name }}', '{{ package.price }}')" style="background-color: #2196F3;">
+                {% if packages %}
+                    {% for package in packages %}
+                    <tr>
+                        <td>{{ package.name }}</td>
+                        <td>{{ package.product_name }}</td>
+                        <td>{{ package.price }}</td>
+                        <td class="status-{{ 'active' if package.is_active else 'inactive' }}">
+                            {{ 'مفعل' if package.is_active else 'غير مفعل' }}
+                        </td>
+                        <td>
+                            <button onclick="showEditPackageForm('{{ package.id }}', '{{ package.name }}', '{{ package.price }}')" style="background-color: #2196F3;">
                             تعديل
                         </button>
                         <form action="/toggle_package" method="post" style="display: inline;">
