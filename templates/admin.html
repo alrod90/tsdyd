@@ -161,69 +161,7 @@
         </table>
 </div>
 
-<div class="section">
-        <h2>إدارة الباقات والأسعار</h2>
-        <div>
-            <h3>إضافة باقة جديدة</h3>
-            <form action="/add_package" method="post">
-                <select name="product_id" required>
-                    {% for product in products %}
-                    <option value="{{ product[0] }}">{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
-                <input type="text" name="name" placeholder="اسم الباقة" required>
-                <input type="number" name="price" placeholder="السعر" step="0.01" required>
-                <input type="submit" value="إضافة باقة">
-            </form>
-        </div>
 
-        <div style="margin-top: 20px;">
-            <h3>إدارة الباقات</h3>
-            <table>
-                <tr>
-                    <th>الباقة</th>
-                    <th>المنتج</th>
-                    <th>السعر</th>
-                    <th>الحالة</th>
-                    <th>الإجراءات</th>
-                </tr>
-                {% if packages %}
-                    {% for package in packages %}
-                    <tr>
-                        <td>{{ package.name }}</td>
-                        <td>{{ package.product_name }}</td>
-                        <td>{{ package.price }}</td>
-                        <td class="status-{{ 'active' if package.is_active else 'inactive' }}">
-                            {{ 'مفعل' if package.is_active else 'غير مفعل' }}
-                        </td>
-                        <td>
-                            <button onclick="showEditPackageForm('{{ package.id }}', '{{ package.name }}', '{{ package.price }}')" style="background-color: #2196F3;">
-                            تعديل
-                            </button>
-                            <form action="/toggle_package" method="post" style="display: inline;">
-                                <input type="hidden" name="package_id" value="{{ package.id }}">
-                                <button type="submit" style="background-color: {{ '#ff4444' if package.is_active else '#4CAF50' }}">
-                                    {{ 'تعطيل' if package.is_active else 'تفعيل' }}
-                                </button>
-                            </form>
-                            <form action="/delete_package" method="post" style="display: inline;">
-                                <input type="hidden" name="package_id" value="{{ package.id }}">
-                                <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذه الباقة؟')" style="background-color: #ff4444;">
-                                    حذف
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% endif %}
-            </table>
-            <div class="pagination" style="margin-top: 10px; text-align: center;">
-                {% for i in range((packages|length + 4) // 5) %}
-                <button onclick="showPackagePage({{ i + 1 }})" style="margin: 0 5px;">{{ i + 1 }}</button>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
     
     <script>
     function showPackagePage(pageNum) {
