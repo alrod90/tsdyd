@@ -1153,9 +1153,27 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     # خصم المبلغ من رصيد المستخدم وإنشاء الطلب
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
               (amount, update.effective_user.id))
-    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info) VALUES (?, ?, ?, ?)',
-              (update.effective_user.id, context.user_data['product_id'], amount, customer_info))
+              
+    # تحديد نوع الطلب
+    order_type = "package" if query.data.startswith('select_mega_') else "speed" if query.data.startswith('select_speed_') else "custom"
+    
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, order_type) VALUES (?, ?, ?, ?, ?)',
+              (update.effective_user.id, context.user_data['product_id'], amount, customer_info, order_type))
     order_id = c.lastrowid
+    
+    # إرسال إشعار للمدير
+    c.execute('SELECT telegram_id FROM users WHERE id = 1')
+    admin = c.fetchone()
+    if admin:
+        admin_message = f"""
+طلب جديد #{order_id}
+النوع: {"باقة" if order_type == "package" else "سرعة" if order_type == "speed" else "مبلغ مخصص"}
+المبلغ: {amount} ليرة سوري
+معلومات الزبون: {customer_info}
+معرف المستخدم: {update.effective_user.id}
+"""
+        await context.bot.send_message(chat_id=admin[0], text=admin_message)
+        
     conn.commit()
 
     # إرسال إشعار للمدير

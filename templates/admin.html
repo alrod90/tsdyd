@@ -529,6 +529,7 @@
                 <th>معرف المستخدم</th>
                 <th>الشركة</th>
                 <th>المبلغ</th>
+                <th>نوع الطلب</th>
                 <th>معلومات الزبون</th>
                 <th>الحالة</th>
                 <th>التاريخ</th>
@@ -541,6 +542,15 @@
                 <td>{{ order[1] }}</td>
                 <td>{{ order[2] }}</td>
                 <td>{{ order[3] }}</td>
+                <td>
+                    {% if order[8] == 'package' %}
+                        <span class="badge bg-success">باقة</span>
+                    {% elif order[8] == 'speed' %}
+                        <span class="badge bg-primary">سرعة</span>
+                    {% else %}
+                        <span class="badge bg-warning">مبلغ مخصص</span>
+                    {% endif %}
+                </td>
                 <td>{{ order[4] }}</td>
                 <td>
                     {% if order[5] == 'pending' %}
