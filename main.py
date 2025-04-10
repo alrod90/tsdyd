@@ -464,6 +464,18 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
 
+    elif query.data == 'balance':
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+        result = c.fetchone()
+        balance = result[0] if result else 0
+        conn.close()
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(f"رصيدك الحالي: {balance} ليرة سوري", reply_markup=reply_markup)
+        return
+
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
