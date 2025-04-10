@@ -1321,7 +1321,16 @@ def admin_panel():
         categories = c.fetchall()
         c.execute('SELECT id, name, category, is_active FROM products')
         products = c.fetchall()
-        c.execute('SELECT id, telegram_id, balance, is_active, phone_number, note FROM users')
+        # Check if phone_number column exists
+        c.execute("PRAGMA table_info(users)")
+        columns = [col[1] for col in c.fetchall()]
+        
+        if 'phone_number' in columns:
+            c.execute('SELECT id, telegram_id, balance, is_active, phone_number, note FROM users')
+        else:
+            # Add phone_number column if it doesn't exist
+            c.execute('ALTER TABLE users ADD COLUMN phone_number TEXT')
+            c.execute('SELECT id, telegram_id, balance, is_active, phone_number, note FROM users')
         users = c.fetchall()
 
         try:
