@@ -187,13 +187,13 @@
                     <th>الحالة</th>
                     <th>الإجراءات</th>
                 </tr>
-                {% for i in range(0, packages|length, 5) %}
-                <tr class="package-row page-{{ (i // 5) + 1 }}" {% if (i // 5) + 1 != 1 %}style="display: none;"{% endif %}>
-                    <td>{{ packages[i].name }}</td>
-                    <td>{{ packages[i].product_name }}</td>
-                    <td>{{ packages[i].price }}</td>
-                    <td class="status-{{ 'active' if packages[i].is_active else 'inactive' }}">
-                        {{ 'مفعل' if packages[i].is_active else 'غير مفعل' }}
+                {% for package in packages %}
+                <tr>
+                    <td>{{ package.name }}</td>
+                    <td>{{ package.product_name }}</td>
+                    <td>{{ package.price }}</td>
+                    <td class="status-{{ 'active' if package.is_active else 'inactive' }}">
+                        {{ 'مفعل' if package.is_active else 'غير مفعل' }}
                     </td>
                     <td>
                         <button onclick="showEditPackageForm('{{ packages[i].id }}', '{{ packages[i].name }}', '{{ packages[i].price }}')" style="background-color: #2196F3;">
