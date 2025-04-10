@@ -260,12 +260,8 @@
         <div>
             <h3>إضافة سرعة جديدة</h3>
             <form action="/add_speed" method="post">
-                <select name="product_ids" multiple required style="height: 100px;">
-                    {% for product in products %}
-                    <option value="{{ product[0] }}">{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
-                <small>يمكنك اختيار عدة منتجات باستخدام Ctrl + النقر</small>
+                <input type="text" name="name" placeholder="اسم السرعة" required>
+                <input type="number" name="price" placeholder="السعر" step="0.01" required>
                 <input type="text" name="name" placeholder="اسم السرعة" required>
                 <input type="number" name="price" placeholder="السعر" step="0.01" required>
                 <label class="switch">
@@ -324,12 +320,11 @@
         <div>
             <h3>إضافة باقة جديدة</h3>
             <form action="/add_mega" method="post">
-                <select name="product_ids" multiple required style="height: 100px;">
+                <select name="product_id" required>
                     {% for product in products %}
                     <option value="{{ product[0] }}">{{ product[1] }}</option>
                     {% endfor %}
                 </select>
-                <small>يمكنك اختيار عدة منتجات باستخدام Ctrl + النقر</small>
                 <input type="text" name="name" placeholder="اسم الباقة" required>
                 <input type="number" name="price" placeholder="السعر" step="0.01" required>
                 <label class="switch">
