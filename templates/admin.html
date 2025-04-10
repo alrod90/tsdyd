@@ -286,6 +286,65 @@
     </div>
 
     <div class="section">
+        <h2>إدارة الباقات</h2>
+        <div>
+            <h3>إضافة باقة جديدة</h3>
+            <form action="/add_package" method="post">
+                <select name="product_id" required>
+                    {% for product in products %}
+                    <option value="{{ product[0] }}">{{ product[1] }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="name" placeholder="اسم الباقة" required>
+                <input type="number" name="price" placeholder="السعر" step="0.01" required>
+                <label class="switch">
+                    <input type="checkbox" name="is_active" checked>
+                    <span class="slider"></span>
+                </label>
+                <span>تفعيل الباقة</span>
+                <input type="submit" value="إضافة باقة">
+            </form>
+        </div>
+
+        <table>
+            <tr>
+                <th>المنتج</th>
+                <th>الباقة</th>
+                <th>السعر</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+            </tr>
+            {% for package in packages %}
+            <tr>
+                <td>{{ package.product_name }}</td>
+                <td>{{ package.name }}</td>
+                <td>{{ package.price }}</td>
+                <td class="status-{{ 'active' if package.is_active else 'inactive' }}">
+                    {{ 'مفعل' if package.is_active else 'غير مفعل' }}
+                </td>
+                <td>
+                    <button onclick="showEditPackageForm({{ package.id }}, '{{ package.name }}', {{ package.price }}, '{{ package.product_id }}')" style="background-color: #2196F3;">
+                        تعديل
+                    </button>
+                    <form action="/toggle_package" method="post" style="display: inline;">
+                        <input type="hidden" name="package_id" value="{{ package.id }}">
+                        <button type="submit" style="background-color: {{ '#ff4444' if package.is_active else '#4CAF50' }}">
+                            {{ 'تعطيل' if package.is_active else 'تفعيل' }}
+                        </button>
+                    </form>
+                    <form action="/delete_package" method="post" style="display: inline;">
+                        <input type="hidden" name="package_id" value="{{ package.id }}">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من حذف هذه الباقة؟')" style="background-color: #ff4444;">
+                            حذف
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="section">
         <h2>إضافة منتج</h2>
         <form action="/add_product" method="post">
             <input type="text" name="name" placeholder="اسم المنتج" required>
