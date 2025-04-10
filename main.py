@@ -82,6 +82,9 @@ def init_db():
                   created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS megas
+                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
+                 FOREIGN KEY(product_id) REFERENCES products(id))''')
 
     # تحديث حالة المنتجات عند تغيير حالة القسم
     c.execute('''CREATE TRIGGER IF NOT EXISTS update_products_status 
@@ -709,7 +712,7 @@ async def handle_search_customer_for_edit(update: Update, context: ContextTypes.
             )])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
+        await query.message.edit_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
     else:
         await update.message.reply_text("لم يتم العثور على طلبات مطابقة")
     return ConversationHandler.END
@@ -1359,6 +1362,7 @@ def admin_panel():
 
         # Fetch speeds with product names
         c.execute('''
+            ```python
             SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
             FROM speeds s
             JOIN products p ON s.product_id = p.id
@@ -2152,7 +2156,7 @@ def run_bot():
                 CallbackQueryHandler(button_click, pattern="^back$")
             ],
             "WAITING_NEW_ORDER_PRODUCT": [
-                CallbackQueryHandler(handle_new_order_product, pattern="^select_product_"),
+                CallbackQueryHandler(handle_new_order_product, pattern="^select_product__"),
                 CallbackQueryHandler(button_click, pattern="^back$")
             ],
             "WAITING_NEW_ORDER_CUSTOMER_INFO": [
