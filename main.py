@@ -48,21 +48,6 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
-    
-    # إنشاء جداول العلاقات بين المنتجات والسرعات/الباقات
-    c.execute('''CREATE TABLE IF NOT EXISTS speed_products
-                 (speed_id INTEGER, 
-                  product_id INTEGER,
-                  FOREIGN KEY(speed_id) REFERENCES speeds(id),
-                  FOREIGN KEY(product_id) REFERENCES products(id),
-                  PRIMARY KEY(speed_id, product_id))''')
-                  
-    c.execute('''CREATE TABLE IF NOT EXISTS package_products
-                 (package_id INTEGER,
-                  product_id INTEGER,
-                  FOREIGN KEY(package_id) REFERENCES packages(id),
-                  FOREIGN KEY(product_id) REFERENCES products(id),
-                  PRIMARY KEY(package_id, product_id))''')
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -1375,24 +1360,24 @@ def admin_panel():
                          ORDER BY o.created_at DESC''', (user_telegram_id,))
         orders = c.fetchall()
 
-        # Fetch speeds with all related products
-        c.execute('SELECT id, name, price, is_active FROM speeds ORDER BY id DESC')
-        speeds = []
-        for speed in c.fetchall():
-            c.execute('''
-                SELECT p.name 
-                FROM speed_products sp 
-                JOIN products p ON p.id = sp.product_id 
-                WHERE sp.speed_id = ?
-            ''', (speed[0],))
-            products = [{'name': row[0]} for row in c.fetchall()]
-            speeds.append({
-                'id': speed[0],
-                'name': speed[1],
-                'price': speed[2],
-                'is_active': speed[3],
-                'products': products
-            })
+        # Fetch speeds with product names
+        c.execute('''
+            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
+            FROM speeds s
+            JOIN products p ON s.product_id = p.id
+            ORDER BY s.id DESC
+        ''')
+        speeds = [
+            {
+                'id': row[0],
+                'name': row[1],
+                'price': row[2],
+                'product_id': row[3],
+                'product_name': row[4],
+                'is_active': row[5]
+            }
+            for row in c.fetchall()
+        ]
 
         # Fetch megas with product names
         c.execute('''
@@ -1423,23 +1408,15 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
-        product_ids = request.form.getlist('product_ids')
+        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
-        # إضافة السرعة
-        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
-                 (name, price, is_active))
-        speed_id = c.lastrowid
-        
-        # ربط السرعة بالمنتجات المختارة
-        for product_id in product_ids:
-            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
-                     (speed_id, product_id))
+        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
+                 (product_id, name, price, is_active))
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
@@ -1467,9 +1444,6 @@ def delete_speed():
         speed_id = request.form['speed_id']
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        # حذف العلاقات أولاً
-        c.execute('DELETE FROM speed_products WHERE speed_id = ?', (speed_id,))
-        # ثم حذف السرعة
         c.execute('DELETE FROM speeds WHERE id = ?', (speed_id,))
         conn.commit()
         conn.close()

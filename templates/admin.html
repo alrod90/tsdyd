@@ -260,8 +260,11 @@
         <div>
             <h3>إضافة سرعة جديدة</h3>
             <form action="/add_speed" method="post">
-                <input type="text" name="name" placeholder="اسم السرعة" required>
-                <input type="number" name="price" placeholder="السعر" step="0.01" required>
+                <select name="product_id" required>
+                    {% for product in products %}
+                    <option value="{{ product[0] }}">{{ product[1] }}</option>
+                    {% endfor %}
+                </select>
                 <input type="text" name="name" placeholder="اسم السرعة" required>
                 <input type="number" name="price" placeholder="السعر" step="0.01" required>
                 <label class="switch">
@@ -283,11 +286,7 @@
             </tr>
             {% for speed in speeds %}
             <tr>
-                <td>
-                    {% for product in speed.products %}
-                        {{ product.name }}{% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                </td>
+                <td>{{ speed.product_name }}</td>
                 <td>{{ speed.name }}</td>
                 <td>{{ speed.price }}</td>
                 <td class="status-{{ 'active' if speed.is_active else 'inactive' }}">
@@ -711,7 +710,7 @@
                     <textarea name="rejection_note" placeholder="سبب الرفض" required style="width: 100%; height: 100px;"></textarea>
                     <textarea name="note" placeholder="ملاحظة إضافية (اختياري)" style="width: 100%; height: 100px; margin-top: 10px;"></textarea>
                     <div style="margin-top: 20px;">
-                        <button type="submit" style="backgroundcolor: #f44336;">تأكيد الرفض</button>
+                        <button type="submit" style="background-color: #f44336;">تأكيد الرفض</button>
                         <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
                     </div>
                 </form>
