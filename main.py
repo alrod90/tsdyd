@@ -1275,6 +1275,12 @@ def admin_panel():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
+        # إضافة جدول الباقات إذا لم يكن موجوداً
+        c.execute('''CREATE TABLE IF NOT EXISTS packages
+                     (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, 
+                      is_active BOOLEAN DEFAULT 1,
+                      FOREIGN KEY(product_id) REFERENCES products(id))''')
+
         # إضافة جدول الأقسام إذا لم يكن موجوداً
         c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
@@ -1310,6 +1316,26 @@ def admin_panel():
         products = c.fetchall()
         c.execute('SELECT * FROM users')
         users = c.fetchall()
+
+        # استرجاع الباقات مع أسماء المنتجات
+        c.execute('''
+            SELECT p.id, p.name, p.price, p.product_id, pr.name as product_name, p.is_active 
+            FROM packages p
+            JOIN products pr ON p.product_id = pr.id
+            ORDER BY p.id DESC
+        ''')
+        packages = [
+            {
+                'id': row[0],
+                'name': row[1],
+                'price': row[2],
+                'product_id': row[3],
+                'product_name': row[4],
+                'is_active': row[5]
+            }
+            for row in c.fetchall()
+        ]
+
         c.execute('SELECT telegram_id FROM users WHERE id = 1')
         admin_id = c.fetchone()
 
