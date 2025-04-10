@@ -1448,6 +1448,25 @@ def edit_speed():
         print(f"Error in edit_speed: {str(e)}")
         return "حدث خطأ في تعديل السرعة", 500
 
+@app.route('/add_mega', methods=['POST'])
+def add_mega():
+    try:
+        product_id = request.form['product_id']
+        name = request.form['name']
+        price = float(request.form['price'])
+        is_active = 'is_active' in request.form
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('INSERT INTO megas (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
+                 (product_id, name, price, is_active))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in add_mega: {str(e)}")
+        return "حدث خطأ في إضافة الميغا", 500
+
 @app.route('/add_package', methods=['POST'])
 def add_package():
     try:
