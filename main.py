@@ -1378,8 +1378,27 @@ def admin_panel():
             }
             for row in c.fetchall()
         ]
+
+        # Fetch megas with product names
+        c.execute('''
+            SELECT m.id, m.name, m.price, m.product_id, p.name as product_name, m.is_active
+            FROM megas m
+            JOIN products p ON m.product_id = p.id
+            ORDER BY m.id DESC
+        ''')
+        megas = [
+            {
+                'id': row[0],
+                'name': row[1],
+                'price': row[2],
+                'product_id': row[3],
+                'product_name': row[4],
+                'is_active': row[5]
+            }
+            for row in c.fetchall()
+        ]
         conn.close()
-        return render_template('admin.html', categories=categories, products=products, users=users, orders=orders, speeds=speeds)
+        return render_template('admin.html', categories=categories, products=products, users=users, orders=orders, speeds=speeds, megas=megas)
     except Exception as e:
         print(f"Error in admin_panel: {str(e)}")
         if conn:
