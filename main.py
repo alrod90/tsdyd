@@ -1317,11 +1317,11 @@ def admin_panel():
                       created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
         conn.commit()
 
-        c.execute('SELECT * FROM categories')
+        c.execute('SELECT id, name, identifier, is_active FROM categories')
         categories = c.fetchall()
-        c.execute('SELECT * FROM products')
+        c.execute('SELECT id, name, category, is_active FROM products')
         products = c.fetchall()
-        c.execute('SELECT * FROM users')
+        c.execute('SELECT id, telegram_id, balance, is_active, phone_number, note FROM users')
         users = c.fetchall()
 
         try:
