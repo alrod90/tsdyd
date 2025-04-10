@@ -1359,7 +1359,7 @@ def admin_panel():
 
         # Fetch speeds with product names
         c.execute('''
-            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active```python
+            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
             FROM speeds s
             JOIN products p ON s.product_id = p.id
             ORDER BY s.id DESC
