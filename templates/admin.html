@@ -124,7 +124,7 @@
             <span>تفعيل القسم</span>
             <input type="submit" value="إضافة قسم">
         </form>
-        
+
         <table>
             <tr>
                 <th>الاسم</th>
@@ -162,7 +162,7 @@
 </div>
 
 
-    
+
     <script>
     function showPackagePage(pageNum) {
         document.querySelectorAll('.package-row').forEach(row => {
@@ -172,14 +172,14 @@
             row.style.display = '';
         });
     }
-    
+
     function showEditPackageForm(id, name, price) {
         var modal = document.createElement('div');
         modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
-        
+
         var content = document.createElement('div');
         content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
-        
+
         content.innerHTML = `
             <h3>تعديل الباقة</h3>
             <form action="/edit_package" method="post">
@@ -192,7 +192,30 @@
                 </div>
             </form>
         `;
-        
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    }
+    function showEditSpeedForm(id, name, price) {
+        var modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+
+        var content = document.createElement('div');
+        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+        content.innerHTML = `
+            <h3>تعديل السرعة</h3>
+            <form action="/edit_speed" method="post">
+                <input type="hidden" name="speed_id" value="${id}">
+                <input type="text" name="name" value="${name}" placeholder="اسم السرعة" required>
+                <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
+                <div style="margin-top: 20px;">
+                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                </div>
+            </form>
+        `;
+
         modal.appendChild(content);
         document.body.appendChild(modal);
     }
@@ -236,7 +259,7 @@
                     {{ 'مفعل' if speed.is_active else 'غير مفعل' }}
                 </td>
                 <td>
-                    <button onclick="showEditSpeedForm('{{ speed.id }}', '{{ speed.name }}', '{{ speed.price }}')" style="background-color: #2196F3;">
+                    <button onclick="showEditSpeedForm({{ speed.id }}, '{{ speed.name }}', {{ speed.price }})" style="background-color: #2196F3;">
                         تعديل
                     </button>
                     <form action="/toggle_speed" method="post" style="display: inline;">
@@ -349,6 +372,27 @@
         </table>
     </div>
 
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
+        <div style="background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;">
+            <h3>تعديل المنتج</h3>
+            <form action="/edit_product" method="post">
+                <input type="hidden" name="product_id" id="edit_product_id">
+                <input type="text" name="name" id="edit_name" required>
+                <select name="category" id="edit_category" required>
+                    {% for category in categories %}
+                        {% if category[3] %}
+                        <option value="{{ category[2] }}">{{ category[1] }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <div style="margin-top: 20px;">
+                    <button type="submit">حفظ التغييرات</button>
+                    <button type="button" onclick="hideEditForm()">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="section">
         <h2>المستخدمين</h2>
         <table>
@@ -383,31 +427,9 @@
         </table>
     </div>
 
-    <!-- نافذة تعديل المنتج -->
-    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
-        <div style="background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;">
-            <h3>تعديل المنتج</h3>
-            <form action="/edit_product" method="post">
-                <input type="hidden" name="product_id" id="edit_product_id">
-                <input type="text" name="name" id="edit_name" required>
-                <select name="category" id="edit_category" required>
-                    {% for category in categories %}
-                        {% if category[3] %}
-                        <option value="{{ category[2] }}">{{ category[1] }}</option>
-                        {% endif %}
-                    {% endfor %}
-                </select>
-                <div style="margin-top: 20px;">
-                    <button type="submit">حفظ التغييرات</button>
-                    <button type="button" onclick="hideEditForm()">إلغاء</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <div class="section">
         <h2>الطلبات</h2>
-        
+
         <table>
             <tr>
                 <th>رقم الطلب</th>
@@ -483,7 +505,7 @@
             modal.appendChild(content);
             document.body.appendChild(modal);
         }
-        
+
 
         // تحديث الصفحة تلقائياً كل 30 ثانية
         function autoRefresh() {
@@ -680,7 +702,7 @@
         `;
 
         modal.appendChild(content);
-        document.body.appendChild(modal);
+            document.body.appendChild(modal);
     }
 
     function validateAmount(form) {
