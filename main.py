@@ -565,17 +565,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.edit_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
                 conn.close()
                 return
-
-            keyboard = [
-                [InlineKeyboardButton("تأكيد الطلب", callback_data='confirm_purchase')],
-                [InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.message.edit_text(
-                f"سعر {item[0]}: {item[1]} ليرة سوري\n"
-                "الرجاء إدخال بيانات الزبون:",
-                reply_markup=reply_markup
-            )
+            
+            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
             conn.close()
             return "WAITING_CUSTOMER_INFO"
         
