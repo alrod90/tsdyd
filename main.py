@@ -361,8 +361,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("طلبات معلقة", callback_data='pending_orders')
             ],
             [
-                InlineKeyboardButton("بحث في الطلبات", callback_data='search_orders'),
+                InlineKeyboardButton("طلب جديد", callback_data='add_new_order'),
                 InlineKeyboardButton("تعديل طلب", callback_data='edit_order')
+            ],
+            [
+                InlineKeyboardButton("بحث في الطلبات", callback_data='search_orders')
             ],
             [InlineKeyboardButton("رجوع", callback_data='admin_back')]
         ]
