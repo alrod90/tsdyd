@@ -191,25 +191,20 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("حدث خطأ في الوصول للوحة التحكم، الرجاء المحاولة مرة أخرى")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    conn = None
-    try:
-        # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
-        user_id = update.effective_user.id
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        c.execute('SELECT * FROM users WHERE telegram_id = ?', (user_id,))
-        if not c.fetchone():
-            c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
-            conn.commit()
+    # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
+    user_id = update.effective_user.id
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM users WHERE telegram_id = ?', (user_id,))
+    if not c.fetchone():
+        c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
+        conn.commit()
 
-        welcome_message = f"""مرحبا بك في نظام تسديد الفواتير
+    welcome_message = f"""مرحبا بك في نظام تسديد الفواتير
 معرف التيليجرام الخاص بك هو: {user_id}
 يمكنك استخدام هذا المعرف للتواصل مع الإدارة.
 """
-        await update.message.reply_text(welcome_message)
-    finally:
-        if conn:
-            conn.close()
+    await update.message.reply_text(welcome_message)
 
     # جلب الأقسام النشطة من قاعدة البيانات
     c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
