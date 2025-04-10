@@ -502,7 +502,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if has_speeds:
             keyboard.append([InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}')])
             
-        keyboard.append([InlineKeyboardButton("إدخال المبلغ يدوياً", callback_data=f'manual_{product_id}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
         
         context.user_data['product_name'] = product[0]
