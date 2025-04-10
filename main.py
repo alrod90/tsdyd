@@ -557,19 +557,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
             
-            # التحقق من الرصيد مباشرة
-            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-            user_balance = c.fetchone()[0]
-            
-            if user_balance < item[1]:
-                await query.message.edit_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
-                conn.close()
-                return
-            
-            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
-            conn.close()
-            return "WAITING_CUSTOMER_INFO"
-            
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
             user_balance = c.fetchone()[0]
@@ -1166,27 +1153,9 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     # خصم المبلغ من رصيد المستخدم وإنشاء الطلب
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
               (amount, update.effective_user.id))
-              
-    # تحديد نوع الطلب
-    order_type = "package" if query.data.startswith('select_mega_') else "speed" if query.data.startswith('select_speed_') else "custom"
-    
-    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, order_type) VALUES (?, ?, ?, ?, ?)',
-              (update.effective_user.id, context.user_data['product_id'], amount, customer_info, order_type))
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info) VALUES (?, ?, ?, ?)',
+              (update.effective_user.id, context.user_data['product_id'], amount, customer_info))
     order_id = c.lastrowid
-    
-    # إرسال إشعار للمدير
-    c.execute('SELECT telegram_id FROM users WHERE id = 1')
-    admin = c.fetchone()
-    if admin:
-        admin_message = f"""
-طلب جديد #{order_id}
-النوع: {"باقة" if order_type == "package" else "سرعة" if order_type == "speed" else "مبلغ مخصص"}
-المبلغ: {amount} ليرة سوري
-معلومات الزبون: {customer_info}
-معرف المستخدم: {update.effective_user.id}
-"""
-        await context.bot.send_message(chat_id=admin[0], text=admin_message)
-        
     conn.commit()
 
     # إرسال إشعار للمدير
