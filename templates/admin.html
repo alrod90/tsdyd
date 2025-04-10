@@ -287,7 +287,11 @@
             </tr>
             {% for speed in speeds %}
             <tr>
-                <td>{{ speed.product_name }}</td>
+                <td>
+                    {% for product in speed.products %}
+                        {{ product.name }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
                 <td>{{ speed.name }}</td>
                 <td>{{ speed.price }}</td>
                 <td class="status-{{ 'active' if speed.is_active else 'inactive' }}">

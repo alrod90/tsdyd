@@ -1375,24 +1375,24 @@ def admin_panel():
                          ORDER BY o.created_at DESC''', (user_telegram_id,))
         orders = c.fetchall()
 
-        # Fetch speeds with product names
-        c.execute('''
-            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
-            FROM speeds s
-            JOIN products p ON s.product_id = p.id
-            ORDER BY s.id DESC
-        ''')
-        speeds = [
-            {
-                'id': row[0],
-                'name': row[1],
-                'price': row[2],
-                'product_id': row[3],
-                'product_name': row[4],
-                'is_active': row[5]
-            }
-            for row in c.fetchall()
-        ]
+        # Fetch speeds with all related products
+        c.execute('SELECT id, name, price, is_active FROM speeds ORDER BY id DESC')
+        speeds = []
+        for speed in c.fetchall():
+            c.execute('''
+                SELECT p.name 
+                FROM speed_products sp 
+                JOIN products p ON p.id = sp.product_id 
+                WHERE sp.speed_id = ?
+            ''', (speed[0],))
+            products = [{'name': row[0]} for row in c.fetchall()]
+            speeds.append({
+                'id': speed[0],
+                'name': speed[1],
+                'price': speed[2],
+                'is_active': speed[3],
+                'products': products
+            })
 
         # Fetch megas with product names
         c.execute('''
