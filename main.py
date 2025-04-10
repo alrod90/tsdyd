@@ -569,15 +569,20 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 conn.close()
                 return
 
-            # عرض تفاصيل الطلب مباشرة
+            keyboard = [
+                [InlineKeyboardButton("تأكيد الطلب", callback_data='confirm_purchase')],
+                [InlineKeyboardButton("إلغاء", callback_data='cancel_purchase')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             await query.message.edit_text(
-                f"سيتم خصم {item[1]} ليرة سوري من رصيدك.\n"
-                f"الرجاء إدخال بيانات الزبون:",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("رجوع", callback_data='back')
-                ]])
+                f"تفاصيل الطلب:\n"
+                f"النوع: {item[0]}\n"
+                f"السعر: {item[1]} ليرة سوري\n\n"
+                "هل تريد تأكيد الطلب؟",
+                reply_markup=reply_markup
             )
-            conn.close()
+            
             return "WAITING_CUSTOMER_INFO"
 
         conn.close()
