@@ -48,19 +48,6 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
-    
-    # إنشاء جداول العلاقات المتعددة
-    c.execute('''CREATE TABLE IF NOT EXISTS speed_products
-                 (speed_id INTEGER, product_id INTEGER,
-                  PRIMARY KEY (speed_id, product_id),
-                  FOREIGN KEY (speed_id) REFERENCES speeds(id),
-                  FOREIGN KEY (product_id) REFERENCES products(id))''')
-                  
-    c.execute('''CREATE TABLE IF NOT EXISTS package_products
-                 (package_id INTEGER, product_id INTEGER,
-                  PRIMARY KEY (package_id, product_id),
-                  FOREIGN KEY (package_id) REFERENCES packages(id),
-                  FOREIGN KEY (product_id) REFERENCES products(id))''')
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -1421,24 +1408,15 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
-        product_ids = request.form.getlist('product_ids')
+        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
-        # إضافة السرعة
-        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
-                 (name, price, is_active))
-        speed_id = c.lastrowid
-        
-        # إضافة العلاقات مع المنتجات
-        for product_id in product_ids:
-            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
-                     (speed_id, product_id))
-                     
+        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
+                 (product_id, name, price, is_active))
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
@@ -1495,24 +1473,15 @@ def edit_speed():
 @app.route('/add_mega', methods=['POST'])
 def add_mega():
     try:
-        product_ids = request.form.getlist('product_ids')
+        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
-        # إضافة الباقة
-        c.execute('INSERT INTO megas (name, price, is_active) VALUES (?, ?, ?)',
-                 (name, price, is_active))
-        mega_id = c.lastrowid
-        
-        # إضافة العلاقات مع المنتجات
-        for product_id in product_ids:
-            c.execute('INSERT INTO package_products (package_id, product_id) VALUES (?, ?)',
-                     (mega_id, product_id))
-                     
+        c.execute('INSERT INTO megas (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
+                 (product_id, name, price, is_active))
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
