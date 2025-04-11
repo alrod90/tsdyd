@@ -1875,7 +1875,7 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
             return False
 
         bot = telegram.Bot(token=bot_token)
-        
+
         if user_id:
             # إرسال لمستخدم واحد
             return await send_single_message(bot, user_id)
@@ -1985,7 +1985,7 @@ def add_order():
 بيانات الزبون: {customer_info}"""
 
         try:
-            asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+            asyncio.run(send_notification(bot, notification_message, user_id))
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2021,11 +2021,7 @@ def add_balance():
 رصيدك الحالي: {new_balance} ليرة سوري"""
 
     try:
-        asyncio.run(bot.send_message(
-            chat_id=user_id,
-            text=notification_message,
-            parse_mode='HTML'
-        ))
+        asyncio.run(send_notification(bot, notification_message, user_id))
     except Exception as e:
         print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2057,11 +2053,7 @@ def edit_user():
 الرصيد الجديد: {new_balance} ليرة سوري"""
 
         try:
-            asyncio.run(bot.send_message(
-                chat_id=user_id,
-                text=notification_message,
-                parse_mode='HTML'
-            ))
+            asyncio.run(send_notification(bot, notification_message, user_id))
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2118,12 +2110,12 @@ def change_order_status():
             JOIN products p ON o.product_id = p.id 
             WHERE o.id = ?
         ''', (order_id,))
-        
+
         order_info = c.fetchone()
         if not order_info:
             conn.close()
             return "الطلب غير موجود", 404
-            
+
         user_id = order_info[0]
         amount = order_info[1]
         product_name = order_info[2]
@@ -2157,11 +2149,7 @@ def change_order_status():
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        asyncio.run(bot.send_message(
-            chat_id=user_id,
-            text=notification_message,
-            parse_mode='HTML'
-        ))
+        asyncio.run(send_notification(bot, notification_message, user_id))
 
         conn.commit()
         conn.close()
@@ -2229,11 +2217,7 @@ def change_order_status():
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
         try:
-            asyncio.run(bot.send_message(
-                chat_id=user_id,
-                text=notification_message,
-                parse_mode='HTML'
-            ))
+            asyncio.run(send_notification(bot, notification_message, user_id))
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2316,11 +2300,7 @@ def handle_order():
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
         try:
-            asyncio.run(bot.send_message(
-                chat_id=user_id,
-                text=notification_message,
-                parse_mode='HTML'
-            ))
+            asyncio.run(send_notification(bot, notification_message, user_id))
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2384,7 +2364,7 @@ def edit_order_amount():
 
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+        asyncio.run(send_notification(bot, notification_message, user_id))
 
         conn.commit()
         conn.close()
@@ -2642,10 +2622,9 @@ async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_
         conn.commit()
 
         # إرسال إشعار للمستخدم
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"تم إضافة {amount} ليرة سوري إلى رصيدك من قبل الموزع"
-        )
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        asyncio.run(send_notification(bot, f"تم إضافة {amount} ليرة سوري إلى رصيدك من قبل الموزع", user_id))
 
         conn.close()
         await update.message.reply_text("تمت العملية بنجاح")
