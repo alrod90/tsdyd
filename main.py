@@ -1841,16 +1841,38 @@ def delete_product():
 
 @app.route('/edit_product', methods=['POST'])
 def edit_product():
-    product_id = request.form['product_id']
-    name = request.form['name']
-    category = request.form['category']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE products SET name = ?, category = ? WHERE id = ?',
-              (name, category, product_id))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('admin_panel'))
+    try:
+        product_id = request.form['product_id']
+        name = request.form['name']
+        category = request.form['category']
+        speeds = request.form.getlist('speeds[]')
+        megas = request.form.getlist('megas[]')
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # Update product info
+        c.execute('UPDATE products SET name = ?, category = ? WHERE id = ?',
+                  (name, category, product_id))
+                  
+        # Update speeds associations
+        c.execute('UPDATE speeds SET product_id = NULL WHERE product_id = ?', (product_id,))
+        for speed_id in speeds:
+            c.execute('UPDATE speeds SET product_id = ? WHERE id = ?', 
+                     (product_id, speed_id))
+                     
+        # Update megas associations
+        c.execute('UPDATE megas SET product_id = NULL WHERE product_id = ?', (product_id,))
+        for mega_id in megas:
+            c.execute('UPDATE megas SET product_id = ? WHERE id = ?',
+                     (product_id, mega_id))
+        
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in edit_product: {str(e)}")
+        return "حدث خطأ في تعديل المنتج", 500
 
 async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
     conn = sqlite3.connect('store.db')
