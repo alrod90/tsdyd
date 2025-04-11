@@ -1591,27 +1591,24 @@ def add_speed():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        try:
-            # إضافة السرعة
-            c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
-                     (name, price, is_active))
-            speed_id = c.lastrowid
-            
-            # إضافة الارتباطات مع المنتجات
-            for product_id in product_ids:
-                c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
-                         (speed_id, product_id))
-            
-            conn.commit()
-            return redirect(url_for('admin_panel'))
-        except Exception as e:
-            conn.rollback()
-            print(f"خطأ في إضافة السرعة: {str(e)}")
-            return "حدث خطأ في إضافة السرعة", 500
-        finally:
-            conn.close()
+        # إضافة السرعة
+        c.execute('''INSERT INTO speeds (name, price, is_active) 
+                    VALUES (?, ?, ?)''', (name, price, is_active))
+        speed_id = c.lastrowid
+        
+        # إضافة الارتباطات مع المنتجات
+        for product_id in product_ids:
+            c.execute('''INSERT INTO speed_products (speed_id, product_id) 
+                        VALUES (?, ?)''', (speed_id, product_id))
+        
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"خطأ في إضافة السرعة: {str(e)}")
+        if 'conn' in locals():
+            conn.rollback()
+            conn.close()
         return "حدث خطأ في إضافة السرعة", 500
     except Exception as e:
         print(f"Error in add_speed: {str(e)}")
@@ -1651,33 +1648,40 @@ def delete_speed():
 
 @app.route('/edit_speed', methods=['POST'])
 def edit_speed():
+    conn = None
     try:
         speed_id = request.form['speed_id']
         name = request.form['name']
         price = float(request.form['price'])
-        product_ids = request.form.getlist('product_ids')
+        product_ids = request.form.getlist('product_ids[]')  # تصحيح اسم المصفوفة
+
+        if not product_ids:
+            return "يجب اختيار منتج واحد على الأقل", 400
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
         # تحديث معلومات السرعة
-        c.execute('UPDATE speeds SET name = ?, price = ? WHERE id = ?',
-                 (name, price, speed_id))
+        c.execute('''UPDATE speeds SET name = ?, price = ? 
+                    WHERE id = ?''', (name, price, speed_id))
 
         # حذف العلاقات القديمة
         c.execute('DELETE FROM speed_products WHERE speed_id = ?', (speed_id,))
 
         # إضافة العلاقات الجديدة
         for product_id in product_ids:
-            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
-                     (speed_id, product_id))
+            c.execute('''INSERT INTO speed_products (speed_id, product_id) 
+                        VALUES (?, ?)''', (speed_id, product_id))
 
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
-        print(f"Error in edit_speed: {str(e)}")
-        return redirect(url_for('admin_panel'))
+        print(f"خطأ في تعديل السرعة: {str(e)}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return "حدث خطأ في تعديل السرعة", 500
 
 @app.route('/add_mega', methods=['POST'])
 def add_mega():
