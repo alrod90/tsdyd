@@ -1834,56 +1834,47 @@ def edit_product():
     return redirect(url_for('admin_panel'))
 
 async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
+    try:
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
 
-    if user_id:
-        users = [(user_id,)]
-    else:
-        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-        users = c.fetchall()
+        if user_id:
+            users = [(user_id,)]
+        else:
+            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+            users = c.fetchall()
 
-    # إرسال عبر تيليجرام أولاً
-    for user in users:
-        success = False
-        retry_count = 3
-
-        while retry_count > 0 and not success:
+        for user in users:
             try:
-                # محاولة إرسال رسالة مع إشعار صوتي
-                await context.bot.send_message(
+                await bot.send_message(
                     chat_id=user[0],
                     text=message,
-                    disable_notification=False,
-                    protect_content=True
+                    parse_mode='HTML',
+                    disable_notification=False
                 )
-                success = True
+                print(f"تم إرسال الإشعار بنجاح للمستخدم {user[0]}")
             except Exception as e:
-                print(f"Error sending Telegram message to {user[0]}: {str(e)}")
-                retry_count -= 1
-                await asyncio.sleep(1)
-
-        # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
-        if not success and is_important:
-            try:
-                # استرجاع رقم الهاتف من قاعدة البيانات
-                c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user[0],))
-                phone_result = c.fetchone()
-
-                if phone_result and phone_result[0]:
-                    # إرسال SMS عبر خدمة SMS
-                    response = requests.post(
-                        "YOUR_SMS_GATEWAY_URL",
-                        data={
-                            "to": phone_result[0],
-                            "message": f"إشعار مهم: {message}"
-                        }
+                print(f"خطأ في إرسال الإشعار للمستخدم {user[0]}: {str(e)}")
+                # محاولة ثانية للإرسال
+                try:
+                    await asyncio.sleep(1)
+                    await bot.send_message(
+                        chat_id=user[0],
+                        text=message,
+                        parse_mode=None,
+                        disable_notification=False
                     )
-                    response.raise_for_status()
-            except Exception as e:
-                print(f"Error sending SMS to {user[0]}: {str(e)}")
-
-    conn.close()
+                    print(f"نجحت المحاولة الثانية لإرسال الإشعار للمستخدم {user[0]}")
+                except Exception as e2:
+                    print(f"فشلت المحاولة الثانية للإرسال للمستخدم {user[0]}: {str(e2)}")
+    except Exception as e:
+        print(f"خطأ عام في إرسال الإشعارات: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
