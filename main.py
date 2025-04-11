@@ -2351,7 +2351,12 @@ def get_db_connection():
         return sqlite3.connect('store.db')
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    try:
+        app.run(host='0.0.0.0', port=5001, debug=False)
+    except Exception as e:
+        print(f"Error starting Flask: {str(e)}")
+        if os.path.exists('bot.lock'):
+            os.remove('bot.lock')
 
 def run_bot():
     # Initialize bot
@@ -2508,7 +2513,7 @@ if __name__ == '__main__':
         with open('bot.lock', 'w') as f:
             f.write(str(os.getpid()))
 
-        sock.bind(('0.0.0.0', 5001))  # منفذ للتحقق فقط
+        sock.bind(('0.0.0.0', 5002))  # منفذ للتحقق فقط
 
         # تشغيل التطبيق
         app.config['TEMPLATES_AUTO_RELOAD'] = True
