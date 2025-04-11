@@ -247,9 +247,13 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # إذا كان البوت متوقف وليس المستخدم مدير
     if bot_status and not bot_status[0] and (not user_data or user_data[1] != 1):
+        # Get custom message
+        c.execute('SELECT bot_stop_message FROM users WHERE id = 1')
+        custom_message = c.fetchone()[0] or "عذراً، الخدمة متوقفة مؤقتاً. يرجى المحاولة في وقت لاحق."
+        
         keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("عذراً، الخدمة متوقفة مؤقتاً. يرجى المحاولة في وقت لاحق.", reply_markup=reply_markup)
+        await query.message.edit_text(custom_message, reply_markup=reply_markup)
         return
         
     # التحقق من حالة المستخدم
@@ -2043,7 +2047,18 @@ def toggle_distributor():
 def toggle_bot():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('UPDATE users SET is_bot_active = NOT is_bot_active WHERE id = 1')
+    
+    # Get the custom message if provided
+    custom_message = request.form.get('custom_message', 'عذراً، الخدمة متوقفة مؤقتاً. يمكنك في الوقت الحالي فقط مشاهدة رصيدك وطلباتك.')
+    
+    # Add a column for custom message if it doesn't exist
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN bot_stop_message TEXT')
+    except:
+        pass
+        
+    # Update bot status and message
+    c.execute('UPDATE users SET is_bot_active = NOT is_bot_active, bot_stop_message = ? WHERE id = 1', (custom_message,))
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
