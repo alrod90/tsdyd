@@ -1443,7 +1443,7 @@ def delete_category():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-@app.route('/services')
+@app.route('/services/')
 def services_panel():
     try:
         conn = sqlite3.connect('store.db')
