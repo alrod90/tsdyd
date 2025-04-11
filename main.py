@@ -1443,7 +1443,16 @@ def delete_category():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/services')
+@login_required
 def services_panel():
     try:
         conn = sqlite3.connect('store.db')
