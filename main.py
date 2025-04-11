@@ -48,6 +48,19 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
+    
+    # إضافة جداول الربط بين المنتجات والسرعات/الباقات
+    c.execute('''CREATE TABLE IF NOT EXISTS speed_products
+                 (speed_id INTEGER, product_id INTEGER,
+                  PRIMARY KEY (speed_id, product_id),
+                  FOREIGN KEY (speed_id) REFERENCES speeds(id),
+                  FOREIGN KEY (product_id) REFERENCES products(id))''')
+                  
+    c.execute('''CREATE TABLE IF NOT EXISTS mega_products
+                 (mega_id INTEGER, product_id INTEGER,
+                  PRIMARY KEY (mega_id, product_id),
+                  FOREIGN KEY (mega_id) REFERENCES megas(id),
+                  FOREIGN KEY (product_id) REFERENCES products(id))''')
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -1579,15 +1592,24 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
-        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
+        product_ids = request.form.getlist('product_ids')
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
-                 (product_id, name, price, is_active))
+        
+        # إنشاء السرعة
+        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
+                 (name, price, is_active))
+        speed_id = c.lastrowid
+        
+        # ربط السرعة بالمنتجات المحددة
+        for product_id in product_ids:
+            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
+                     (speed_id, product_id))
+        
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
