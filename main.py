@@ -1833,40 +1833,85 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(bot: telegram.Bot, user_id: int, message: str, is_important=False):
-    try:
-        await bot.send_message(
-            chat_id=user_id,
-            text=message,
-            parse_mode='HTML',
-            disable_notification=not is_important
-        )
-        print(f"تم إرسال الإشعار بنجاح إلى {user_id}")
-        return True
-    except Exception as e:
-        print(f"خطأ في إرسال الإشعار إلى {user_id}: {str(e)}")
-        return False
+async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+
+    if user_id:
+        users = [(user_id,)]
+    else:
+        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+        users = c.fetchall()
+
+    # إرسال عبر تيليجرام أولاً
+    for user in users:
+        success = False
+        retry_count = 3
+
+        while retry_count > 0 and not success:
+            try:
+                # محاولة إرسال رسالة مع إشعار صوتي
+                await context.bot.send_message(
+                    chat_id=user[0],
+                    text=message,
+                    disable_notification=False,
+                    protect_content=True
+                )
+                success = True
+            except Exception as e:
+                print(f"Error sending Telegram message to {user[0]}: {str(e)}")
+                retry_count -= 1
+                await asyncio.sleep(1)
+
+        # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
+        if not success and is_important:
+            try:
+                # استرجاع رقم الهاتف من قاعدة البيانات
+                c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user[0],))
+                phone_result = c.fetchone()
+
+                if phone_result and phone_result[0]:
+                    # إرسال SMS عبر خدمة SMS
+                    response = requests.post(
+                        "YOUR_SMS_GATEWAY_URL",
+                        data={
+                            "to": phone_result[0],
+                            "message": f"إشعار مهم: {message}"
+                        }
+                    )
+                    response.raise_for_status()
+            except Exception as e:
+                print(f"Error sending SMS to {user[0]}: {str(e)}")
+
+    conn.close()
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
     message = request.form['message']
-    user_id = request.form.get('user_id')
+    user_id = request.form.get('user_id', None)
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    
+
     async def send_notifications():
         bot = telegram.Bot(token=bot_token)
-        if user_id:
-            await send_notification(bot, int(user_id), message, is_important=True)
-        else:
-            conn = sqlite3.connect('store.db')
-            c = conn.cursor()
-            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-            users = c.fetchall()
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+
+        try:
+            if user_id:
+                await bot.send_message(chat_id=int(user_id), text=message)
+            else:
+                c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+                users = c.fetchall()
+                for user in users:
+                    try:
+                        await bot.send_message(chat_id=user[0], text=message)
+                    except Exception as e:
+                        print(f"Error sending message to {user[0]}: {e}")
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+        finally:
             conn.close()
-            
-            for user in users:
-                await send_notification(bot, user[0], message, is_important=True)
-    
+
     asyncio.run(send_notifications())
     return redirect(url_for('admin_panel'))
 
@@ -2165,61 +2210,6 @@ def handle_order():
         product_name = order[2]
         current_balance = order[3]
 
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        bot = telegram.Bot(token=bot_token)
-
-        if action == 'reject':
-            if not rejection_note:
-                if conn:
-                    conn.close()
-                return "يجب إدخال سبب الرفض", 400
-
-            # إعادة المبلغ للمستخدم
-            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
-                    (amount, user_id))
-            c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
-                    ('rejected', rejection_note, order_id))
-
-            notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
-رقم الطلب: {order_id}
-الشركة: {product_name}
-المبلغ المعاد لرصيدك: {amount} ليرة سوري
-سبب الرفض: {rejection_note}
-رصيدك الحالي: {current_balance + amount} ليرة سوري"""
-
-            asyncio.run(send_notification(bot, user_id, notification_message, True))
-
-        elif action == 'accept':
-            c.execute('UPDATE orders SET status = ? WHERE id = ?', ('accepted', order_id))
-
-            notification_message = f"""✅ تم قبول طلبك!
-رقم الطلب: {order_id}
-الشركة: {product_name}
-المبلغ: {amount} ليرة سوري"""
-
-            asyncio.run(send_notification(bot, user_id, notification_message, True))
-
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_panel'))
-
-    except Exception as e:
-        print(f"Error in handle_order: {str(e)}")
-        if conn:
-            conn.close()
-        return f"حدث خطأ في معالجة الطلب: {str(e)}", 500
-        order = c.fetchone()
-
-        if not order:
-            if conn:
-                conn.close()
-            return "الطلب غير موجود", 404
-
-        user_id = order[0]
-        amount = order[1]
-        product_name = order[2]
-        current_balance = order[3]
-
         if action == 'reject':
             if not rejection_note and action == 'reject':
                 if conn:
@@ -2368,7 +2358,7 @@ def get_db_connection():
         return sqlite3.connect('store.db')
 
 def run_flask():
-    app.run(host='0.0.0.0', port=3000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)
 
 def run_bot():
     # Initialize bot
