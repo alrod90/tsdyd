@@ -495,7 +495,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         has_speeds = c.fetchone()[0] > 0
 
         keyboard = []
-        keyboard.append([InlineKeyboardButton("إضافة دفعة", callback_data=f'manual_{product_id}')])
+        keyboard.append([InlineKeyboardButton("إضافة دفعة", callback_data=f'add_balance_{product_id}')])
 
         row = []
         if has_megas:
@@ -618,6 +618,9 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith('add_balance_') or query.data.startswith('manual_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
+        # مسح المبلغ السابق إن وجد
+        if 'amount' in context.user_data:
+            del context.user_data['amount']
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
