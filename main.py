@@ -2297,10 +2297,12 @@ def get_db_connection():
         conn.execute("PRAGMA journal_mode = WAL")
         conn.execute("PRAGMA timezone = '+03:00'")
         return conn
-
+    except Exception as e:
+        print(f"خطأ في الاتصال بقاعدة البيانات: {str(e)}")
         # إذا لم تكن موجودة، قم بإنشاء قاعدة بيانات جديدة
         conn = sqlite3.connect('store.db')
         conn.execute("PRAGMA timezone = '+03:00'")
+        return conn
 
         # إنشاء الجداول الأساسية
         c = conn.cursor()
