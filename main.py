@@ -48,14 +48,14 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
-    
+
     # إضافة جداول الربط بين المنتجات والسرعات/الباقات
     c.execute('''CREATE TABLE IF NOT EXISTS speed_products
                  (speed_id INTEGER, product_id INTEGER,
                   PRIMARY KEY (speed_id, product_id),
                   FOREIGN KEY (speed_id) REFERENCES speeds(id),
                   FOREIGN KEY (product_id) REFERENCES products(id))''')
-                  
+
     c.execute('''CREATE TABLE IF NOT EXISTS mega_products
                  (mega_id INTEGER, product_id INTEGER,
                   PRIMARY KEY (mega_id, product_id),
@@ -679,7 +679,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.message.edit_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
+            await query.message.edit_text("اختر```python
+ الطلب للتعديل:", reply_markup=reply_markup)
             return
 
     elif query.data.startswith('edit_order_'):
@@ -1354,7 +1355,7 @@ async def update_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE
     status = current_order[2]
     if status != 'rejected':
         amount_diff = new_amount - current_amount
-        if amount_diff > 0:
+        if amount_diff> 0:
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
             user_balance = c.fetchone()[0]
             if user_balance < amount_diff:
@@ -1599,18 +1600,27 @@ def add_speed():
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # إنشاء السرعة
         c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
                  (name, price, is_active))
         speed_id = c.lastrowid
-        
+
         # ربط السرعة بالمنتجات المحددة
         for product_id in product_ids:
             c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
                      (speed_id, product_id))
-        
+
         conn.commit()
+
+        # جلب أسماء المنتجات المرتبطة للإشعار
+        c.execute('''
+            SELECT p.name FROM products p 
+            JOIN speed_products sp ON p.id = sp.product_id 
+            WHERE sp.speed_id = ?
+        ''', (speed_id,))
+        product_names = [row[0] for row in c.fetchall()]
+
         conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
