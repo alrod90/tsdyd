@@ -2465,6 +2465,17 @@ def run_bot():
     # Run bot
     application.run_polling()
 
+async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
+        [InlineKeyboardButton("رجوع", callback_data='back')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.callback_query.message.edit_text(
+        "مرحباً بك في لوحة الموزع\nالرجاء اختيار العملية المطلوبة:",
+        reply_markup=reply_markup
+    )
+
 if __name__ == '__main__':
     # ضبط المنطقة الزمنية
     os.environ['TZ'] = 'Asia/Damascus'
