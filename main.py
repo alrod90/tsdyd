@@ -1451,6 +1451,7 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.route('/services/')
 @app.route('/services')
 @login_required
 def services_panel():
