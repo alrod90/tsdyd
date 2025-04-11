@@ -75,8 +75,8 @@ c.execute('''CREATE TABLE IF NOT EXISTS speed_products
                   FOREIGN KEY(product_id) REFERENCES products(id))''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS packages
-                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
-                 FOREIGN KEY(product_id) REFERENCES products(id))''')
+             (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
+             FOREIGN KEY(product_id) REFERENCES products(id))''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
