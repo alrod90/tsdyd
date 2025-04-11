@@ -107,6 +107,9 @@
         .hidden {
             display: none;
         }
+        .hidden-table {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -125,7 +128,8 @@
             <input type="submit" value="إضافة قسم">
         </form>
 
-        <table>
+        <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
+        <table class="hidden-table">
             <tr>
                 <th>الاسم</th>
                 <th>المعرف</th>
@@ -159,100 +163,111 @@
             </tr>
             {% endfor %}
         </table>
-</div>
+    </div>
 
 
 
     <script>
-    function showPackagePage(pageNum) {
-        document.querySelectorAll('.package-row').forEach(row => {
-            row.style.display = 'none';
-        });
-        document.querySelectorAll('.page-' + pageNum).forEach(row => {
-            row.style.display = '';
-        });
-    }
+        function toggleTable(btn) {
+            const table = btn.nextElementSibling;
+            if (table.classList.contains('hidden-table')) {
+                table.classList.remove('hidden-table');
+                btn.textContent = 'إخفاء الجدول';
+            } else {
+                table.classList.add('hidden-table');
+                btn.textContent = 'إظهار الجدول';
+            }
+        }
 
-    function showEditPackageForm(id, name, price) {
-        var modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+        function showPackagePage(pageNum) {
+            document.querySelectorAll('.package-row').forEach(row => {
+                row.style.display = 'none';
+            });
+            document.querySelectorAll('.page-' + pageNum).forEach(row => {
+                row.style.display = '';
+            });
+        }
 
-        var content = document.createElement('div');
-        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+        function showEditPackageForm(id, name, price) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
-        content.innerHTML = `
-            <h3>تعديل الباقة</h3>
-            <form action="/edit_package" method="post">
-                <input type="hidden" name="package_id" value="${id}">
-                <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
-                <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
-                <div style="margin-top: 20px;">
-                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
-                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
-                </div>
-            </form>
-        `;
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
 
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-    }
-    function showEditMegaForm(id, name, price, product_id) {
-        var modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+            content.innerHTML = `
+                <h3>تعديل الباقة</h3>
+                <form action="/edit_package" method="post">
+                    <input type="hidden" name="package_id" value="${id}">
+                    <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
+                    <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
 
-        var content = document.createElement('div');
-        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+        function showEditMegaForm(id, name, price, product_id) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
-        content.innerHTML = `
-            <h3>تعديل الباقة</h3>
-            <form action="/edit_mega" method="post">
-                <input type="hidden" name="mega_id" value="${id}">
-                <select name="product_id" required>
-                    {% for product in products %}
-                    <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
-                <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
-                <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
-                <div style="margin-top: 20px;">
-                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
-                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
-                </div>
-            </form>
-        `;
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
 
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-    }
+            content.innerHTML = `
+                <h3>تعديل الباقة</h3>
+                <form action="/edit_mega" method="post">
+                    <input type="hidden" name="mega_id" value="${id}">
+                    <select name="product_id" required>
+                        {% for product in products %}
+                        <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
+                    <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
 
-    function showEditSpeedForm(id, name, price, product_id) {
-        var modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
 
-        var content = document.createElement('div');
-        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+        function showEditSpeedForm(id, name, price, product_id) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
-        content.innerHTML = `
-            <h3>تعديل السرعة</h3>
-            <form action="/edit_speed" method="post">
-                <input type="hidden" name="speed_id" value="${id}">
-                <select name="product_id" required>
-                    {% for product in products %}
-                    <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
-                <input type="text" name="name" value="${name}" placeholder="اسم السرعة" required>
-                <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
-                <div style="margin-top: 20px;">
-                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
-                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
-                </div>
-            </form>
-        `;
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
 
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-    }
+            content.innerHTML = `
+                <h3>تعديل السرعة</h3>
+                <form action="/edit_speed" method="post">
+                    <input type="hidden" name="speed_id" value="${id}">
+                    <select name="product_id" required>
+                        {% for product in products %}
+                        <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="name" value="${name}" placeholder="اسم السرعة" required>
+                    <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
+
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
     </script>
 
     <div class="section">
@@ -276,7 +291,8 @@
             </form>
         </div>
 
-        <table>
+        <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
+        <table class="hidden-table">
             <tr>
                 <th>المنتج</th>
                 <th>السرعة</th>
@@ -335,7 +351,8 @@
             </form>
         </div>
 
-        <table>
+        <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
+        <table class="hidden-table">
             <tr>
                 <th>المنتج</th>
                 <th>الباقة</th>
@@ -427,7 +444,8 @@
 
     <div class="section">
         <h2>المنتجات</h2>
-        <table>
+        <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
+        <table class="hidden-table">
             <tr>
                 <th>الرقم</th>
                 <th>الاسم</th>
@@ -488,7 +506,8 @@
 
     <div class="section">
         <h2>المستخدمين</h2>
-        <table>
+        <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
+        <table class="hidden-table">
             <tr>
                 <th>الرقم</th>
                 <th>معرف تيليجرام</th>
@@ -523,7 +542,8 @@
     <div class="section">
         <h2>الطلبات</h2>
 
-        <table>
+        <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
+        <table class="hidden-table">
             <tr>
                 <th>رقم الطلب</th>
                 <th>معرف المستخدم</th>
@@ -575,6 +595,16 @@
     </div>
 
     <script>
+        function toggleTable(btn) {
+            const table = btn.nextElementSibling;
+            if (table.classList.contains('hidden-table')) {
+                table.classList.remove('hidden-table');
+                btn.textContent = 'إخفاء الجدول';
+            } else {
+                table.classList.add('hidden-table');
+                btn.textContent = 'إظهار الجدول';
+            }
+        }
         function showEditCategoryForm(id, name, identifier) {
             var modal = document.createElement('div');
             modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
@@ -697,7 +727,7 @@
 
     function showRejectForm(orderId) {
             var modal = document.createElement('div');
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+            modal.stylecssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
             var content = document.createElement('div');
             content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
