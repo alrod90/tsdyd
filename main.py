@@ -2091,7 +2091,6 @@ def toggle_user():
 
 @app.route('/change_order_status', methods=['POST'])
 def change_order_status():
-    conn = None
     try:
         order_id = request.form.get('order_id')
         new_status = request.form.get('new_status')
@@ -2102,6 +2101,7 @@ def change_order_status():
             return "بيانات غير صحيحة", 400
 
         conn = sqlite3.connect('store.db')
+        conn.row_factory = sqlite3.Row
         c = conn.cursor()
 
         # استرجاع معلومات الطلب والمنتج
@@ -2152,7 +2152,6 @@ def change_order_status():
         asyncio.run(send_notification(bot, notification_message, user_id))
 
         conn.commit()
-        conn.close()
 
         # استرجاع معلومات الطلب الحالية
         c.execute('SELECT status, user_id, amount FROM orders WHERE id = ?', (order_id,))
@@ -2233,6 +2232,7 @@ def change_order_status():
                 conn.close()
             except Exception as e:
                 print(f"Error closing connection: {str(e)}")
+        return redirect(url_for('admin_panel'))
 
 @app.route('/handle_order', methods=['POST'])
 def handle_order():
