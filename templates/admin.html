@@ -107,13 +107,6 @@
         .hidden {
             display: none;
         }
-        .product-selection {
-            margin-bottom: 10px;
-        }
-        .product-checkboxes label {
-            display: block;
-            margin-bottom: 5px;
-        }
     </style>
 </head>
 <body>
@@ -166,7 +159,7 @@
             </tr>
             {% endfor %}
         </table>
-    </div>
+</div>
 
 
 
@@ -232,7 +225,7 @@
         document.body.appendChild(modal);
     }
 
-    function showEditSpeedForm(id, name, price, product_ids) {
+    function showEditSpeedForm(id, name, price, product_id) {
         var modal = document.createElement('div');
         modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
@@ -243,19 +236,13 @@
             <h3>تعديل السرعة</h3>
             <form action="/edit_speed" method="post">
                 <input type="hidden" name="speed_id" value="${id}">
+                <select name="product_id" required>
+                    {% for product in products %}
+                    <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
+                    {% endfor %}
+                </select>
                 <input type="text" name="name" value="${name}" placeholder="اسم السرعة" required>
                 <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
-                <div class="product-selection">
-                    <label>المنتجات المرتبطة:</label>
-                    <div class="product-checkboxes">
-                        {% for product in products %}
-                        <label>
-                            <input type="checkbox" name="products[]" value="{{ product[0] }}" ${product_ids.includes('{{ product[0] }}') ? 'checked' : ''}>
-                            {{ product[1] }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
                 <div style="margin-top: 20px;">
                     <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
                     <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
@@ -273,19 +260,13 @@
         <div>
             <h3>إضافة سرعة جديدة</h3>
             <form action="/add_speed" method="post">
+                <select name="product_id" required>
+                    {% for product in products %}
+                    <option value="{{ product[0] }}">{{ product[1] }}</option>
+                    {% endfor %}
+                </select>
                 <input type="text" name="name" placeholder="اسم السرعة" required>
                 <input type="number" name="price" placeholder="السعر" step="0.01" required>
-                <div class="product-selection">
-                    <label>المنتجات المرتبطة:</label>
-                    <div class="product-checkboxes">
-                        {% for product in products %}
-                        <label>
-                            <input type="checkbox" name="products[]" value="{{ product[0] }}">
-                            {{ product[1] }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
                 <label class="switch">
                     <input type="checkbox" name="is_active" checked>
                     <span class="slider"></span>
@@ -312,7 +293,7 @@
                     {{ 'مفعل' if speed.is_active else 'غير مفعل' }}
                 </td>
                 <td>
-                    <button onclick="showEditSpeedForm({{ speed.id }}, '{{ speed.name }}', {{ speed.price }}, {{ speed.product_ids }})" style="background-color: #2196F3;">
+                    <button onclick="showEditSpeedForm({{ speed.id }}, '{{ speed.name }}', {{ speed.price }}, '{{ speed.product_id }}')" style="background-color: #2196F3;">
                         تعديل
                     </button>
                     <form action="/toggle_speed" method="post" style="display: inline;">
@@ -727,7 +708,7 @@
                     <input type="hidden" name="order_id" value="${orderId}">
                     <input type="hidden" name="action" value="reject">
                     <textarea name="rejection_note" placeholder="سبب الرفض" required style="width: 100%; height: 100px;"></textarea>
-                    <textarea name="note" placeholder="ملاحظة إضافية (اختياري)" style="width: 100%; height100px; margin-top: 10px;"></textarea>
+                    <textarea name="note" placeholder="ملاحظة إضافية (اختياري)" style="width: 100%; height: 100px; margin-top: 10px;"></textarea>
                     <div style="margin-top: 20px;">
                         <button type="submit" style="background-color: #f44336;">تأكيد الرفض</button>
                         <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">إلغاء</button>
