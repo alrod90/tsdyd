@@ -369,52 +369,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await query.message.edit_text("إدارة المنتجات:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    elif query.data.startswith('edit_product_'):
-        product_id = int(query.data.split('_')[2])
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        # Get product details
-        c.execute('SELECT name, category FROM products WHERE id = ?', (product_id,))
-        product = c.fetchone()
-        
-        # Get associated speeds
-        c.execute('SELECT id, name, price FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
-        speeds = c.fetchall()
-        
-        # Get associated megas
-        c.execute('SELECT id, name, price FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
-        megas = c.fetchall()
-        
-        keyboard = [
-            [InlineKeyboardButton("تعديل اسم المنتج", callback_data=f'edit_product_name_{product_id}')],
-            [InlineKeyboardButton("تعديل القسم", callback_data=f'edit_product_category_{product_id}')]
-        ]
-        
-        # Add speed management buttons if speeds exist
-        if speeds:
-            keyboard.append([InlineKeyboardButton("إدارة السرعات", callback_data=f'manage_speeds_{product_id}')])
-            
-        # Add mega management buttons if megas exist
-        if megas:
-            keyboard.append([InlineKeyboardButton("إدارة الباقات", callback_data=f'manage_megas_{product_id}')])
-            
-        keyboard.append([InlineKeyboardButton("رجوع", callback_data='products_menu')])
-        
-        message = f"تعديل المنتج: {product[0]}\nالقسم: {product[1]}"
-        if speeds:
-            message += "\n\nالسرعات المرتبطة:"
-            for speed in speeds:
-                message += f"\n- {speed[1]}: {speed[2]} ل.س"
-        if megas:
-            message += "\n\nالباقات المرتبطة:"
-            for mega in megas:
-                message += f"\n- {mega[1]}: {mega[2]} ل.س"
-                
-        conn.close()
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text(message, reply_markup=reply_markup)
-
     elif query.data == 'orders_menu':
         keyboard = [
             [
@@ -1770,85 +1724,17 @@ def add_package():
         print(f"Error in add_package: {str(e)}")
         return "حدث خطأ في إضافة الباقة", 500
 
-@app.route('/update_speed_link', methods=['POST'])
-def update_speed_link():
-    try:
-        speed_id = request.form['speed_id']
-        product_id = request.form['product_id']
-        link = request.form['link'] == 'true'
-        
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        if link:
-            c.execute('UPDATE speeds SET product_id = ? WHERE id = ?', (product_id, speed_id))
-        else:
-            c.execute('UPDATE speeds SET product_id = NULL WHERE id = ?', (speed_id,))
-            
-        conn.commit()
-        conn.close()
-        return "Success", 200
-    except Exception as e:
-        print(f"Error updating speed link: {str(e)}")
-        return "Error", 500
-
-@app.route('/update_mega_link', methods=['POST'])
-def update_mega_link():
-    try:
-        mega_id = request.form['mega_id']
-        product_id = request.form['product_id']
-        link = request.form['link'] == 'true'
-        
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        if link:
-            c.execute('UPDATE megas SET product_id = ? WHERE id = ?', (product_id, mega_id))
-        else:
-            c.execute('UPDATE megas SET product_id = NULL WHERE id = ?', (mega_id,))
-            
-        conn.commit()
-        conn.close()
-        return "Success", 200
-    except Exception as e:
-        print(f"Error updating mega link: {str(e)}")
-        return "Error", 500
-
 @app.route('/add_product', methods=['POST'])
 def add_product():
     name = request.form['name']
     category = request.form['category']
     is_active = 'is_active' in request.form
-    speeds = request.form.getlist('speeds[]')
-    megas = request.form.getlist('megas[]')
-    
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    
-    try:
-        # إضافة المنتج
-        c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, ?)',
-                  (name, category, is_active))
-        product_id = c.lastrowid
-        
-        # ربط السرعات المحددة
-        for speed_id in speeds:
-            c.execute('UPDATE speeds SET product_id = ? WHERE id = ?', 
-                     (product_id, speed_id))
-            
-        # ربط الباقات المحددة    
-        for mega_id in megas:
-            c.execute('UPDATE megas SET product_id = ? WHERE id = ?',
-                     (product_id, mega_id))
-            
-        conn.commit()
-        
-    except Exception as e:
-        print(f"Error adding product: {str(e)}")
-        conn.rollback()
-    finally:
-        conn.close()
-        
+    c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, ?)',
+              (name, category, is_active))
+    conn.commit()
+    conn.close()
     return redirect(url_for('admin_panel'))
 
 @app.route('/toggle_product', methods=['POST'])
@@ -1885,38 +1771,16 @@ def delete_product():
 
 @app.route('/edit_product', methods=['POST'])
 def edit_product():
-    try:
-        product_id = request.form['product_id']
-        name = request.form['name']
-        category = request.form['category']
-        speeds = request.form.getlist('speeds[]')
-        megas = request.form.getlist('megas[]')
-        
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        # Update product info
-        c.execute('UPDATE products SET name = ?, category = ? WHERE id = ?',
-                  (name, category, product_id))
-                  
-        # Update speeds associations
-        c.execute('UPDATE speeds SET product_id = NULL WHERE product_id = ?', (product_id,))
-        for speed_id in speeds:
-            c.execute('UPDATE speeds SET product_id = ? WHERE id = ?', 
-                     (product_id, speed_id))
-                     
-        # Update megas associations
-        c.execute('UPDATE megas SET product_id = NULL WHERE product_id = ?', (product_id,))
-        for mega_id in megas:
-            c.execute('UPDATE megas SET product_id = ? WHERE id = ?',
-                     (product_id, mega_id))
-        
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_panel'))
-    except Exception as e:
-        print(f"Error in edit_product: {str(e)}")
-        return "حدث خطأ في تعديل المنتج", 500
+    product_id = request.form['product_id']
+    name = request.form['name']
+    category = request.form['category']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE products SET name = ?, category = ? WHERE id = ?',
+              (name, category, product_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
 
 async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
     conn = sqlite3.connect('store.db')
