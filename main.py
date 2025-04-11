@@ -2150,7 +2150,7 @@ def handle_order():
             return "بيانات غير صحيحة", 400
 
         conn = sqlite3.connect('store.db')
-c = conn.cursor()
+        c = conn.cursor()
 
         # استرجاع معلومات الطلب والمنتج
         c.execute('''
@@ -2302,20 +2302,9 @@ def get_db_connection():
         # إذا لم تكن موجودة، قم بإنشاء قاعدة بيانات جديدة
         conn = sqlite3.connect('store.db')
         conn.execute("PRAGMA timezone = '+03:00'")
-        return conn
 
         # إنشاء الجداول الأساسية
         c = conn.cursor()
-        c.execute('''CREATE TABLE IF NOT EXISTS products 
-                     (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
-        c.execute('''CREATE TABLE IF NOT EXISTS users
-                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
-        c.execute('''CREATE TABLE IF NOT EXISTS orders
-                     (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
-                      customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
-        conn.commit()
         return conn
     except Exception as e:
         print(f"خطأ في مزامنة قاعدة البيانات: {str(e)}")
