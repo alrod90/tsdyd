@@ -164,95 +164,125 @@
 
 
     <script>
-    function showPackagePage(pageNum) {
-        document.querySelectorAll('.package-row').forEach(row => {
-            row.style.display = 'none';
-        });
-        document.querySelectorAll('.page-' + pageNum).forEach(row => {
-            row.style.display = '';
-        });
-    }
+        function handleSpeedSelection(select) {
+            let productId = document.querySelector('select[name="product_id"]').value;
+            let selectedOptions = Array.from(select.selectedOptions);
 
-    function showEditPackageForm(id, name, price) {
-        var modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+            selectedOptions.forEach(option => {
+                fetch('/update_speed_link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `speed_id=${option.value}&product_id=${productId}&link=${option.selected}`
+                });
+            });
+        }
 
-        var content = document.createElement('div');
-        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+        function handleMegaSelection(select) {
+            let productId = document.querySelector('select[name="product_id"]').value;
+            let selectedOptions = Array.from(select.selectedOptions);
 
-        content.innerHTML = `
-            <h3>تعديل الباقة</h3>
-            <form action="/edit_package" method="post">
-                <input type="hidden" name="package_id" value="${id}">
-                <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
-                <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
-                <div style="margin-top: 20px;">
-                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
-                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
-                </div>
-            </form>
-        `;
+            selectedOptions.forEach(option => {
+                fetch('/update_mega_link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `mega_id=${option.value}&product_id=${productId}&link=${option.selected}`
+                });
+            });
+        }
 
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-    }
-    function showEditMegaForm(id, name, price, product_id) {
-        var modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+        function showPackagePage(pageNum) {
+            document.querySelectorAll('.package-row').forEach(row => {
+                row.style.display = 'none';
+            });
+            document.querySelectorAll('.page-' + pageNum).forEach(row => {
+                row.style.display = '';
+            });
+        }
 
-        var content = document.createElement('div');
-        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+        function showEditPackageForm(id, name, price) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
-        content.innerHTML = `
-            <h3>تعديل الباقة</h3>
-            <form action="/edit_mega" method="post">
-                <input type="hidden" name="mega_id" value="${id}">
-                <select name="product_id" required>
-                    {% for product in products %}
-                    <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
-                <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
-                <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
-                <div style="margin-top: 20px;">
-                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
-                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
-                </div>
-            </form>
-        `;
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
 
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-    }
+            content.innerHTML = `
+                <h3>تعديل الباقة</h3>
+                <form action="/edit_package" method="post">
+                    <input type="hidden" name="package_id" value="${id}">
+                    <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
+                    <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
 
-    function showEditSpeedForm(id, name, price, product_id) {
-        var modal = document.createElement('div');
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+        function showEditMegaForm(id, name, price, product_id) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
-        var content = document.createElement('div');
-        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
 
-        content.innerHTML = `
-            <h3>تعديل السرعة</h3>
-            <form action="/edit_speed" method="post">
-                <input type="hidden" name="speed_id" value="${id}">
-                <select name="product_id" required>
-                    {% for product in products %}
-                    <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
-                <input type="text" name="name" value="${name}" placeholder="اسم السرعة" required>
-                <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
-                <div style="margin-top: 20px;">
-                    <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
-                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
-                </div>
-            </form>
-        `;
+            content.innerHTML = `
+                <h3>تعديل الباقة</h3>
+                <form action="/edit_mega" method="post">
+                    <input type="hidden" name="mega_id" value="${id}">
+                    <select name="product_id" required>
+                        {% for product in products %}
+                        <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="name" value="${name}" placeholder="اسم الباقة" required>
+                    <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
 
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-    }
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+
+        function showEditSpeedForm(id, name, price, product_id) {
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+
+            var content = document.createElement('div');
+            content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+            content.innerHTML = `
+                <h3>تعديل السرعة</h3>
+                <form action="/edit_speed" method="post">
+                    <input type="hidden" name="speed_id" value="${id}">
+                    <select name="product_id" required>
+                        {% for product in products %}
+                        <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="name" value="${name}" placeholder="اسم السرعة" required>
+                    <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
+                        <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                    </div>
+                </form>
+            `;
+
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
     </script>
 
     <div class="section">
@@ -386,7 +416,7 @@
             </select>
             <div style="margin: 10px 0;">
                 <label>السرعات المتاحة:</label>
-                <select name="speeds[]" multiple style="width: 100%; min-height: 100px;">
+                <select name="speeds[]" multiple style="width: 100%; min-height: 100px;" onchange="handleSpeedSelection(this)">
                     {% for speed in speeds %}
                     <option value="{{ speed.id }}">{{ speed.name }} - {{ speed.price }} ل.س</option>
                     {% endfor %}
@@ -395,7 +425,7 @@
             </div>
             <div style="margin: 10px 0;">
                 <label>الباقات المتاحة:</label>
-                <select name="megas[]" multiple style="width: 100%; min-height: 100px;">
+                <select name="megas[]" multiple style="width: 100%; min-height: 100px;" onchange="handleMegaSelection(this)">
                     {% for mega in megas %}
                     <option value="{{ mega.id }}">{{ mega.name }} - {{ mega.price }} ل.س</option>
                     {% endfor %}
@@ -691,7 +721,7 @@
                     </select>
                     <div style="margin: 10px 0;">
                         <label>السرعات المتاحة:</label>
-                        <select name="speeds[]" multiple style="width: 100%; min-height: 100px;">
+                        <select name="speeds[]" multiple style="width: 100%; min-height: 100px;" onchange="handleSpeedSelection(this)">
                             {% for speed in speeds %}
                             <option value="{{ speed.id }}" data-product="{{ speed.product_id }}">{{ speed.name }} - {{ speed.price }} ل.س</option>
                             {% endfor %}
@@ -699,7 +729,7 @@
                     </div>
                     <div style="margin: 10px 0;">
                         <label>الباقات المتاحة:</label>
-                        <select name="megas[]" multiple style="width: 100%; min-height: 100px;">
+                        <select name="megas[]" multiple style="width: 100%; min-height: 100px;" onchange="handleMegaSelection(this)">
                             {% for mega in megas %}
                             <option value="{{ mega.id }}" data-product="{{ mega.product_id }}">{{ mega.name }} - {{ mega.price }} ل.س</option>
                             {% endfor %}

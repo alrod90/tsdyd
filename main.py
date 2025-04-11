@@ -1770,6 +1770,50 @@ def add_package():
         print(f"Error in add_package: {str(e)}")
         return "حدث خطأ في إضافة الباقة", 500
 
+@app.route('/update_speed_link', methods=['POST'])
+def update_speed_link():
+    try:
+        speed_id = request.form['speed_id']
+        product_id = request.form['product_id']
+        link = request.form['link'] == 'true'
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        if link:
+            c.execute('UPDATE speeds SET product_id = ? WHERE id = ?', (product_id, speed_id))
+        else:
+            c.execute('UPDATE speeds SET product_id = NULL WHERE id = ?', (speed_id,))
+            
+        conn.commit()
+        conn.close()
+        return "Success", 200
+    except Exception as e:
+        print(f"Error updating speed link: {str(e)}")
+        return "Error", 500
+
+@app.route('/update_mega_link', methods=['POST'])
+def update_mega_link():
+    try:
+        mega_id = request.form['mega_id']
+        product_id = request.form['product_id']
+        link = request.form['link'] == 'true'
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        if link:
+            c.execute('UPDATE megas SET product_id = ? WHERE id = ?', (product_id, mega_id))
+        else:
+            c.execute('UPDATE megas SET product_id = NULL WHERE id = ?', (mega_id,))
+            
+        conn.commit()
+        conn.close()
+        return "Success", 200
+    except Exception as e:
+        print(f"Error updating mega link: {str(e)}")
+        return "Error", 500
+
 @app.route('/add_product', methods=['POST'])
 def add_product():
     name = request.form['name']
