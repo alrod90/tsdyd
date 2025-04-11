@@ -676,7 +676,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for product in products:
-            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'addorder_product_{product[0]}')])
+            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'addorder_product```python
+_{product[0]}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -2121,7 +2122,7 @@ def change_order_status():
         product_name = order_info[2]
 
         # تحديث حالة الطلب
-        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
+        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id= ?',
                  (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
 
         # إعداد نص الإشعار
