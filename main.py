@@ -1443,6 +1443,61 @@ def delete_category():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/services')
+def services_panel():
+    try:
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        c.execute('SELECT * FROM products')
+        products = c.fetchall()
+
+        # Fetch speeds with product names
+        c.execute('''
+            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
+            FROM speeds s
+            JOIN products p ON s.product_id = p.id
+            ORDER BY s.id DESC
+        ''')
+        speeds = [
+            {
+                'id': row[0],
+                'name': row[1],
+                'price': row[2],
+                'product_id': row[3],
+                'product_name': row[4],
+                'is_active': row[5]
+            }
+            for row in c.fetchall()
+        ]
+
+        # Fetch megas with product names
+        c.execute('''
+            SELECT m.id, m.name, m.price, m.product_id, p.name as product_name, m.is_active
+            FROM megas m
+            JOIN products p ON m.product_id = p.id
+            ORDER BY m.id DESC
+        ''')
+        megas = [
+            {
+                'id': row[0],
+                'name': row[1],
+                'price': row[2],
+                'product_id': row[3],
+                'product_name': row[4],
+                'is_active': row[5]
+            }
+            for row in c.fetchall()
+        ]
+        
+        conn.close()
+        return render_template('services.html', products=products, speeds=speeds, megas=megas)
+    except Exception as e:
+        print(f"Error in services_panel: {str(e)}")
+        if conn:
+            conn.close()
+        return "حدث خطأ في الوصول إلى صفحة الخدمات. الرجاء المحاولة مرة أخرى.", 500
+
 @app.route('/')
 def admin_panel():
     try:
