@@ -1833,47 +1833,19 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
-    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-    bot = telegram.Bot(token=bot_token)
-    
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-
+async def send_notification(bot: telegram.Bot, user_id: int, message: str, is_important=False):
     try:
-        if user_id:
-            users = [(user_id,)]
-        else:
-            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-            users = c.fetchall()
-
-        for user in users:
-            success = False
-            retry_count = 3
-
-            while retry_count > 0 and not success:
-                try:
-                    await bot.send_message(
-                        chat_id=user[0],
-                        text=message,
-                        parse_mode='HTML',
-                        disable_notification=False
-                    )
-                    print(f"تم إرسال الإشعار بنجاح إلى {user[0]}")
-                    success = True
-                except Exception as e:
-                    print(f"خطأ في إرسال الإشعار إلى {user[0]}: {str(e)}")
-                    retry_count -= 1
-                    if retry_count > 0:
-                        await asyncio.sleep(2)
-            
-            if not success:
-                print(f"فشل في إرسال الإشعار إلى {user[0]} بعد كل المحاولات")
-
+        await bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode='HTML',
+            disable_notification=not is_important
+        )
+        print(f"تم إرسال الإشعار بنجاح إلى {user_id}")
+        return True
     except Exception as e:
-        print(f"خطأ عام في نظام الإشعارات: {str(e)}")
-    finally:
-        conn.close()
+        print(f"خطأ في إرسال الإشعار إلى {user_id}: {str(e)}")
+        return False
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
@@ -2181,6 +2153,61 @@ def handle_order():
             JOIN users u ON o.user_id = u.telegram_id 
             WHERE o.id = ?
         ''', (order_id,))
+        order = c.fetchone()
+
+        if not order:
+            if conn:
+                conn.close()
+            return "الطلب غير موجود", 404
+
+        user_id = order[0]
+        amount = order[1]
+        product_name = order[2]
+        current_balance = order[3]
+
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+
+        if action == 'reject':
+            if not rejection_note:
+                if conn:
+                    conn.close()
+                return "يجب إدخال سبب الرفض", 400
+
+            # إعادة المبلغ للمستخدم
+            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
+                    (amount, user_id))
+            c.execute('UPDATE orders SET status = ?, rejection_note = ? WHERE id = ?',
+                    ('rejected', rejection_note, order_id))
+
+            notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ المعاد لرصيدك: {amount} ليرة سوري
+سبب الرفض: {rejection_note}
+رصيدك الحالي: {current_balance + amount} ليرة سوري"""
+
+            asyncio.run(send_notification(bot, user_id, notification_message, True))
+
+        elif action == 'accept':
+            c.execute('UPDATE orders SET status = ? WHERE id = ?', ('accepted', order_id))
+
+            notification_message = f"""✅ تم قبول طلبك!
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري"""
+
+            asyncio.run(send_notification(bot, user_id, notification_message, True))
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+
+    except Exception as e:
+        print(f"Error in handle_order: {str(e)}")
+        if conn:
+            conn.close()
+        return f"حدث خطأ في معالجة الطلب: {str(e)}", 500
         order = c.fetchone()
 
         if not order:
