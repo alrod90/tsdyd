@@ -674,7 +674,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         products = c.fetchall()
         conn.close()
 
-        keyboard = []
+        keyboard =[]
         for product in products:
             keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
@@ -1349,7 +1349,7 @@ async def handle_new_order_amount(update: Update, context: ContextTypes.DEFAULT_
 
 async def create_new_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = context.user_data.get('new_order_user_id')
-    product_id = context.user_data.get('new_order_product_id')
+    product_id = context.user_data.get('new_order_productid')
     amount = context.user_data.get('new_order_amount')
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
@@ -2327,10 +2327,10 @@ def edit_order_amount():
     try:
         order_id = request.form['order_id']
         new_amount = float(request.form['new_amount'])
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # استرجاع معلومات الطلب الحالية
         c.execute('''SELECT o.amount, o.user_id, o.status, p.name, u.balance
                      FROM orders o 
@@ -2347,13 +2347,14 @@ def edit_order_amount():
         user_id = current_order[1]
         status = current_order[2]
         product_name = current_order[3]
+        current_balance = current_order[4]
 
         # إذا كان الطلب مقبولاً أو قيد المعالجة، نتعامل مع الرصيد
         if status != 'rejected':
             amount_diff = new_amount - current_amount
 
             if amount_diff > 0:  # إذا كان المبلغ الجديد أكبر
-                if current_order[4] < amount_diff:  # التحقق من الرصيد الحالي
+                if current_balance < amount_diff:  # التحقق من الرصيد الحالي
                     conn.close()
                     return "رصيد المستخدم غير كافي للتعديل", 400
 
@@ -2367,7 +2368,7 @@ def edit_order_amount():
 
         # تحديث مبلغ الطلب
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
-        
+
         # إعداد رسالة الإشعار
         notification_message = f"""تم تعديل مبلغ الطلب
 رقم الطلب: {order_id}
@@ -2390,7 +2391,7 @@ def edit_order_amount():
                 requests.post(telegram_api_url, json=payload)
         except Exception as e:
             print(f"Error sending notification: {str(e)}")
-        
+
         conn.close()
         return redirect(url_for('admin_panel'))
 
