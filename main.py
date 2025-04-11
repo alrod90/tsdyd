@@ -2362,25 +2362,31 @@ def edit_order_amount():
 
         # تحديث مبلغ الطلب
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
-
+        
         # إعداد رسالة الإشعار
         notification_message = f"""تم تعديل مبلغ الطلب
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ الجديد: {new_amount} ليرة سوري"""
 
-        # حفظ الإشعار في قاعدة البيانات بدلاً من إرساله مباشرة
-        c.execute('''CREATE TABLE IF NOT EXISTS notifications 
-                     (id INTEGER PRIMARY KEY, user_id INTEGER, message TEXT, sent BOOLEAN DEFAULT 0, 
-                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-        c.execute('INSERT INTO notifications (user_id, message) VALUES (?, ?)',
-                 (user_id, notification_message))
-
+        # حفظ التغييرات في قاعدة البيانات
         conn.commit()
-        conn.close()
 
-        # إرسال الإشعار يتم من خلال وظيفة منفصلة
-        # سيتم إرساله عند التشغيل التالي للتطبيق
+        try:
+            # إنشاء مثيل جديد للبوت وإرسال الإشعار
+            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+            if bot_token:
+                # استخدام requests بدلاً من telegram-python-bot
+                telegram_api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {
+                    "chat_id": user_id,
+                    "text": notification_message
+                }
+                requests.post(telegram_api_url, json=payload)
+        except Exception as e:
+            print(f"Error sending notification: {str(e)}")
+        
+        conn.close()
         return redirect(url_for('admin_panel'))
 
     except Exception as e:
