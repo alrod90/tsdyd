@@ -1255,8 +1255,22 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     # خصم المبلغ من رصيد المستخدم وإنشاء الطلب
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
               (amount, update.effective_user.id))
-    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info) VALUES (?, ?, ?, ?)',
-              (update.effective_user.id, context.user_data['product_id'], amount, customer_info))
+    order_type = ""
+    if context.user_data.get('selected_mega'):
+        c.execute('SELECT name FROM megas WHERE id = ?', (context.user_data['selected_mega'],))
+        mega = c.fetchone()
+        if mega:
+            order_type = f"باقة: {mega[0]}"
+    elif context.user_data.get('selected_speed'):
+        c.execute('SELECT name FROM speeds WHERE id = ?', (context.user_data['selected_speed'],))
+        speed = c.fetchone()
+        if speed:
+            order_type = f"سرعة: {speed[0]}"
+    else:
+        order_type = "دفعة يدوية"
+
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, order_type) VALUES (?, ?, ?, ?, ?)',
+              (update.effective_user.id, context.user_data['product_id'], amount, customer_info, order_type))
     order_id = c.lastrowid
     conn.commit()
 
