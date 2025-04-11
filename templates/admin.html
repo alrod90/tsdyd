@@ -236,11 +236,15 @@
             <h3>تعديل السرعة</h3>
             <form action="/edit_speed" method="post">
                 <input type="hidden" name="speed_id" value="${id}">
-                <select name="product_id" required>
-                    {% for product in products %}
-                    <option value="{{ product[0] }}" ${product_id == '{{ product[0] }}' ? 'selected' : ''}>{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
+                <div style="margin: 10px 0;">
+                    <label>المنتجات المرتبطة:</label>
+                    <select name="product_ids[]" multiple required style="width: 100%; min-height: 100px;">
+                        {% for product in products %}
+                        <option value="{{ product[0] }}">{{ product[1] }}</option>
+                        {% endfor %}
+                    </select>
+                    <small>اضغط Ctrl (أو Command على Mac) للاختيار المتعدد</small>
+                </div>
                 <input type="text" name="name" value="${name}" placeholder="اسم السرعة" required>
                 <input type="number" name="price" value="${price}" step="0.01" placeholder="السعر" required>
                 <div style="margin-top: 20px;">

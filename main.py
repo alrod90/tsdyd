@@ -1585,23 +1585,34 @@ def add_speed():
         is_active = 'is_active' in request.form
         product_ids = request.form.getlist('product_ids[]')
 
+        if not product_ids:
+            return "يجب اختيار منتج واحد على الأقل", 400
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        # إضافة السرعة
-        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
-                 (name, price, is_active))
-        speed_id = c.lastrowid
-        
-        # إضافة الارتباطات مع المنتجات
-        if product_ids:
+        try:
+            # إضافة السرعة
+            c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
+                     (name, price, is_active))
+            speed_id = c.lastrowid
+            
+            # إضافة الارتباطات مع المنتجات
             for product_id in product_ids:
                 c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
                          (speed_id, product_id))
-        
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_panel'))
+            
+            conn.commit()
+            return redirect(url_for('admin_panel'))
+        except Exception as e:
+            conn.rollback()
+            print(f"خطأ في إضافة السرعة: {str(e)}")
+            return "حدث خطأ في إضافة السرعة", 500
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"خطأ في إضافة السرعة: {str(e)}")
+        return "حدث خطأ في إضافة السرعة", 500
     except Exception as e:
         print(f"Error in add_speed: {str(e)}")
         conn.rollback()
