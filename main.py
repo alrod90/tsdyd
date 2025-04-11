@@ -1833,19 +1833,35 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(bot_token, user_id, message):
-    try:
-        bot = telegram.Bot(token=bot_token)
-        await bot.send_message(
-            chat_id=user_id,
-            text=message,
-            parse_mode='HTML',
-            disable_notification=False
-        )
-        return True
-    except Exception as e:
-        print(f"Error sending notification to {user_id}: {str(e)}")
-        return False
+async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+
+    if user_id:
+        users = [(user_id,)]
+    else:
+        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+        users = c.fetchall()
+
+    for user in users:
+        success = False
+        retry_count = 3
+
+        while retry_count > 0 and not success:
+            try:
+                await context.bot.send_message(
+                    chat_id=user[0],
+                    text=message,
+                    parse_mode='HTML',
+                    disable_notification=False
+                )
+                success = True
+            except Exception as e:
+                print(f"خطأ في إرسال الإشعار إلى {user[0]}: {str(e)}")
+                retry_count -= 1
+                await asyncio.sleep(1)
+
+    conn.close()
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
