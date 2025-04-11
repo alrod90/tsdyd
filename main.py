@@ -482,34 +482,34 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # التحقق من وجود باقات أو سرعات للمنتج
         c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
         product = c.fetchone()
-        
+
         c.execute('SELECT COUNT(*) FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
         has_megas = c.fetchone()[0] > 0
-        
+
         c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
         has_speeds = c.fetchone()[0] > 0
 
         keyboard = []
         keyboard.append([InlineKeyboardButton("إضافة دفعة", callback_data=f'manual_{product_id}')])
-        
+
         row = []
         if has_megas:
             row.append(InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}'))
-            
+
         if has_speeds:
             row.append(InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}'))
-            
+
         if row:
             keyboard.append(row)
-            
+
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
-        
+
         context.user_data['product_name'] = product[0]
-        
+
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(f"اختر نوع الخدمة لـ {product[0]}:", reply_markup=reply_markup)
         conn.close()
@@ -530,7 +530,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data=f'select_mega_{mega[0]}_{product_id}'
             )])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
-        
+
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر الباقة المناسبة:", reply_markup=reply_markup)
         return
@@ -550,7 +550,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data=f'select_speed_{speed[0]}_{product_id}'
             )])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
-        
+
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر السرعة المناسبة:", reply_markup=reply_markup)
         return
@@ -560,19 +560,19 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         item_type = parts[1]  # mega or speed
         item_id = int(parts[2])
         product_id = int(parts[3])
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         table_name = 'megas' if item_type == 'mega' else 'speeds'
         c.execute(f'SELECT name, price FROM {table_name} WHERE id = ?', (item_id,))
         item = c.fetchone()
-        
+
         if item:
             context.user_data['product_id'] = product_id
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
-            
+
             # حفظ معرف الباقة أو السرعة المختارة
             if item_type == 'mega':
                 context.user_data['selected_mega'] = item_id
@@ -580,25 +580,25 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 context.user_data['selected_speed'] = item_id
                 context.user_data['selected_mega'] = None
-            
+
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
             user_balance = c.fetchone()[0]
-            
+
             if user_balance < item[1]:
                 await query.message.edit_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
                 conn.close()
                 return
-            
+
             # عرض تأكيد الطلب مباشرة مع تفاصيل السعر
             confirmation_message = f"""
 سيتم خصم {item[1]} ليرة سوري من رصيدك مقابل {item[0]}.
 الرجاء إدخال بيانات الزبون:"""
-            
+
             await query.message.edit_text(confirmation_message)
             conn.close()
             return "WAITING_CUSTOMER_INFO"
-        
+
         conn.close()
         await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
         return
@@ -721,7 +721,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
-    
+
     # إذا كان المبلغ محدد مسبقاً (من اختيار باقة أو سرعة)
     if 'amount' in context.user_data:
         amount = context.user_data['amount']
@@ -1204,21 +1204,22 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 
     # إرسال إشعار للمدير
     # تحديد نوع الطلب
-            order_type = ""
-            if context.user_data.get('selected_mega'):
-                c.execute('SELECT name FROM megas WHERE id = ?', (context.user_data['selected_mega'],))
-                mega = c.fetchone()
-                if mega:
-                    order_type = f"باقة: {mega[0]}"
-            elif context.user_data.get('selected_speed'):
-                c.execute('SELECT name FROM speeds WHERE id = ?', (context.user_data['selected_speed'],))
-                speed = c.fetchone()
-                if speed:
-                    order_type = f"سرعة: {speed[0]}"
-            else:
-                order_type = "دفعة يدوية"
+    order_type = ""
+    if context.user_data.get('selected_mega'):
+        c.execute('SELECT name FROM megas WHERE id = ?', (context.user_data['selected_mega'],))
+        mega = c.fetchone()
+        if mega:
+            order_type = f"باقة: {mega[0]}"
+    elif context.user_data.get('selected_speed'):
+        c.execute('SELECT name FROM speeds WHERE id = ?', (context.user_data['selected_speed'],))
+        speed = c.fetchone()
+        if speed:
+            order_type = f"سرعة: {speed[0]}"
+    else:
+        order_type = "دفعة يدوية"
 
-            admin_message = f"""
+    # إرسال إشعار للمدير
+    admin_message = f"""
 طلب جديد
 رقم الطلب: {order_id}
 معرف المشتري: {update.effective_user.id}
@@ -1353,7 +1354,7 @@ async def update_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE
     c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
     conn.commit()
     conn.close()
-    await update.message.reply_text(f"تم تحديث مبلغ الطلب {order_id} إلى {new_amount}")
+    await update.message.reply_text(f"تمتحديث مبلغ الطلب {order_id} إلى {new_amount}")
 
 async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE, order_id, status):
     conn = sqlite3.connect('store.db')
@@ -2142,7 +2143,7 @@ def handle_order():
         c.execute('''
             SELECT o.user_id, o.amount, p.name, u.balance 
             FROM orders o 
-            JOIN products p ON o.product_id = p.id 
+            JOIN products p ON o.productid = p.id 
             JOIN users u ON o.user_id = u.telegram_id 
             WHERE o.id = ?
         ''', (order_id,))
