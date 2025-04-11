@@ -486,7 +486,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             c.execute('SELECT category FROM products WHERE id = ?', (context.user_data.get('product_id'),))
             category = c.fetchone()
-            
+
             if category:
                 c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category[0],))
                 products = c.fetchall()
@@ -612,7 +612,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not item:
                 await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
                 return
-                
+
             context.user_data['product_id'] = product_id
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
@@ -675,7 +675,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
 
         keyboard = []
-        for product in products:
+for product in products:
             keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
@@ -1891,7 +1891,7 @@ def send_notification_route():
         message = request.form['message']
         user_id = request.form.get('user_id')
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        
+
         if not bot_token:
             print("Error: TELEGRAM_BOT_TOKEN not found")
             return "Error: Bot token not configured", 500
@@ -1950,19 +1950,28 @@ def add_order():
         conn.close()
 
         # إرسال إشعار للمستخدم
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        bot = telegram.Bot(token=bot_token)
+        try:
+            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+            if not bot_token:
+                raise Exception("Bot token not found")
+
+            bot = telegram.Bot(token=bot_token)
+            asyncio.run(bot.send_message(
+                chat_id=user_id,
+                text=notification_message,
+                parse_mode='HTML'
+            ))
+            print(f"Notification sent successfully to {user_id}")
+        except Exception as e:
+            print(f"Error sending notification: {str(e)}")
+            # حتى لو فشل الإشعار، نستمر في العملية
+
 
         notification_message = f"""✉️ تم إنشاء طلب جديد
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}"""
-
-        try:
-            asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
-        except Exception as e:
-            print(f"خطأ في إرسال الإشعار: {str(e)}")
 
         return redirect(url_for('admin_panel'))
 
@@ -2237,16 +2246,21 @@ def handle_order():
 المبلغ: {amount} ليرة سوري"""
 
         # إرسال الإشعار للمستخدم
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        bot = telegram.Bot(token=bot_token)
         try:
+            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+            if not bot_token:
+                raise Exception("Bot token not found")
+
+            bot = telegram.Bot(token=bot_token)
             asyncio.run(bot.send_message(
                 chat_id=user_id,
                 text=notification_message,
                 parse_mode='HTML'
             ))
+            print(f"Notification sent successfully to {user_id}")
         except Exception as e:
-            print(f"خطأ في إرسال الإشعار: {str(e)}")
+            print(f"Error sending notification: {str(e)}")
+            # حتى لو فشل الإشعار، نستمر في العملية
 
         conn.commit()
         conn.close()
@@ -2308,7 +2322,16 @@ def edit_order_amount():
 
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+        try:
+            asyncio.run(bot.send_message(
+                chat_id=user_id,
+                text=notification_message,
+                parse_mode='HTML'
+            ))
+            print(f"Notification sent successfully to {user_id}")
+        except Exception as e:
+            print(f"Error sending notification: {str(e)}")
+            # حتى لو فشل الإشعار، نستمر في العملية
 
         conn.commit()
         conn.close()
