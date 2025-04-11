@@ -244,7 +244,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton("طلباتي", callback_data='my_orders')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("عذراً، حسابك معطل. يمكنك فقط عرض رصيدك وطلباتك.", reply_markup=reply_markup)
+        await query.message.edit_text("عذراً، الخدمة متوقفة مؤقتاً حاول في وقت اخر. كما يمكنك في الوقت الحالي فقط مشاهدة رصيدك وطلباتك.", reply_markup=reply_markup)
         return
 
     if query.data.startswith('cat_'):
