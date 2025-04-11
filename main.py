@@ -1583,12 +1583,21 @@ def add_speed():
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
+        product_ids = request.form.getlist('product_ids')
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # إضافة السرعة
         c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
                  (name, price, is_active))
         speed_id = c.lastrowid
+        
+        # إضافة الارتباطات مع المنتجات
+        for product_id in product_ids:
+            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
+                     (speed_id, product_id))
+        
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))

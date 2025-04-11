@@ -159,7 +159,7 @@
             </tr>
             {% endfor %}
         </table>
-</div>
+    </div>
 
 
 
@@ -260,13 +260,16 @@
         <div>
             <h3>إضافة سرعة جديدة</h3>
             <form action="/add_speed" method="post">
-                <select name="product_ids" multiple required style="height: 150px;">
-                    {% for product in products %}
-                    <option value="{{ product[0] }}">{{ product[1] }}</option>
-                    {% endfor %}
-                </select>
                 <input type="text" name="name" placeholder="اسم السرعة" required>
                 <input type="number" name="price" placeholder="السعر" step="0.01" required>
+                <div style="margin: 10px 0;">
+                    <label>المنتجات المرتبطة:</label>
+                    <select name="product_ids" multiple required style="width: 100%; min-height: 100px;">
+                        {% for product in products %}
+                        <option value="{{ product[0] }}">{{ product[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <label class="switch">
                     <input type="checkbox" name="is_active" checked>
                     <span class="slider"></span>
