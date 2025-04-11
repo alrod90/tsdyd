@@ -676,8 +676,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for product in products:
-            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'addorder_product```python
-_{product[0]}')])
+            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
