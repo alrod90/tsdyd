@@ -2352,7 +2352,7 @@ def get_db_connection():
 
 def run_flask():
     try:
-        app.run(host='0.0.0.0', port=5001, debug=False)
+        app.run(host='0.0.0.0', port=5000, debug=False)
     except Exception as e:
         print(f"Error starting Flask: {str(e)}")
         if os.path.exists('bot.lock'):
