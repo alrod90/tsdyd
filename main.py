@@ -1833,55 +1833,19 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-
-    if user_id:
-        users = [(user_id,)]
-    else:
-        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-        users = c.fetchall()
-
-    for user in users:
-        success = False
-        retry_count = 3
-
-        while retry_count > 0 and not success:
-            try:
-                await context.bot.send_message(
-                    chat_id=user[0],
-                    text=message,
-                    parse_mode='HTML',
-                    disable_notification=False
-                )
-                success = True
-            except Exception as e:
-                print(f"Error sending notification to {user[0]}: {str(e)}")
-                retry_count -= 1
-                await asyncio.sleep(1)
-
-    conn.close()
-    if is_important:
-        try:
-            conn = sqlite3.connect('store.db')
-            c = conn.cursor()
-            c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user_id,))
-            phone_result = c.fetchone()
-            conn.close()
-
-            if phone_result and phone_result[0]:
-                response = requests.post(
-                    "YOUR_SMS_GATEWAY_URL",
-                    data={
-                        "to": phone_result[0],
-                        "message": f"إشعار مهم: {message}"
-                    }
-                )
-                response.raise_for_status()
-        except Exception as sms_error:
-            print(f"Error sending SMS to {user_id}: {str(sms_error)}")
-    return False
+async def send_notification(bot_token, user_id, message):
+    try:
+        bot = telegram.Bot(token=bot_token)
+        await bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode='HTML',
+            disable_notification=False
+        )
+        return True
+    except Exception as e:
+        print(f"Error sending notification to {user_id}: {str(e)}")
+        return False
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
@@ -2349,7 +2313,7 @@ def get_db_connection():
         return sqlite3.connect('store.db')
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=3000, debug=False)
 
 def run_bot():
     # Initialize bot
