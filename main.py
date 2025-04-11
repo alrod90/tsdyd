@@ -48,6 +48,10 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
+    
+    # إضافة حقل حالة البوت
+    c.execute('''ALTER TABLE users ADD COLUMN is_bot_active BOOLEAN DEFAULT 1''')
+    conn.commit()
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -230,12 +234,26 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    # التحقق من حالة المستخدم
+    # التحقق من حالة المستخدم والبوت
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('SELECT is_active FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    user_status = c.fetchone()
+    c.execute('SELECT is_active, id FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    user_data = c.fetchone()
+    
+    # التحقق من حالة البوت
+    c.execute('SELECT is_bot_active FROM users WHERE id = 1')
+    bot_status = c.fetchone()
     conn.close()
+    
+    # إذا كان البوت متوقف وليس المستخدم مدير
+    if bot_status and not bot_status[0] and (not user_data or user_data[1] != 1):
+        keyboard = [[InlineKeyboardButton("رجوع", callback_data='back')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("عذراً، الخدمة متوقفة مؤقتاً. يرجى المحاولة في وقت لاحق.", reply_markup=reply_markup)
+        return
+        
+    # التحقق من حالة المستخدم
+    if user_data and not user_data[0]:
 
     # إذا كان المستخدم معطل ويحاول الوصول إلى قسم غير مسموح به
     if user_status and not user_status[0] and query.data.startswith(('cat_', 'buy_')):
@@ -2016,6 +2034,15 @@ def toggle_distributor():
     except Exception as e:
         print(f"Error in toggle_distributor: {str(e)}")
         return "حدث خطأ في تغيير صلاحية الموزع", 500
+
+@app.route('/toggle_bot', methods=['POST'])
+def toggle_bot():
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE users SET is_bot_active = NOT is_bot_active WHERE id = 1')
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
 
 @app.route('/toggle_user', methods=['POST'])
 def toggle_user():
