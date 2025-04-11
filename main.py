@@ -1862,26 +1862,26 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
                 await asyncio.sleep(1)
 
     conn.close()
-        if is_important:
-            try:
-                conn = sqlite3.connect('store.db')
-                c = conn.cursor()
-                c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user_id,))
-                phone_result = c.fetchone()
-                conn.close()
+    if is_important:
+        try:
+            conn = sqlite3.connect('store.db')
+            c = conn.cursor()
+            c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user_id,))
+            phone_result = c.fetchone()
+            conn.close()
 
-                if phone_result and phone_result[0]:
-                    response = requests.post(
-                        "YOUR_SMS_GATEWAY_URL",
-                        data={
-                            "to": phone_result[0],
-                            "message": f"إشعار مهم: {message}"
-                        }
-                    )
-                    response.raise_for_status()
-            except Exception as sms_error:
-                print(f"Error sending SMS to {user_id}: {str(sms_error)}")
-        return False
+            if phone_result and phone_result[0]:
+                response = requests.post(
+                    "YOUR_SMS_GATEWAY_URL",
+                    data={
+                        "to": phone_result[0],
+                        "message": f"إشعار مهم: {message}"
+                    }
+                )
+                response.raise_for_status()
+        except Exception as sms_error:
+            print(f"Error sending SMS to {user_id}: {str(sms_error)}")
+    return False
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
