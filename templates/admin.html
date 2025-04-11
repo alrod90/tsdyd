@@ -159,7 +159,7 @@
             </tr>
             {% endfor %}
         </table>
-    </div>
+</div>
 
 
 
@@ -411,11 +411,6 @@
     <div class="section">
         <h2>التحكم في البوت</h2>
         <form action="/toggle_bot" method="post">
-            <div class="form-group mb-2">
-              <label for="customMessage">رسالة إيقاف البوت:</label>
-              <input type="text" class="form-control" id="customMessage" name="custom_message" 
-                     placeholder="عذراً، الخدمة متوقفة مؤقتاً. يمكنك في الوقت الحالي فقط مشاهدة رصيدك وطلباتك.">
-            </div>
             <button type="submit" id="botStatusBtn" onclick="return confirm('هل أنت متأكد من تغيير حالة البوت؟')" style="background-color: {{ '#ff4444' if bot_active else '#4CAF50' }}">
                 {{ 'إيقاف البوت' if bot_active else 'تشغيل البوت' }}
             </button>
