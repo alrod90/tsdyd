@@ -1579,6 +1579,7 @@ def admin_panel():
 
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
+    conn = None
     try:
         name = request.form['name']
         price = float(request.form['price'])
@@ -1599,17 +1600,18 @@ def add_speed():
         # إضافة الارتباطات مع المنتجات
         for product_id in product_ids:
             c.execute('''INSERT INTO speed_products (speed_id, product_id) 
-                        VALUES (?, ?)''', (speed_id, product_id))
+                        VALUES (?, ?)''', (speed_id, int(product_id)))
         
         conn.commit()
-        conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"خطأ في إضافة السرعة: {str(e)}")
-        if 'conn' in locals():
+        if conn:
             conn.rollback()
+            return "حدث خطأ في إضافة السرعة", 500
+    finally:
+        if conn:
             conn.close()
-        return "حدث خطأ في إضافة السرعة", 500
     except Exception as e:
         print(f"Error in add_speed: {str(e)}")
         conn.rollback()
@@ -1650,10 +1652,10 @@ def delete_speed():
 def edit_speed():
     conn = None
     try:
-        speed_id = request.form['speed_id']
+        speed_id = int(request.form['speed_id'])
         name = request.form['name']
         price = float(request.form['price'])
-        product_ids = request.form.getlist('product_ids[]')  # تصحيح اسم المصفوفة
+        product_ids = request.form.getlist('product_ids[]')
 
         if not product_ids:
             return "يجب اختيار منتج واحد على الأقل", 400
@@ -1671,17 +1673,18 @@ def edit_speed():
         # إضافة العلاقات الجديدة
         for product_id in product_ids:
             c.execute('''INSERT INTO speed_products (speed_id, product_id) 
-                        VALUES (?, ?)''', (speed_id, product_id))
+                        VALUES (?, ?)''', (speed_id, int(product_id)))
 
         conn.commit()
-        conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"خطأ في تعديل السرعة: {str(e)}")
         if conn:
             conn.rollback()
+            return "حدث خطأ في تعديل السرعة", 500
+    finally:
+        if conn:
             conn.close()
-        return "حدث خطأ في تعديل السرعة", 500
 
 @app.route('/add_mega', methods=['POST'])
 def add_mega():
