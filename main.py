@@ -2121,7 +2121,7 @@ def change_order_status():
         product_name = order_info[2]
 
         # تحديث حالة الطلب
-        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id= ?',
+        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note =? WHERE id= ?',
                  (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
 
         # إعداد نص الإشعار
@@ -2362,42 +2362,32 @@ def edit_order_amount():
 
         # تحديث مبلغ الطلب
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
-        conn.commit()
 
-        # تخزين معلومات الإشعار في قاعدة البيانات
+        # إعداد رسالة الإشعار
         notification_message = f"""تم تعديل مبلغ الطلب
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ الجديد: {new_amount} ليرة سوري"""
 
+        # حفظ الإشعار في قاعدة البيانات بدلاً من إرساله مباشرة
         c.execute('''CREATE TABLE IF NOT EXISTS notifications 
-                     (id INTEGER PRIMARY KEY, user_id INTEGER, message TEXT, sent BOOLEAN DEFAULT 0)''')
+                     (id INTEGER PRIMARY KEY, user_id INTEGER, message TEXT, sent BOOLEAN DEFAULT 0, 
+                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         c.execute('INSERT INTO notifications (user_id, message) VALUES (?, ?)',
                  (user_id, notification_message))
+
         conn.commit()
         conn.close()
 
-        try:
-            # إرسال الإشعار في عملية منفصلة
-            def send_notification_thread():
-                asyncio.set_event_loop(asyncio.new_event_loop())
-                bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-                bot = telegram.Bot(token=bot_token)
-                asyncio.run(send_notification(bot, notification_message, user_id))
-
-            thread = Thread(target=send_notification_thread)
-            thread.daemon = True
-            thread.start()
-        except Exception as e:
-            print(f"خطأ في إرسال الإشعار: {str(e)}")
-
+        # إرسال الإشعار يتم من خلال وظيفة منفصلة
+        # سيتم إرساله عند التشغيل التالي للتطبيق
         return redirect(url_for('admin_panel'))
 
     except Exception as e:
-        print(f"Error in edit_order_amount: {str(e)}")
-        if 'conn' in locals():
+        print(f"خطأ في تعديل مبلغ الطلب: {str(e)}")
+        if 'conn' in locals() and conn:
             conn.close()
-        return redirect(url_for('admin_panel'))
+        return f"حدث خطأ في تعديل مبلغ الطلب: {str(e)}", 500
 
 # تم إزالة وظيفة حذف الطلبات لمنع حذف أي طلب
 
