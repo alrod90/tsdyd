@@ -951,10 +951,19 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 
             if order:
                 status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
+                
+                # تحديد نوع الطلب
+                order_type = "دفعة يدوية"
+                if 'mega_' in str(order[6]):
+                    order_type = "باقة"
+                elif 'speed_' in str(order[6]):
+                    order_type = "سرعة"
+                
                 message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
 الشركة: {order[1]}
+نوع الطلب: {order_type}
 المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
