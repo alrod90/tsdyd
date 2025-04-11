@@ -1834,52 +1834,74 @@ def edit_product():
     return redirect(url_for('admin_panel'))
 
 async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
+    """
+    دالة محسنة لإرسال الإشعارات للمستخدمين
+    """
+    MAX_RETRIES = 3
+    RETRY_DELAY = 1  # ثانية
+
+    async def send_single_message(bot, chat_id, retry_count=0):
+        try:
+            await bot.send_message(
+                chat_id=int(chat_id),
+                text=message,
+                parse_mode='HTML',
+                disable_notification=not is_important
+            )
+            print(f"✅ تم إرسال الإشعار بنجاح للمستخدم {chat_id}")
+            return True
+        except telegram.error.RetryAfter as e:
+            if retry_count < MAX_RETRIES:
+                await asyncio.sleep(e.retry_after)
+                return await send_single_message(bot, chat_id, retry_count + 1)
+            return False
+        except telegram.error.BadRequest as e:
+            print(f"❌ خطأ في صيغة الرسالة للمستخدم {chat_id}: {str(e)}")
+            return False
+        except telegram.error.Unauthorized:
+            print(f"🚫 المستخدم {chat_id} قام بحظر البوت")
+            return False
+        except Exception as e:
+            print(f"❌ خطأ غير متوقع للمستخدم {chat_id}: {str(e)}")
+            if retry_count < MAX_RETRIES:
+                await asyncio.sleep(RETRY_DELAY)
+                return await send_single_message(bot, chat_id, retry_count + 1)
+            return False
+
     try:
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         if not bot_token:
-            print("خطأ: لم يتم العثور على توكن البوت")
-            return
+            print("❌ خطأ: لم يتم العثور على توكن البوت")
+            return False
 
         bot = telegram.Bot(token=bot_token)
         
-        try:
-            if user_id:
-                await bot.send_message(
-                    chat_id=int(user_id),
-                    text=message,
-                    parse_mode='HTML',
-                    disable_notification=not is_important
-                )
-                print(f"تم إرسال الإشعار بنجاح للمستخدم {user_id}")
-            else:
+        if user_id:
+            # إرسال لمستخدم واحد
+            return await send_single_message(bot, user_id)
+        else:
+            # إرسال لجميع المستخدمين النشطين
+            async with asyncio.Semaphore(5):  # تحديد عدد الإرسالات المتزامنة
                 conn = sqlite3.connect('store.db')
                 c = conn.cursor()
                 c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
                 users = c.fetchall()
                 conn.close()
 
-                for user in users:
-                    try:
-                        await bot.send_message(
-                            chat_id=int(user[0]),
-                            text=message,
-                            parse_mode='HTML',
-                            disable_notification=not is_important
-                        )
-                        print(f"تم إرسال الإشعار بنجاح للمستخدم {user[0]}")
-                        await asyncio.sleep(0.1)
-                    except telegram.error.BadRequest as e:
-                        print(f"خطأ في إرسال الإشعار للمستخدم {user[0]}: {str(e)}")
-                    except telegram.error.Unauthorized as e:
-                        print(f"المستخدم {user[0]} قام بحظر البوت")
-                    except Exception as e:
-                        print(f"خطأ غير متوقع للمستخدم {user[0]}: {str(e)}")
+                success_count = 0
+                total_users = len(users)
 
-        except Exception as e:
-            print(f"خطأ في إرسال الإشعارات: {str(e)}")
-            
+                for user in users:
+                    if await send_single_message(bot, user[0]):
+                        success_count += 1
+                    await asyncio.sleep(0.1)  # تأخير بين الرسائل لتجنب التقييد
+
+                print(f"📊 تم إرسال الإشعارات بنجاح لـ {success_count} من {total_users} مستخدم")
+                return success_count > 0
+
     except Exception as e:
-        print(f"خطأ في تهيئة البوت: {str(e)}")
+        print(f"❌ خطأ في نظام الإشعارات: {str(e)}")
+        return False
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
