@@ -65,9 +65,16 @@ def init_db():
                   enable_packages BOOLEAN DEFAULT 0,
                   enable_custom_amount BOOLEAN DEFAULT 1)''')
 
+    # جدول العلاقة بين المنتجات والسرعات
+    c.execute('''CREATE TABLE IF NOT EXISTS product_speeds
+                 (product_id INTEGER, speed_id INTEGER,
+                  PRIMARY KEY (product_id, speed_id),
+                  FOREIGN KEY(product_id) REFERENCES products(id),
+                  FOREIGN KEY(speed_id) REFERENCES speeds(id))''')
+
+    # جدول السرعات
     c.execute('''CREATE TABLE IF NOT EXISTS speeds
-                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
-                 FOREIGN KEY(product_id) REFERENCES products(id))''')
+                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1)''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS packages
                  (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
@@ -82,9 +89,16 @@ def init_db():
                   created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
+    # جدول العلاقة بين المنتجات والباقات
+    c.execute('''CREATE TABLE IF NOT EXISTS product_megas
+                 (product_id INTEGER, mega_id INTEGER,
+                  PRIMARY KEY (product_id, mega_id),
+                  FOREIGN KEY(product_id) REFERENCES products(id),
+                  FOREIGN KEY(mega_id) REFERENCES megas(id))''')
+
+    # جدول الباقات
     c.execute('''CREATE TABLE IF NOT EXISTS megas
-                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
-                 FOREIGN KEY(product_id) REFERENCES products(id))''')
+                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1)''')
 
     # تحديث حالة المنتجات عند تغيير حالة القسم
     c.execute('''CREATE TRIGGER IF NOT EXISTS update_products_status 
@@ -1579,15 +1593,24 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
-        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
+        selected_products = request.form.getlist('products[]')
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
-                 (product_id, name, price, is_active))
+        
+        # إضافة السرعة الجديدة
+        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
+                 (name, price, is_active))
+        speed_id = c.lastrowid
+        
+        # ربط السرعة بالمنتجات المختارة
+        for product_id in selected_products:
+            c.execute('INSERT INTO product_speeds (product_id, speed_id) VALUES (?, ?)',
+                     (product_id, speed_id))
+        
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
