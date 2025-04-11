@@ -486,7 +486,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             c.execute('SELECT category FROM products WHERE id = ?', (context.user_data.get('product_id'),))
             category = c.fetchone()
-            
+
             if category:
                 c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category[0],))
                 products = c.fetchall()
@@ -612,7 +612,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not item:
                 await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
                 return
-                
+
             context.user_data['product_id'] = product_id
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
@@ -676,7 +676,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for product in products:
-            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
+            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'addorder_product_{product[0]}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -2130,6 +2130,7 @@ def change_order_status():
         product_name = c.fetchone()[0]
 
         # إعداد رسالة الإشعار
+        notification_message = ""
         if new_status == "accepted":
             notification_message = f"""✅ تم قبول طلبك!
 رقم الطلب: {order_id}
@@ -2139,19 +2140,14 @@ def change_order_status():
             notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
 رقم الطلب: {order_id}
 الشركة: {product_name}
-المبلغ المعاد لرصيدك: {amount} ليرة سوري"""
+المبلغ المعاد: {amount} ليرة سوري"""
             if rejection_note:
                 notification_message += f"\nسبب الرفض: {rejection_note}"
-
-            # إضافة الرصيد الحالي بعد الإعادة
-            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
-            current_balance = c.fetchone()[0]
-            notification_message += f"\n\nرصيدك الحالي: {current_balance} ليرة سوري"
         else:
             notification_message = f"""🕒 تم تحديث حالة طلبك
 رقم الطلب: {order_id}
 الشركة: {product_name}
-الحالة: قيد المعالجة"""
+الحالة الجديدة: قيد المعالجة"""
 
         if note:
             notification_message += f"\nملاحظة: {note}"
