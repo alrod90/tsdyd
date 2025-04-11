@@ -48,13 +48,6 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
-
-    # إضافة عمود نوع الطلب إذا لم يكن موجوداً
-    try:
-        c.execute("ALTER TABLE orders ADD COLUMN order_type TEXT")
-        conn.commit()
-    except:
-        pass # العمود موجود بالفعل
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -1260,6 +1253,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     order_id = c.lastrowid
     conn.commit()
 
+    # إرسال إشعار للمدير
     # تحديد نوع الطلب
     order_type = ""
     if context.user_data.get('selected_mega'):
@@ -1274,9 +1268,6 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
             order_type = f"سرعة: {speed[0]}"
     else:
         order_type = "دفعة يدوية"
-
-    # حفظ نوع الطلب في قاعدة البيانات
-    c.execute('UPDATE orders SET order_type = ? WHERE id = ?', (order_type, order_id))
 
     # إرسال إشعار للمدير
     admin_message = f"""
@@ -1578,7 +1569,7 @@ def admin_panel():
         admin_id = c.fetchone()
 
         if admin_id and admin_id[0]:
-            c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note, o.order_type
+            c.execute('''SELECT o.id, o.user_id, p.name, o.amount, o.customer_info, o.status, o.created_at, o.note
                          FROM orders o 
                          JOIN products p ON o.product_id = p.id 
                          ORDER BY o.created_at DESC''')
@@ -2124,6 +2115,7 @@ def change_order_status():
         order_info = c.fetchone()
         if not order_info:
             return "الطلب غير موجود", 404
+
         user_id = order_info[0]
         amount = order_info[1]
         product_name = order_info[2]
@@ -2332,10 +2324,10 @@ def edit_order_amount():
     try:
         order_id = request.form['order_id']
         new_amount = float(request.form['new_amount'])
-
+        
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-
+        
         # استرجاع معلومات الطلب الحالية
         c.execute('''SELECT o.amount, o.user_id, o.status, p.name, u.balance
                      FROM orders o 
@@ -2372,7 +2364,7 @@ def edit_order_amount():
 
         # تحديث مبلغ الطلب
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
-
+        
         # إعداد رسالة الإشعار
         notification_message = f"""تم تعديل مبلغ الطلب
 رقم الطلب: {order_id}
@@ -2395,7 +2387,7 @@ def edit_order_amount():
                 requests.post(telegram_api_url, json=payload)
         except Exception as e:
             print(f"Error sending notification: {str(e)}")
-
+        
         conn.close()
         return redirect(url_for('admin_panel'))
 
