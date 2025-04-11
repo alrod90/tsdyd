@@ -679,8 +679,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.message.edit_text("اختر```python
- الطلب للتعديل:", reply_markup=reply_markup)
+            await query.message.edit_text("اختر الطلب للتعديل:", reply_markup=reply_markup)
             return
 
     elif query.data.startswith('edit_order_'):
