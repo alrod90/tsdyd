@@ -548,6 +548,7 @@
                 <th>رقم الطلب</th>
                 <th>معرف المستخدم</th>
                 <th>الشركة</th>
+                <th>نوع الطلب</th>
                 <th>المبلغ</th>
                 <th>معلومات الزبون</th>
                 <th>الحالة</th>
@@ -560,6 +561,19 @@
                 <td>{{ order[0] }}</td>
                 <td>{{ order[1] }}</td>
                 <td>{{ order[2] }}</td>
+                <td>
+                    {% if order[7] %}
+                        {% if 'mega_' in order[7] %}
+                            باقة
+                        {% elif 'speed_' in order[7] %}
+                            سرعة
+                        {% else %}
+                            دفعة يدوية
+                        {% endif %}
+                    {% else %}
+                        دفعة يدوية
+                    {% endif %}
+                </td>
                 <td>{{ order[3] }}</td>
                 <td>{{ order[4] }}</td>
                 <td>
