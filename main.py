@@ -1263,8 +1263,15 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     # خصم المبلغ من رصيد المستخدم وإنشاء الطلب
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
               (amount, update.effective_user.id))
-    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info) VALUES (?, ?, ?, ?)',
-              (update.effective_user.id, context.user_data['product_id'], amount, customer_info))
+    # تحديد نوع الطلب
+        order_type = None
+        if context.user_data.get('selected_mega'):
+            order_type = f"mega_{context.user_data['selected_mega']}"
+        elif context.user_data.get('selected_speed'):
+            order_type = f"speed_{context.user_data['selected_speed']}"
+
+        c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, note) VALUES (?, ?, ?, ?, ?)',
+              (update.effective_user.id, context.user_data['product_id'], amount, customer_info, order_type))
     order_id = c.lastrowid
     conn.commit()
 
