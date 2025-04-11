@@ -1836,45 +1836,41 @@ def edit_product():
 async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
     try:
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            print("خطأ: لم يتم العثور على توكن البوت")
+            return
+            
         bot = telegram.Bot(token=bot_token)
-        
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        if user_id:
-            users = [(user_id,)]
-        else:
-            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-            users = c.fetchall()
+        try:
+            if user_id:
+                users = [(user_id,)]
+            else:
+                c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+                users = c.fetchall()
 
-        for user in users:
-            try:
-                await bot.send_message(
-                    chat_id=user[0],
-                    text=message,
-                    parse_mode='HTML',
-                    disable_notification=False
-                )
-                print(f"تم إرسال الإشعار بنجاح للمستخدم {user[0]}")
-            except Exception as e:
-                print(f"خطأ في إرسال الإشعار للمستخدم {user[0]}: {str(e)}")
-                # محاولة ثانية للإرسال
+            for user in users:
                 try:
-                    await asyncio.sleep(1)
                     await bot.send_message(
-                        chat_id=user[0],
+                        chat_id=int(user[0]),  # تحويل المعرف إلى رقم
                         text=message,
-                        parse_mode=None,
-                        disable_notification=False
+                        parse_mode=None,  # تعطيل parse_mode لتجنب الأخطاء
+                        disable_notification=not is_important
                     )
-                    print(f"نجحت المحاولة الثانية لإرسال الإشعار للمستخدم {user[0]}")
-                except Exception as e2:
-                    print(f"فشلت المحاولة الثانية للإرسال للمستخدم {user[0]}: {str(e2)}")
+                    print(f"تم إرسال الإشعار بنجاح للمستخدم {user[0]}")
+                    await asyncio.sleep(0.1)  # تأخير صغير بين الرسائل
+                except telegram.error.BadRequest as e:
+                    print(f"خطأ في صيغة الرسالة للمستخدم {user[0]}: {str(e)}")
+                except telegram.error.Unauthorized as e:
+                    print(f"المستخدم {user[0]} قام بحظر البوت: {str(e)}")
+                except Exception as e:
+                    print(f"خطأ في إرسال الإشعار للمستخدم {user[0]}: {str(e)}")
+        finally:
+            conn.close()
     except Exception as e:
         print(f"خطأ عام في إرسال الإشعارات: {str(e)}")
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
