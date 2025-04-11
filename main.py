@@ -2208,10 +2208,13 @@ def change_order_status():
         c.execute('SELECT note FROM orders WHERE id = ?', (order_id,))
         current_note = c.fetchone()[0]
         
-        # الحفاظ على نوع الطلب إذا كان موجوداً
-        if current_note and ('mega_' in current_note or 'speed_' in current_note):
-            order_type = current_note.split('_')[0] + '_' + current_note.split('_')[1]
-            final_note = order_type + (f" - {note}" if note else "")
+        # الحفاظ على نوع الطلب عند تعديل الملاحظات
+        if current_note:
+            if 'mega_' in current_note or 'speed_' in current_note:
+                order_type = current_note.split(' - ')[0] if ' - ' in current_note else current_note
+                final_note = order_type + (f" - {note}" if note else "")
+            else:
+                final_note = note
         else:
             final_note = note
 
