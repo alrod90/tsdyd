@@ -2091,6 +2091,7 @@ def toggle_user():
 
 @app.route('/change_order_status', methods=['POST'])
 def change_order_status():
+    conn = None
     try:
         order_id = request.form.get('order_id')
         new_status = request.form.get('new_status')
@@ -2113,7 +2114,6 @@ def change_order_status():
 
         order_info = c.fetchone()
         if not order_info:
-            conn.close()
             return "الطلب غير موجود", 404
 
         user_id = order_info[0]
@@ -2222,12 +2222,17 @@ def change_order_status():
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
         conn.commit()
-        conn.close()
         return redirect(url_for('admin_panel'))
 
     except Exception as e:
         print(f"Error in change_order_status: {str(e)}")
         return f"حدث خطأ في تغيير حالة الطلب: {str(e)}", 500
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception as e:
+                print(f"Error closing connection: {str(e)}")
 
 @app.route('/handle_order', methods=['POST'])
 def handle_order():
