@@ -1833,45 +1833,26 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-
-    if user_id:
-        users = [(user_id,)]
-    else:
-        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-        users = c.fetchall()
-
-    # إرسال عبر تيليجرام أولاً
-    for user in users:
-        success = False
-        retry_count = 3
-
-        while retry_count > 0 and not success:
+async def send_notification(bot, user_id, message, is_important=False):
+    try:
+        await bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode='HTML',
+            disable_notification=False
+        )
+        return True
+    except Exception as e:
+        print(f"Error sending notification to {user_id}: {str(e)}")
+        if is_important:
             try:
-                # محاولة إرسال رسالة مع إشعار صوتي
-                await context.bot.send_message(
-                    chat_id=user[0],
-                    text=message,
-                    disable_notification=False,
-                    protect_content=True
-                )
-                success = True
-            except Exception as e:
-                print(f"Error sending Telegram message to {user[0]}: {str(e)}")
-                retry_count -= 1
-                await asyncio.sleep(1)
-
-        # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
-        if not success and is_important:
-            try:
-                # استرجاع رقم الهاتف من قاعدة البيانات
-                c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user[0],))
+                conn = sqlite3.connect('store.db')
+                c = conn.cursor()
+                c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (user_id,))
                 phone_result = c.fetchone()
+                conn.close()
 
                 if phone_result and phone_result[0]:
-                    # إرسال SMS عبر خدمة SMS
                     response = requests.post(
                         "YOUR_SMS_GATEWAY_URL",
                         data={
@@ -1880,38 +1861,30 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
                         }
                     )
                     response.raise_for_status()
-            except Exception as e:
-                print(f"Error sending SMS to {user[0]}: {str(e)}")
-
-    conn.close()
+            except Exception as sms_error:
+                print(f"Error sending SMS to {user_id}: {str(sms_error)}")
+        return False
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
     message = request.form['message']
-    user_id = request.form.get('user_id', None)
+    user_id = request.form.get('user_id')
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-
+    
     async def send_notifications():
         bot = telegram.Bot(token=bot_token)
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-
-        try:
-            if user_id:
-                await bot.send_message(chat_id=int(user_id), text=message)
-            else:
-                c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-                users = c.fetchall()
-                for user in users:
-                    try:
-                        await bot.send_message(chat_id=user[0], text=message)
-                    except Exception as e:
-                        print(f"Error sending message to {user[0]}: {e}")
-        except Exception as e:
-            print(f"Error sending notification: {e}")
-        finally:
+        if user_id:
+            await send_notification(bot, int(user_id), message, is_important=True)
+        else:
+            conn = sqlite3.connect('store.db')
+            c = conn.cursor()
+            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+            users = c.fetchall()
             conn.close()
-
+            
+            for user in users:
+                await send_notification(bot, user[0], message, is_important=True)
+    
     asyncio.run(send_notifications())
     return redirect(url_for('admin_panel'))
 
