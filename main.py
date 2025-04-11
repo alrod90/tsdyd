@@ -2204,19 +2204,7 @@ def change_order_status():
                      (amount, user_id))
 
         # تحديث حالة الطلب
-        # الحصول على نوع الطلب الحالي قبل التحديث
-        c.execute('SELECT note FROM orders WHERE id = ?', (order_id,))
-        current_note = c.fetchone()[0]
-        
-        # الحفاظ على نوع الطلب عند تعديل الملاحظات
-        if current_note:
-            if 'mega_' in current_note or 'speed_' in current_note:
-                order_type = current_note.split(' - ')[0] if ' - ' in current_note else current_note
-                final_note = order_type + (f" - {note}" if note else "")
-            else:
-                final_note = note
-        else:
-            final_note = note
+        final_note = note
 
         c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
                  (new_status, final_note, rejection_note if new_status == 'rejected' else None, order_id))
