@@ -48,6 +48,13 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
+    
+    # إضافة عمود نوع الطلب إذا لم يكن موجوداً
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN order_type TEXT")
+        conn.commit()
+    except:
+        pass # العمود موجود بالفعل
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
