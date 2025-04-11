@@ -1833,35 +1833,35 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
+async def send_notification(bot_token: str, message: str, user_id=None):
+    try:
+        bot = telegram.Bot(token=bot_token)
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
 
-    if user_id:
-        users = [(user_id,)]
-    else:
-        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-        users = c.fetchall()
+        if user_id:
+            users = [(user_id,)]
+        else:
+            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+            users = c.fetchall()
 
-    # إرسال عبر تيليجرام أولاً
-    for user in users:
-        success = False
-        retry_count = 3
-
-        while retry_count > 0 and not success:
+        for user in users:
             try:
-                # محاولة إرسال رسالة مع إشعار صوتي
-                await context.bot.send_message(
+                await bot.send_message(
                     chat_id=user[0],
                     text=message,
-                    disable_notification=False,
-                    protect_content=True
+                    parse_mode='HTML',
+                    disable_notification=False
                 )
-                success = True
+                print(f"Notification sent successfully to {user[0]}")
             except Exception as e:
-                print(f"Error sending Telegram message to {user[0]}: {str(e)}")
-                retry_count -= 1
-                await asyncio.sleep(1)
+                print(f"Error sending notification to {user[0]}: {str(e)}")
+                continue
+    except Exception as e:
+        print(f"Error in send_notification: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
         # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
         if not success and is_important:
@@ -1887,33 +1887,26 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
-    message = request.form['message']
-    user_id = request.form.get('user_id', None)
-    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    try:
+        message = request.form['message']
+        user_id = request.form.get('user_id')
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        
+        if not bot_token:
+            print("Error: TELEGRAM_BOT_TOKEN not found")
+            return "Error: Bot token not configured", 500
 
-    async def send_notifications():
-        bot = telegram.Bot(token=bot_token)
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
+        if user_id:
+            try:
+                user_id = int(user_id)
+            except ValueError:
+                return "Invalid user ID", 400
 
-        try:
-            if user_id:
-                await bot.send_message(chat_id=int(user_id), text=message)
-            else:
-                c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-                users = c.fetchall()
-                for user in users:
-                    try:
-                        await bot.send_message(chat_id=user[0], text=message)
-                    except Exception as e:
-                        print(f"Error sending message to {user[0]}: {e}")
-        except Exception as e:
-            print(f"Error sending notification: {e}")
-        finally:
-            conn.close()
-
-    asyncio.run(send_notifications())
-    return redirect(url_for('admin_panel'))
+        asyncio.run(send_notification(bot_token, message, user_id))
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in send_notification_route: {str(e)}")
+        return str(e), 500
 
 @app.route('/add_order', methods=['POST'])
 def add_order():
