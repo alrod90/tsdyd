@@ -1583,7 +1583,7 @@ def add_speed():
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
-        product_ids = request.form.getlist('product_ids')
+        product_ids = request.form.getlist('product_ids[]')
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
@@ -1594,16 +1594,21 @@ def add_speed():
         speed_id = c.lastrowid
         
         # إضافة الارتباطات مع المنتجات
-        for product_id in product_ids:
-            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
-                     (speed_id, product_id))
+        if product_ids:
+            for product_id in product_ids:
+                c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
+                         (speed_id, product_id))
         
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"Error in add_speed: {str(e)}")
-        return "حدث خطأ في إضافة السرعة", 500
+        conn.rollback()
+        return f"حدث خطأ في إضافة السرعة: {str(e)}", 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/toggle_speed', methods=['POST'])
 def toggle_speed():
