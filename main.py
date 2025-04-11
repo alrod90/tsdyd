@@ -508,36 +508,38 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        # التحقق من وجود باقات أو سرعات للمنتج
-        c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
-        product = c.fetchone()
+        try:
+            # التحقق من وجود باقات أو سرعات للمنتج
+            c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
+            product = c.fetchone()
 
-        c.execute('SELECT COUNT(*) FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
-        has_megas = c.fetchone()[0] > 0
+            c.execute('SELECT COUNT(*) FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
+            has_megas = c.fetchone()[0] > 0
 
-        c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
-        has_speeds = c.fetchone()[0] > 0
+            c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
+            has_speeds = c.fetchone()[0] > 0
 
-        keyboard = []
-        keyboard.append([InlineKeyboardButton("إضافة دفعة", callback_data=f'add_balance_{product_id}')])
+            keyboard = []
+            keyboard.append([InlineKeyboardButton("إضافة دفعة", callback_data=f'manual_balance_{product_id}')])
 
-        row = []
-        if has_megas:
-            row.append(InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}'))
+            row = []
+            if has_megas:
+                row.append(InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}'))
 
-        if has_speeds:
-            row.append(InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}'))
+            if has_speeds:
+                row.append(InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}'))
 
-        if row:
-            keyboard.append(row)
+            if row:
+                keyboard.append(row)
 
-        keyboard.append([InlineKeyboardButton("رجوع للقائمة السابقة", callback_data='back_to_main')])
+            keyboard.append([InlineKeyboardButton("رجوع للقائمة السابقة", callback_data='back_to_main')])
 
-        context.user_data['product_name'] = product[0]
+            context.user_data['product_name'] = product[0]
 
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text(f"اختر نوع الخدمة لـ {product[0]}:", reply_markup=reply_markup)
-        conn.close()
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.message.edit_text(f"اختر نوع الخدمة لـ {product[0]}:", reply_markup=reply_markup)
+        finally:
+            conn.close()
         return
 
     elif query.data.startswith('megas_'):
@@ -639,8 +641,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 c.close()
                 conn.close()
 
-    elif query.data.startswith('add_balance_') or query.data.startswith('manual_'):
-        product_id = int(query.data.split('_')[1])
+    elif query.data.startswith('manual_balance_'):
+        product_id = int(query.data.split('_')[2])
         context.user_data['product_id'] = product_id
         # مسح المبلغ السابق إن وجد
         if 'amount' in context.user_data:
@@ -648,12 +650,13 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
-        product_name = c.fetchone()[0]
-        conn.close()
-
-        context.user_data['product_name'] = product_name
-        await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        try:
+            c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
+            product_name = c.fetchone()[0]
+            context.user_data['product_name'] = product_name
+            await query.message.edit_text("الرجاء إدخال بيانات الزبون:")
+        finally:
+            conn.close()
         return "WAITING_CUSTOMER_INFO"
     elif query.data == 'add_new_order':
         conn = sqlite3.connect('store.db')
