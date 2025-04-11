@@ -561,19 +561,23 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     elif query.data.startswith('select_mega_') or query.data.startswith('select_speed_'):
-        parts = query.data.split('_')
-        item_type = parts[1]  # mega or speed
-        item_id = int(parts[2])
-        product_id = int(parts[3])
+        try:
+            parts = query.data.split('_')
+            item_type = parts[1]  # mega or speed
+            item_id = int(parts[2])
+            product_id = int(parts[3])
 
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
+            conn = sqlite3.connect('store.db')
+            c = conn.cursor()
 
-        table_name = 'megas' if item_type == 'mega' else 'speeds'
-        c.execute(f'SELECT name, price FROM {table_name} WHERE id = ?', (item_id,))
-        item = c.fetchone()
+            table_name = 'megas' if item_type == 'mega' else 'speeds'
+            c.execute(f'SELECT name, price FROM {table_name} WHERE id = ?', (item_id,))
+            item = c.fetchone()
 
-        if item:
+            if not item:
+                await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
+                return
+                
             context.user_data['product_id'] = product_id
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
@@ -592,7 +596,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if user_balance < item[1]:
                 await query.message.edit_text(f"عذراً، رصيدك غير كافي. رصيدك الحالي: {user_balance} ليرة سوري")
-                conn.close()
                 return
 
             # عرض تأكيد الطلب مباشرة مع تفاصيل السعر
@@ -601,12 +604,16 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 الرجاء إدخال بيانات الزبون:"""
 
             await query.message.edit_text(confirmation_message)
-            conn.close()
             return "WAITING_CUSTOMER_INFO"
 
-        conn.close()
-        await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
-        return
+        except Exception as e:
+            print(f"Error in select_mega_speed: {str(e)}")
+            await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
+            return
+        finally:
+            if 'conn' in locals():
+                c.close()
+                conn.close()
 
     elif query.data.startswith('add_balance_') or query.data.startswith('manual_'):
         product_id = int(query.data.split('_')[1])
