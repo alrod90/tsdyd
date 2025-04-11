@@ -66,8 +66,13 @@ def init_db():
                   enable_custom_amount BOOLEAN DEFAULT 1)''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS speeds
-                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
-                 FOREIGN KEY(product_id) REFERENCES products(id))''')
+                 (id INTEGER PRIMARY KEY, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1)''')
+                 
+    c.execute('''CREATE TABLE IF NOT EXISTS product_speeds
+                 (speed_id INTEGER, product_id INTEGER,
+                  PRIMARY KEY (speed_id, product_id),
+                  FOREIGN KEY(speed_id) REFERENCES speeds(id),
+                  FOREIGN KEY(product_id) REFERENCES products(id))''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS packages
                  (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
@@ -539,7 +544,10 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         product_id = int(query.data.split('_')[1])
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT id, name, price FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
+        c.execute('''SELECT s.id, s.name, s.price 
+                     FROM speeds s
+                     JOIN product_speeds ps ON s.id = ps.speed_id
+                     WHERE ps.product_id = ? AND s.is_active = 1''', (product_id,))
         speeds = c.fetchall()
         conn.close()
 
@@ -1579,21 +1587,58 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
-        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
+        product_ids = request.form.getlist('products[]')
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
-                 (product_id, name, price, is_active))
+        
+        # Add speed
+        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
+                 (name, price, is_active))
+        speed_id = c.lastrowid
+        
+        # Link products
+        for product_id in product_ids:
+            c.execute('INSERT INTO product_speeds (speed_id, product_id) VALUES (?, ?)',
+                     (speed_id, product_id))
+        
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"Error in add_speed: {str(e)}")
         return "حدث خطأ في إضافة السرعة", 500
+
+@app.route('/edit_speed', methods=['POST']) 
+def edit_speed():
+    try:
+        speed_id = request.form['speed_id']
+        name = request.form['name']
+        price = float(request.form['price'])
+        product_ids = request.form.getlist('products[]')
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # Update speed
+        c.execute('UPDATE speeds SET name = ?, price = ? WHERE id = ?',
+                 (name, price, speed_id))
+        
+        # Update product links
+        c.execute('DELETE FROM product_speeds WHERE speed_id = ?', (speed_id,))
+        for product_id in product_ids:
+            c.execute('INSERT INTO product_speeds (speed_id, product_id) VALUES (?, ?)',
+                     (speed_id, product_id))
+        
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in edit_speed: {str(e)}")
+        return "حدث خطأ في تعديل السرعة", 500
 
 @app.route('/toggle_speed', methods=['POST'])
 def toggle_speed():
