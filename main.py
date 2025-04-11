@@ -369,6 +369,52 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await query.message.edit_text("إدارة المنتجات:", reply_markup=InlineKeyboardMarkup(keyboard))
 
+    elif query.data.startswith('edit_product_'):
+        product_id = int(query.data.split('_')[2])
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # Get product details
+        c.execute('SELECT name, category FROM products WHERE id = ?', (product_id,))
+        product = c.fetchone()
+        
+        # Get associated speeds
+        c.execute('SELECT id, name, price FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
+        speeds = c.fetchall()
+        
+        # Get associated megas
+        c.execute('SELECT id, name, price FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
+        megas = c.fetchall()
+        
+        keyboard = [
+            [InlineKeyboardButton("تعديل اسم المنتج", callback_data=f'edit_product_name_{product_id}')],
+            [InlineKeyboardButton("تعديل القسم", callback_data=f'edit_product_category_{product_id}')]
+        ]
+        
+        # Add speed management buttons if speeds exist
+        if speeds:
+            keyboard.append([InlineKeyboardButton("إدارة السرعات", callback_data=f'manage_speeds_{product_id}')])
+            
+        # Add mega management buttons if megas exist
+        if megas:
+            keyboard.append([InlineKeyboardButton("إدارة الباقات", callback_data=f'manage_megas_{product_id}')])
+            
+        keyboard.append([InlineKeyboardButton("رجوع", callback_data='products_menu')])
+        
+        message = f"تعديل المنتج: {product[0]}\nالقسم: {product[1]}"
+        if speeds:
+            message += "\n\nالسرعات المرتبطة:"
+            for speed in speeds:
+                message += f"\n- {speed[1]}: {speed[2]} ل.س"
+        if megas:
+            message += "\n\nالباقات المرتبطة:"
+            for mega in megas:
+                message += f"\n- {mega[1]}: {mega[2]} ل.س"
+                
+        conn.close()
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text(message, reply_markup=reply_markup)
+
     elif query.data == 'orders_menu':
         keyboard = [
             [
