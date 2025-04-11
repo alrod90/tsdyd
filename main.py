@@ -66,8 +66,12 @@ def init_db():
                   enable_custom_amount BOOLEAN DEFAULT 1)''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS speeds
-                 (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
-                 FOREIGN KEY(product_id) REFERENCES products(id))''')
+                 (id INTEGER PRIMARY KEY,  name TEXT, price REAL, is_active BOOLEAN DEFAULT 1)''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS speed_products
+                 (id INTEGER PRIMARY KEY, speed_id INTEGER, product_id INTEGER,
+                  FOREIGN KEY(speed_id) REFERENCES speeds(id),
+                  FOREIGN KEY(product_id) REFERENCES products(id))''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS packages
                  (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, is_active BOOLEAN DEFAULT 1,
@@ -1350,7 +1354,7 @@ async def update_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE
                 return
             c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount_diff, user_id))
         elif amount_diff < 0:
-            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?', (-amount_diff, user_id))
+            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',(-amount_diff, user_id))
     c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
     conn.commit()
     conn.close()
@@ -1533,9 +1537,8 @@ def admin_panel():
 
         # Fetch speeds with product names
         c.execute('''
-            SELECT s.id, s.name, s.price, s.product_id, p.name as product_name, s.is_active
+            SELECT s.id, s.name, s.price, s.is_active
             FROM speeds s
-            JOIN products p ON s.product_id = p.id
             ORDER BY s.id DESC
         ''')
         speeds = [
@@ -1543,9 +1546,7 @@ def admin_panel():
                 'id': row[0],
                 'name': row[1],
                 'price': row[2],
-                'product_id': row[3],
-                'product_name': row[4],
-                'is_active': row[5]
+                'is_active': row[3]
             }
             for row in c.fetchall()
         ]
@@ -1579,15 +1580,15 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
-        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
-                 (product_id, name, price, is_active))
+        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
+                 (name, price, is_active))
+        speed_id = c.lastrowid
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
@@ -1629,17 +1630,29 @@ def edit_speed():
         speed_id = request.form['speed_id']
         name = request.form['name']
         price = float(request.form['price'])
-        product_id = request.form['product_id'] # Added product_id
+        product_ids = request.form.getlist('product_ids')
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('UPDATE speeds SET name = ?, price = ?, product_id = ? WHERE id = ?',
-                 (name, price, product_id, speed_id)) # Updated query to include product_id
+
+        # تحديث معلومات السرعة
+        c.execute('UPDATE speeds SET name = ?, price = ? WHERE id = ?',
+                 (name, price, speed_id))
+
+        # حذف العلاقات القديمة
+        c.execute('DELETE FROM speed_products WHERE speed_id = ?', (speed_id,))
+
+        # إضافة العلاقات الجديدة
+        for product_id in product_ids:
+            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
+                     (speed_id, product_id))
+
         conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"Error in edit_speed: {str(e)}")
-        return "حدث خطأ في تعديل السرعة", 500
+        return redirect(url_for('admin_panel'))
 
 @app.route('/add_mega', methods=['POST'])
 def add_mega():
@@ -2137,7 +2150,7 @@ def handle_order():
             return "بيانات غير صحيحة", 400
 
         conn = sqlite3.connect('store.db')
-        c = conn.cursor()
+c = conn.cursor()
 
         # استرجاع معلومات الطلب والمنتج
         c.execute('''
