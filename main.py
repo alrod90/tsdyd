@@ -48,19 +48,6 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
-
-    # إضافة جداول الربط بين المنتجات والسرعات/الباقات
-    c.execute('''CREATE TABLE IF NOT EXISTS speed_products
-                 (speed_id INTEGER, product_id INTEGER,
-                  PRIMARY KEY (speed_id, product_id),
-                  FOREIGN KEY (speed_id) REFERENCES speeds(id),
-                  FOREIGN KEY (product_id) REFERENCES products(id))''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS mega_products
-                 (mega_id INTEGER, product_id INTEGER,
-                  PRIMARY KEY (mega_id, product_id),
-                  FOREIGN KEY (mega_id) REFERENCES megas(id),
-                  FOREIGN KEY (product_id) REFERENCES products(id))''')
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -1354,7 +1341,7 @@ async def update_order_amount(update: Update, context: ContextTypes.DEFAULT_TYPE
     status = current_order[2]
     if status != 'rejected':
         amount_diff = new_amount - current_amount
-        if amount_diff> 0:
+        if amount_diff > 0:
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
             user_balance = c.fetchone()[0]
             if user_balance < amount_diff:
@@ -1592,34 +1579,16 @@ def admin_panel():
 @app.route('/add_speed', methods=['POST'])
 def add_speed():
     try:
+        product_id = request.form['product_id']
         name = request.form['name']
         price = float(request.form['price'])
         is_active = 'is_active' in request.form
-        product_ids = request.form.getlist('product_ids')
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-
-        # إنشاء السرعة
-        c.execute('INSERT INTO speeds (name, price, is_active) VALUES (?, ?, ?)',
-                 (name, price, is_active))
-        speed_id = c.lastrowid
-
-        # ربط السرعة بالمنتجات المحددة
-        for product_id in product_ids:
-            c.execute('INSERT INTO speed_products (speed_id, product_id) VALUES (?, ?)',
-                     (speed_id, product_id))
-
+        c.execute('INSERT INTO speeds (product_id, name, price, is_active) VALUES (?, ?, ?, ?)',
+                 (product_id, name, price, is_active))
         conn.commit()
-
-        # جلب أسماء المنتجات المرتبطة للإشعار
-        c.execute('''
-            SELECT p.name FROM products p 
-            JOIN speed_products sp ON p.id = sp.product_id 
-            WHERE sp.speed_id = ?
-        ''', (speed_id,))
-        product_names = [row[0] for row in c.fetchall()]
-
         conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
