@@ -2143,7 +2143,7 @@ def handle_order():
         c.execute('''
             SELECT o.user_id, o.amount, p.name, u.balance 
             FROM orders o 
-            JOIN products p ON o.productid = p.id 
+            JOIN products p ON o.product_id = p.id 
             JOIN users u ON o.user_id = u.telegram_id 
             WHERE o.id = ?
         ''', (order_id,))
