@@ -573,6 +573,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
             
+            # حفظ معرف الباقة أو السرعة المختارة
+            if item_type == 'mega':
+                context.user_data['selected_mega'] = item_id
+                context.user_data['selected_speed'] = None
+            else:
+                context.user_data['selected_speed'] = item_id
+                context.user_data['selected_mega'] = None
+            
             # التحقق من الرصيد
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
             user_balance = c.fetchone()[0]
@@ -1195,11 +1203,27 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     conn.commit()
 
     # إرسال إشعار للمدير
-    admin_message = f"""
+    # تحديد نوع الطلب
+            order_type = ""
+            if context.user_data.get('selected_mega'):
+                c.execute('SELECT name FROM megas WHERE id = ?', (context.user_data['selected_mega'],))
+                mega = c.fetchone()
+                if mega:
+                    order_type = f"باقة: {mega[0]}"
+            elif context.user_data.get('selected_speed'):
+                c.execute('SELECT name FROM speeds WHERE id = ?', (context.user_data['selected_speed'],))
+                speed = c.fetchone()
+                if speed:
+                    order_type = f"سرعة: {speed[0]}"
+            else:
+                order_type = "دفعة يدوية"
+
+            admin_message = f"""
 طلب جديد
 رقم الطلب: {order_id}
 معرف المشتري: {update.effective_user.id}
 الشركة: {product_name}
+نوع الطلب: {order_type}
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
 """
