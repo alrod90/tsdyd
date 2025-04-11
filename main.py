@@ -952,12 +952,18 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
             if order:
                 status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
                 
-                # تحديد نوع الطلب
+                # تحديد نوع الطلب وتفاصيله
                 order_type = "دفعة يدوية"
-                if 'mega_' in str(order[6]):
-                    order_type = "باقة"
-                elif 'speed_' in str(order[6]):
-                    order_type = "سرعة"
+                c.execute('SELECT m.name FROM megas m WHERE m.id = ?', (order[6].split('_')[1],)) if order[6] and 'mega_' in order[6] else None
+                mega_name = c.fetchone()
+                
+                c.execute('SELECT s.name FROM speeds s WHERE s.id = ?', (order[6].split('_')[1],)) if order[6] and 'speed_' in order[6] else None
+                speed_name = c.fetchone()
+                
+                if mega_name:
+                    order_type = f"باقة: {mega_name[0]}"
+                elif speed_name:
+                    order_type = f"سرعة: {speed_name[0]}"
                 
                 message = f"""
 تفاصيل الطلب:
