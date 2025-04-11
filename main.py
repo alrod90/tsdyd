@@ -2364,22 +2364,33 @@ def edit_order_amount():
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
         conn.commit()
 
-        # إرسال إشعار للمستخدم
+        # تخزين معلومات الإشعار في قاعدة البيانات
         notification_message = f"""تم تعديل مبلغ الطلب
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ الجديد: {new_amount} ليرة سوري"""
 
+        c.execute('''CREATE TABLE IF NOT EXISTS notifications 
+                     (id INTEGER PRIMARY KEY, user_id INTEGER, message TEXT, sent BOOLEAN DEFAULT 0)''')
+        c.execute('INSERT INTO notifications (user_id, message) VALUES (?, ?)',
+                 (user_id, notification_message))
+        conn.commit()
+        conn.close()
+
         try:
-            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-            bot = telegram.Bot(token=bot_token)
-            # استخدام Thread لإرسال الإشعار بشكل غير متزامن
-            notification_thread = Thread(target=lambda: asyncio.run(send_notification(None, notification_message, user_id)))
-            notification_thread.start()
+            # إرسال الإشعار في عملية منفصلة
+            def send_notification_thread():
+                asyncio.set_event_loop(asyncio.new_event_loop())
+                bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+                bot = telegram.Bot(token=bot_token)
+                asyncio.run(send_notification(bot, notification_message, user_id))
+
+            thread = Thread(target=send_notification_thread)
+            thread.daemon = True
+            thread.start()
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
-        conn.close()
         return redirect(url_for('admin_panel'))
 
     except Exception as e:
