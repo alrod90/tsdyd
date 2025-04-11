@@ -1839,38 +1839,47 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
         if not bot_token:
             print("خطأ: لم يتم العثور على توكن البوت")
             return
-            
-        bot = telegram.Bot(token=bot_token)
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
 
+        bot = telegram.Bot(token=bot_token)
+        
         try:
             if user_id:
-                users = [(user_id,)]
+                await bot.send_message(
+                    chat_id=int(user_id),
+                    text=message,
+                    parse_mode='HTML',
+                    disable_notification=not is_important
+                )
+                print(f"تم إرسال الإشعار بنجاح للمستخدم {user_id}")
             else:
+                conn = sqlite3.connect('store.db')
+                c = conn.cursor()
                 c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
                 users = c.fetchall()
+                conn.close()
 
-            for user in users:
-                try:
-                    await bot.send_message(
-                        chat_id=int(user[0]),  # تحويل المعرف إلى رقم
-                        text=message,
-                        parse_mode=None,  # تعطيل parse_mode لتجنب الأخطاء
-                        disable_notification=not is_important
-                    )
-                    print(f"تم إرسال الإشعار بنجاح للمستخدم {user[0]}")
-                    await asyncio.sleep(0.1)  # تأخير صغير بين الرسائل
-                except telegram.error.BadRequest as e:
-                    print(f"خطأ في صيغة الرسالة للمستخدم {user[0]}: {str(e)}")
-                except telegram.error.Unauthorized as e:
-                    print(f"المستخدم {user[0]} قام بحظر البوت: {str(e)}")
-                except Exception as e:
-                    print(f"خطأ في إرسال الإشعار للمستخدم {user[0]}: {str(e)}")
-        finally:
-            conn.close()
+                for user in users:
+                    try:
+                        await bot.send_message(
+                            chat_id=int(user[0]),
+                            text=message,
+                            parse_mode='HTML',
+                            disable_notification=not is_important
+                        )
+                        print(f"تم إرسال الإشعار بنجاح للمستخدم {user[0]}")
+                        await asyncio.sleep(0.1)
+                    except telegram.error.BadRequest as e:
+                        print(f"خطأ في إرسال الإشعار للمستخدم {user[0]}: {str(e)}")
+                    except telegram.error.Unauthorized as e:
+                        print(f"المستخدم {user[0]} قام بحظر البوت")
+                    except Exception as e:
+                        print(f"خطأ غير متوقع للمستخدم {user[0]}: {str(e)}")
+
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعارات: {str(e)}")
+            
     except Exception as e:
-        print(f"خطأ عام في إرسال الإشعارات: {str(e)}")
+        print(f"خطأ في تهيئة البوت: {str(e)}")
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
