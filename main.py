@@ -2324,7 +2324,10 @@ def edit_order_amount():
         c = conn.cursor()
 
         # استرجاع معلومات الطلب الحالية
-        c.execute('SELECT amount, user_id, status FROM orders WHERE id = ?', (order_id,))
+        c.execute('''SELECT o.amount, o.user_id, o.status, p.name 
+                     FROM orders o 
+                     JOIN products p ON o.product_id = p.id 
+                     WHERE o.id = ?''', (order_id,))
         current_order = c.fetchone()
 
         if not current_order:
@@ -2334,6 +2337,7 @@ def edit_order_amount():
         current_amount = current_order[0]
         user_id = current_order[1]
         status = current_order[2]
+        product_name = current_order[3]
 
         # إذا كان الطلب مقبولاً أو قيد المعالجة، نتعامل مع الرصيد
         if status != 'rejected':
@@ -2358,21 +2362,31 @@ def edit_order_amount():
 
         # تحديث مبلغ الطلب
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
+        conn.commit()
 
         # إرسال إشعار للمستخدم
-        notification_message = f"تم تعديل مبلغ الطلب رقم {order_id}\nالمبلغ الجديد: {new_amount} ليرة سوري"
+        notification_message = f"""تم تعديل مبلغ الطلب
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ الجديد: {new_amount} ليرة سوري"""
 
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        bot = telegram.Bot(token=bot_token)
-        asyncio.run(send_notification(bot, notification_message, user_id))
+        try:
+            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+            bot = telegram.Bot(token=bot_token)
+            # استخدام Thread لإرسال الإشعار بشكل غير متزامن
+            notification_thread = Thread(target=lambda: asyncio.run(send_notification(None, notification_message, user_id)))
+            notification_thread.start()
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
 
-        conn.commit()
         conn.close()
         return redirect(url_for('admin_panel'))
 
     except Exception as e:
         print(f"Error in edit_order_amount: {str(e)}")
-        return f"حدث خطأ في تعديل مبلغ الطلب: {str(e)}", 500
+        if 'conn' in locals():
+            conn.close()
+        return redirect(url_for('admin_panel'))
 
 # تم إزالة وظيفة حذف الطلبات لمنع حذف أي طلب
 
