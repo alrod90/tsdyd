@@ -2319,14 +2319,15 @@ def edit_order_amount():
     try:
         order_id = request.form['order_id']
         new_amount = float(request.form['new_amount'])
-
+        
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-
+        
         # استرجاع معلومات الطلب الحالية
-        c.execute('''SELECT o.amount, o.user_id, o.status, p.name 
+        c.execute('''SELECT o.amount, o.user_id, o.status, p.name, u.balance
                      FROM orders o 
                      JOIN products p ON o.product_id = p.id 
+                     JOIN users u ON o.user_id = u.telegram_id
                      WHERE o.id = ?''', (order_id,))
         current_order = c.fetchone()
 
@@ -2344,11 +2345,7 @@ def edit_order_amount():
             amount_diff = new_amount - current_amount
 
             if amount_diff > 0:  # إذا كان المبلغ الجديد أكبر
-                # التحقق من الرصيد
-                c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
-                user_balance = c.fetchone()[0]
-
-                if user_balance < amount_diff:
+                if current_order[4] < amount_diff:  # التحقق من الرصيد الحالي
                     conn.close()
                     return "رصيد المستخدم غير كافي للتعديل", 400
 
