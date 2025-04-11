@@ -483,21 +483,30 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'back_to_main':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT category FROM products WHERE id = ?', (context.user_data.get('product_id'),))
-        category = c.fetchone()
-        conn.close()
-
-        if category:
-            keyboard = []
-            c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category[0],))
-            products = c.fetchall()
-            for product in products:
-                keyboard.append([InlineKeyboardButton(f"{product[1]}", callback_data=f'buy_{product[0]}')])
-            keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
+        try:
+            c.execute('SELECT category FROM products WHERE id = ?', (context.user_data.get('product_id'),))
+            category = c.fetchone()
+            
+            if category:
+                c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category[0],))
+                products = c.fetchall()
+                keyboard = []
+                for product in products:
+                    keyboard.append([InlineKeyboardButton(f"{product[1]}", callback_data=f'buy_{product[0]}')])
+                keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await query.message.edit_text(f"الشركات المتوفرة في قسم {category[0]}:", reply_markup=reply_markup)
+            else:
+                keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await query.message.edit_text("اختر من القائمة:", reply_markup=reply_markup)
+        except Exception as e:
+            print(f"Error in back_to_main: {str(e)}")
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.message.edit_text(f"الشركات المتوفرة في قسم {category[0]}:", reply_markup=reply_markup)
-        else:
-            await start(update, context)
+            await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى", reply_markup=reply_markup)
+        finally:
+            conn.close()
         return
 
     elif query.data.startswith('buy_'):
