@@ -2204,8 +2204,19 @@ def change_order_status():
                      (amount, user_id))
 
         # تحديث حالة الطلب
+        # الحصول على نوع الطلب الحالي قبل التحديث
+        c.execute('SELECT note FROM orders WHERE id = ?', (order_id,))
+        current_note = c.fetchone()[0]
+        
+        # الحفاظ على نوع الطلب إذا كان موجوداً
+        if current_note and ('mega_' in current_note or 'speed_' in current_note):
+            order_type = current_note.split('_')[0] + '_' + current_note.split('_')[1]
+            final_note = order_type + (f" - {note}" if note else "")
+        else:
+            final_note = note
+
         c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
-                 (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
+                 (new_status, final_note, rejection_note if new_status == 'rejected' else None, order_id))
 
         # استرجاع معلومات المنتج
         c.execute('SELECT p.name FROM orders o JOIN products p ON o.product_id = p.id WHERE o.id = ?', (order_id,))
