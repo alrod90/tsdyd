@@ -479,6 +479,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
+        context.user_data['last_menu'] = 'main_menu'  # Save the last menu state
 
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
@@ -506,7 +507,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if row:
             keyboard.append(row)
 
-        keyboard.append([InlineKeyboardButton("رجوع", callback_data='back')])
+        keyboard.append([InlineKeyboardButton("رجوع للقائمة السابقة", callback_data='back_to_main')])
 
         context.user_data['product_name'] = product[0]
 
@@ -517,6 +518,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data.startswith('megas_'):
         product_id = int(query.data.split('_')[1])
+        context.user_data['last_menu'] = 'product_menu'  # Save the last menu state
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('SELECT id, name, price FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
@@ -529,7 +531,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"{mega[1]} - {mega[2]} ل.س",
                 callback_data=f'select_mega_{mega[0]}_{product_id}'
             )])
-        keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
+        keyboard.append([InlineKeyboardButton("رجوع للمنتج", callback_data=f'buy_{product_id}')])
+        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر الباقة المناسبة:", reply_markup=reply_markup)
@@ -537,6 +540,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data.startswith('speeds_'):
         product_id = int(query.data.split('_')[1])
+        context.user_data['last_menu'] = 'product_menu'  # Save the last menu state
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('SELECT id, name, price FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
@@ -549,7 +553,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"{speed[1]} - {speed[2]} ل.س",
                 callback_data=f'select_speed_{speed[0]}_{product_id}'
             )])
-        keyboard.append([InlineKeyboardButton("رجوع", callback_data=f'buy_{product_id}')])
+        keyboard.append([InlineKeyboardButton("رجوع للمنتج", callback_data=f'buy_{product_id}')])
+        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر السرعة المناسبة:", reply_markup=reply_markup)
