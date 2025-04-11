@@ -2084,6 +2084,61 @@ def change_order_status():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
+        # استرجاع معلومات الطلب والمنتج
+        c.execute('''
+            SELECT o.user_id, o.amount, p.name
+            FROM orders o 
+            JOIN products p ON o.product_id = p.id 
+            WHERE o.id = ?
+        ''', (order_id,))
+        
+        order_info = c.fetchone()
+        if not order_info:
+            conn.close()
+            return "الطلب غير موجود", 404
+            
+        user_id = order_info[0]
+        amount = order_info[1]
+        product_name = order_info[2]
+
+        # تحديث حالة الطلب
+        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
+                 (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
+
+        # إعداد نص الإشعار
+        if new_status == "accepted":
+            notification_message = f"""✅ تم قبول طلبك!
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري"""
+        elif new_status == "rejected":
+            notification_message = f"""❌ تم رفض طلبك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+المبلغ: {amount} ليرة سوري"""
+            if rejection_note:
+                notification_message += f"\nسبب الرفض: {rejection_note}"
+        else:
+            notification_message = f"""🕒 تم تحديث حالة طلبك
+رقم الطلب: {order_id}
+الشركة: {product_name}
+الحالة: قيد المعالجة"""
+
+        if note:
+            notification_message += f"\nملاحظة: {note}"
+
+        # إرسال الإشعار للمستخدم
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
+        asyncio.run(bot.send_message(
+            chat_id=user_id,
+            text=notification_message,
+            parse_mode='HTML'
+        ))
+
+        conn.commit()
+        conn.close()
+
         # استرجاع معلومات الطلب الحالية
         c.execute('SELECT status, user_id, amount FROM orders WHERE id = ?', (order_id,))
         current_order = c.fetchone()
