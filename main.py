@@ -253,10 +253,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     # التحقق من حالة المستخدم
-    if user_data and not user_data[0]:
-
-    # إذا كان المستخدم معطل ويحاول الوصول إلى قسم غير مسموح به
-    if user_status and not user_status[0] and query.data.startswith(('cat_', 'buy_')):
+    if user_data and not user_data[0] and query.data.startswith(('cat_', 'buy_')):
+        keyboard = [
+            [InlineKeyboardButton("رصيدي", callback_data='balance'),
+             InlineKeyboardButton("طلباتي", callback_data='my_orders')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("عذراً، الخدمة متوقفة مؤقتاً. يمكنك في الوقت الحالي فقط مشاهدة رصيدك وطلباتك.", reply_markup=reply_markup)
+        return
         keyboard = [
             [InlineKeyboardButton("رصيدي", callback_data='balance'),
              InlineKeyboardButton("طلباتي", callback_data='my_orders')]
