@@ -16,8 +16,38 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 
-# Initialize Flask app
-app = Flask(__name__)
+# Flask routes
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username == 'admin' and password == 'admin':
+            session['logged_in'] = True
+            return redirect(url_for('admin'))
+        return render_template('login.html', error='Invalid credentials')
+    return render_template('login.html')
+
+@app.route('/admin')
+def admin():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM products')
+    products = c.fetchall()
+    c.execute('SELECT * FROM users')
+    users = c.fetchall()
+    c.execute('SELECT * FROM orders')
+    orders = c.fetchall()
+    c.execute('SELECT * FROM categories WHERE is_active = 1')
+    categories = c.fetchall()
+    conn.close()
+    return render_template('admin.html', products=products, users=users, orders=orders, categories=categories)
 
 def init_db():
     conn = sqlite3.connect('store.db')
