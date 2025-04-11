@@ -1729,12 +1729,36 @@ def add_product():
     name = request.form['name']
     category = request.form['category']
     is_active = 'is_active' in request.form
+    speeds = request.form.getlist('speeds[]')
+    megas = request.form.getlist('megas[]')
+    
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, ?)',
-              (name, category, is_active))
-    conn.commit()
-    conn.close()
+    
+    try:
+        # إضافة المنتج
+        c.execute('INSERT INTO products (name, category, is_active) VALUES (?, ?, ?)',
+                  (name, category, is_active))
+        product_id = c.lastrowid
+        
+        # ربط السرعات المحددة
+        for speed_id in speeds:
+            c.execute('UPDATE speeds SET product_id = ? WHERE id = ?', 
+                     (product_id, speed_id))
+            
+        # ربط الباقات المحددة    
+        for mega_id in megas:
+            c.execute('UPDATE megas SET product_id = ? WHERE id = ?',
+                     (product_id, mega_id))
+            
+        conn.commit()
+        
+    except Exception as e:
+        print(f"Error adding product: {str(e)}")
+        conn.rollback()
+    finally:
+        conn.close()
+        
     return redirect(url_for('admin_panel'))
 
 @app.route('/toggle_product', methods=['POST'])

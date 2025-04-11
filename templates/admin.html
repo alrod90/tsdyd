@@ -384,6 +384,23 @@
                     {% endif %}
                 {% endfor %}
             </select>
+            <div style="margin: 10px 0;">
+                <label>السرعات المتاحة:</label>
+                <select name="speeds[]" multiple style="width: 100%; min-height: 100px;">
+                    {% for speed in speeds %}
+                    <option value="{{ speed.id }}">{{ speed.name }} - {{ speed.price }} ل.س</option>
+                    {% endfor %}
+                </select>
+                <small>اضغط Ctrl (أو Command على Mac) للاختيار المتعدد</small>
+            </div>
+            <div style="margin: 10px 0;">
+                <label>الباقات المتاحة:</label>
+                <select name="megas[]" multiple style="width: 100%; min-height: 100px;">
+                    {% for mega in megas %}
+                    <option value="{{ mega.id }}">{{ mega.name }} - {{ mega.price }} ل.س</option>
+                    {% endfor %}
+                </select>
+            </div>
             <label class="switch">
                 <input type="checkbox" name="is_active" checked>
                 <span class="slider"></span>
