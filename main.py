@@ -486,7 +486,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             c.execute('SELECT category FROM products WHERE id = ?', (context.user_data.get('product_id'),))
             category = c.fetchone()
-
+            
             if category:
                 c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category[0],))
                 products = c.fetchall()
@@ -612,7 +612,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not item:
                 await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى")
                 return
-
+                
             context.user_data['product_id'] = product_id
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
@@ -675,7 +675,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
 
         keyboard = []
-for product in products:
+        for product in products:
             keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
@@ -1833,35 +1833,35 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(bot_token: str, message: str, user_id=None):
-    try:
-        bot = telegram.Bot(token=bot_token)
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
+async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
 
-        if user_id:
-            users = [(user_id,)]
-        else:
-            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-            users = c.fetchall()
+    if user_id:
+        users = [(user_id,)]
+    else:
+        c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+        users = c.fetchall()
 
-        for user in users:
+    # إرسال عبر تيليجرام أولاً
+    for user in users:
+        success = False
+        retry_count = 3
+
+        while retry_count > 0 and not success:
             try:
-                await bot.send_message(
+                # محاولة إرسال رسالة مع إشعار صوتي
+                await context.bot.send_message(
                     chat_id=user[0],
                     text=message,
-                    parse_mode='HTML',
-                    disable_notification=False
+                    disable_notification=False,
+                    protect_content=True
                 )
-                print(f"Notification sent successfully to {user[0]}")
+                success = True
             except Exception as e:
-                print(f"Error sending notification to {user[0]}: {str(e)}")
-                continue
-    except Exception as e:
-        print(f"Error in send_notification: {str(e)}")
-    finally:
-        if 'conn' in locals():
-            conn.close()
+                print(f"Error sending Telegram message to {user[0]}: {str(e)}")
+                retry_count -= 1
+                await asyncio.sleep(1)
 
         # إذا فشل الإرسال عبر تيليجرام وكان الإشعار مهماً، نرسل SMS
         if not success and is_important:
@@ -1887,26 +1887,33 @@ async def send_notification(bot_token: str, message: str, user_id=None):
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
-    try:
-        message = request.form['message']
-        user_id = request.form.get('user_id')
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+    message = request.form['message']
+    user_id = request.form.get('user_id', None)
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
 
-        if not bot_token:
-            print("Error: TELEGRAM_BOT_TOKEN not found")
-            return "Error: Bot token not configured", 500
+    async def send_notifications():
+        bot = telegram.Bot(token=bot_token)
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
 
-        if user_id:
-            try:
-                user_id = int(user_id)
-            except ValueError:
-                return "Invalid user ID", 400
+        try:
+            if user_id:
+                await bot.send_message(chat_id=int(user_id), text=message)
+            else:
+                c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+                users = c.fetchall()
+                for user in users:
+                    try:
+                        await bot.send_message(chat_id=user[0], text=message)
+                    except Exception as e:
+                        print(f"Error sending message to {user[0]}: {e}")
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+        finally:
+            conn.close()
 
-        asyncio.run(send_notification(bot_token, message, user_id))
-        return redirect(url_for('admin_panel'))
-    except Exception as e:
-        print(f"Error in send_notification_route: {str(e)}")
-        return str(e), 500
+    asyncio.run(send_notifications())
+    return redirect(url_for('admin_panel'))
 
 @app.route('/add_order', methods=['POST'])
 def add_order():
@@ -1950,28 +1957,19 @@ def add_order():
         conn.close()
 
         # إرسال إشعار للمستخدم
-        try:
-            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-            if not bot_token:
-                raise Exception("Bot token not found")
-
-            bot = telegram.Bot(token=bot_token)
-            asyncio.run(bot.send_message(
-                chat_id=user_id,
-                text=notification_message,
-                parse_mode='HTML'
-            ))
-            print(f"Notification sent successfully to {user_id}")
-        except Exception as e:
-            print(f"Error sending notification: {str(e)}")
-            # حتى لو فشل الإشعار، نستمر في العملية
-
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
 
         notification_message = f"""✉️ تم إنشاء طلب جديد
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}"""
+
+        try:
+            asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
+        except Exception as e:
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
 
         return redirect(url_for('admin_panel'))
 
@@ -2246,21 +2244,16 @@ def handle_order():
 المبلغ: {amount} ليرة سوري"""
 
         # إرسال الإشعار للمستخدم
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        bot = telegram.Bot(token=bot_token)
         try:
-            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-            if not bot_token:
-                raise Exception("Bot token not found")
-
-            bot = telegram.Bot(token=bot_token)
             asyncio.run(bot.send_message(
                 chat_id=user_id,
                 text=notification_message,
                 parse_mode='HTML'
             ))
-            print(f"Notification sent successfully to {user_id}")
         except Exception as e:
-            print(f"Error sending notification: {str(e)}")
-            # حتى لو فشل الإشعار، نستمر في العملية
+            print(f"خطأ في إرسال الإشعار: {str(e)}")
 
         conn.commit()
         conn.close()
@@ -2322,16 +2315,7 @@ def edit_order_amount():
 
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        try:
-            asyncio.run(bot.send_message(
-                chat_id=user_id,
-                text=notification_message,
-                parse_mode='HTML'
-            ))
-            print(f"Notification sent successfully to {user_id}")
-        except Exception as e:
-            print(f"Error sending notification: {str(e)}")
-            # حتى لو فشل الإشعار، نستمر في العملية
+        asyncio.run(bot.send_message(chat_id=user_id, text=notification_message))
 
         conn.commit()
         conn.close()
@@ -2374,12 +2358,7 @@ def get_db_connection():
         return sqlite3.connect('store.db')
 
 def run_flask():
-    try:
-        app.run(host='0.0.0.0', port=5000, debug=False)
-    except Exception as e:
-        print(f"Error starting Flask: {str(e)}")
-        if os.path.exists('bot.lock'):
-            os.remove('bot.lock')
+    app.run(host='0.0.0.0', port=5000, debug=False)
 
 def run_bot():
     # Initialize bot
@@ -2536,7 +2515,7 @@ if __name__ == '__main__':
         with open('bot.lock', 'w') as f:
             f.write(str(os.getpid()))
 
-        sock.bind(('0.0.0.0', 5002))  # منفذ للتحقق فقط
+        sock.bind(('0.0.0.0', 5001))  # منفذ للتحقق فقط
 
         # تشغيل التطبيق
         app.config['TEMPLATES_AUTO_RELOAD'] = True

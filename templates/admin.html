@@ -170,8 +170,6 @@
     <script>
         function toggleTable(btn) {
             const table = btn.nextElementSibling;
-            const dataSection = btn.closest('.section');
-
             if (table.classList.contains('hidden-table')) {
                 table.classList.remove('hidden-table');
                 btn.textContent = 'إخفاء الجدول';
@@ -179,31 +177,7 @@
                 table.classList.add('hidden-table');
                 btn.textContent = 'إظهار الجدول';
             }
-
-            // تحديث حالة التخزين المحلي
-            const sectionId = dataSection.querySelector('h2').textContent;
-            localStorage.setItem('table_state_' + sectionId, table.classList.contains('hidden-table'));
         }
-
-        // استعادة حالة الجداول عند تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.section').forEach(section => {
-                const btn = section.querySelector('.toggle-btn');
-                const table = section.querySelector('table');
-                const sectionId = section.querySelector('h2').textContent;
-
-                if (btn && table) {
-                    const isHidden = localStorage.getItem('table_state_' + sectionId) === 'true';
-                    if (isHidden) {
-                        table.classList.add('hidden-table');
-                        btn.textContent = 'إظهار الجدول';
-                    } else {
-                        table.classList.remove('hidden-table');
-                        btn.textContent = 'إخفاء الجدول';
-                    }
-                }
-            });
-        });
 
         function showPackagePage(pageNum) {
             document.querySelectorAll('.package-row').forEach(row => {
@@ -623,8 +597,6 @@
     <script>
         function toggleTable(btn) {
             const table = btn.nextElementSibling;
-            const dataSection = btn.closest('.section');
-
             if (table.classList.contains('hidden-table')) {
                 table.classList.remove('hidden-table');
                 btn.textContent = 'إخفاء الجدول';
@@ -632,30 +604,7 @@
                 table.classList.add('hidden-table');
                 btn.textContent = 'إظهار الجدول';
             }
-
-            // تحديث حالة التخزين المحلي
-            const sectionId = dataSection.querySelector('h2').textContent;
-            localStorage.setItem('table_state_' + sectionId, table.classList.contains('hidden-table'));
         }
-        // استعادة حالة الجداول عند تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.section').forEach(section => {
-                const btn = section.querySelector('.toggle-btn');
-                const table = section.querySelector('table');
-                const sectionId = section.querySelector('h2').textContent;
-
-                if (btn && table) {
-                    const isHidden = localStorage.getItem('table_state_' + sectionId) === 'true';
-                    if (isHidden) {
-                        table.classList.add('hidden-table');
-                        btn.textContent = 'إظهار الجدول';
-                    } else {
-                        table.classList.remove('hidden-table');
-                        btn.textContent = 'إخفاء الجدول';
-                    }
-                }
-            });
-        });
         function showEditCategoryForm(id, name, identifier) {
             var modal = document.createElement('div');
             modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
