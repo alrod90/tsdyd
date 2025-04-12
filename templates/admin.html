@@ -548,7 +548,6 @@
                 <th>رقم الطلب</th>
                 <th>معرف المستخدم</th>
                 <th>الشركة</th>
-                <th>نوع الطلب</th>
                 <th>المبلغ</th>
                 <th>معلومات الزبون</th>
                 <th>الحالة</th>
@@ -561,29 +560,6 @@
                 <td>{{ order[0] }}</td>
                 <td>{{ order[1] }}</td>
                 <td>{{ order[2] }}</td>
-                <td>
-                    {% if order.order_type %}
-                        {% if 'mega_' in order.order_type %}
-                            {% set mega_id = order.order_type.split('_')[1] %}
-                            {% for mega in megas %}
-                                {% if mega.id|string == mega_id %}
-                                    {{ mega.name }}
-                                {% endif %}
-                            {% endfor %}
-                        {% elif 'speed_' in order.order_type %}
-                            {% set speed_id = order.order_type.split('_')[1] %}
-                            {% for speed in speeds %}
-                                {% if speed.id|string == speed_id %}
-                                    {{ speed.name }}
-                                {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            دفعة يدوية
-                        {% endif %}
-                    {% else %}
-                        دفعة يدوية
-                    {% endif %}
-                </td>
                 <td>{{ order[3] }}</td>
                 <td>{{ order[4] }}</td>
                 <td>

@@ -79,8 +79,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT,
-                  order_type TEXT)''')
+                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS megas
@@ -952,25 +951,10 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 
             if order:
                 status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
-                
-                # تحديد نوع الطلب وتفاصيله
-                order_type = "دفعة يدوية"
-                c.execute('SELECT m.name FROM megas m WHERE m.id = ?', (order[6].split('_')[1],)) if order[6] and 'mega_' in order[6] else None
-                mega_name = c.fetchone()
-                
-                c.execute('SELECT s.name FROM speeds s WHERE s.id = ?', (order[6].split('_')[1],)) if order[6] and 'speed_' in order[6] else None
-                speed_name = c.fetchone()
-                
-                if mega_name:
-                    order_type = f"باقة: {mega_name[0]}"
-                elif speed_name:
-                    order_type = f"سرعة: {speed_name[0]}"
-                
                 message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
 الشركة: {order[1]}
-نوع الطلب: {order_type}
 المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
@@ -1264,18 +1248,8 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     # خصم المبلغ من رصيد المستخدم وإنشاء الطلب
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
               (amount, update.effective_user.id))
-    # تحديد نوع الطلب
-    order_type = None
-    if context.user_data.get('selected_mega'):
-        order_type = f"mega_{context.user_data['selected_mega']}"
-    elif context.user_data.get('selected_speed'):
-        order_type = f"speed_{context.user_data['selected_speed']}"
-
-    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, order_type) VALUES (?, ?, ?, ?, ?)',
-          (update.effective_user.id, context.user_data['product_id'], amount, customer_info, 
-           'mega_' + str(context.user_data.get('selected_mega')) if context.user_data.get('selected_mega') else 
-           'speed_' + str(context.user_data.get('selected_speed')) if context.user_data.get('selected_speed') else 
-           'manual'))
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info) VALUES (?, ?, ?, ?)',
+              (update.effective_user.id, context.user_data['product_id'], amount, customer_info))
     order_id = c.lastrowid
     conn.commit()
 
@@ -2208,10 +2182,8 @@ def change_order_status():
                      (amount, user_id))
 
         # تحديث حالة الطلب
-        final_note = note
-
         c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
-                 (new_status, final_note, rejection_note if new_status == 'rejected' else None, order_id))
+                 (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
 
         # استرجاع معلومات المنتج
         c.execute('SELECT p.name FROM orders o JOIN products p ON o.product_id = p.id WHERE o.id = ?', (order_id,))
