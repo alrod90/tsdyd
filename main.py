@@ -36,7 +36,8 @@ def sync_deployed_db():
             c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT,
+                      order_type TEXT)''')
             conn.commit()
             conn.close()
             print("تم إنشاء قاعدة بيانات جديدة")
@@ -677,7 +678,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for product in products:
-            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
+            keyboard.append([InlineKeyboardButton(product[1], callbackdata=f'add_order_product_{product[0]}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -952,20 +953,20 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 
             if order:
                 status_text = "قيد المعالجة" if order[3] == "pending" else "تمت العملية بنجاح" if order[3] == "accepted" else "مرفوض"
-                
+
                 # تحديد نوع الطلب وتفاصيله
                 order_type = "دفعة يدوية"
                 c.execute('SELECT m.name FROM megas m WHERE m.id = ?', (order[6].split('_')[1],)) if order[6] and 'mega_' in order[6] else None
                 mega_name = c.fetchone()
-                
+
                 c.execute('SELECT s.name FROM speeds s WHERE s.id = ?', (order[6].split('_')[1],)) if order[6] and 'speed_' in order[6] else None
                 speed_name = c.fetchone()
-                
+
                 if mega_name:
                     order_type = f"باقة: {mega_name[0]}"
                 elif speed_name:
                     order_type = f"سرعة: {speed_name[0]}"
-                
+
                 message = f"""
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
@@ -1558,7 +1559,7 @@ def admin_panel():
         c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT, order_type TEXT)''')
         conn.commit()
 
         c.execute('SELECT * FROM categories')
@@ -2352,10 +2353,10 @@ def edit_order_amount():
     try:
         order_id = request.form['order_id']
         new_amount = float(request.form['new_amount'])
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # استرجاع معلومات الطلب الحالية
         c.execute('''SELECT o.amount, o.user_id, o.status, p.name, u.balance
                      FROM orders o 
@@ -2392,7 +2393,7 @@ def edit_order_amount():
 
         # تحديث مبلغ الطلب
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
-        
+
         # إعداد رسالة الإشعار
         notification_message = f"""تم تعديل مبلغ الطلب
 رقم الطلب: {order_id}
@@ -2415,7 +2416,7 @@ def edit_order_amount():
                 requests.post(telegram_api_url, json=payload)
         except Exception as e:
             print(f"Error sending notification: {str(e)}")
-        
+
         conn.close()
         return redirect(url_for('admin_panel'))
 
@@ -2450,7 +2451,7 @@ def get_db_connection():
         c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+                      created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT, order_type TEXT)''')
         conn.commit()
         return conn
     except Exception as e:
