@@ -543,51 +543,54 @@
         
         buttonRow.innerHTML = `
             <input type="text" name="button_text[]" placeholder="نص الزر" required>
-            <select name="button_type[]" required>
+            <select name="button_type[]" required onchange="handleButtonTypeChange(this)">
                 <option value="url">رابط خارجي</option>
-                <option value="callback" onclick="loadBotButtons(this)">زر داخلي</option>
+                <option value="callback">زر داخلي</option>
             </select>
-            <input type="text" name="button_value[]" placeholder="الرابط أو معرف الزر" required>
+            <div class="button-value-container">
+                <input type="text" name="button_value[]" placeholder="الرابط أو معرف الزر" required>
+                <select name="bot_button[]" style="display: none;" onchange="updateButtonValue(this)">
+                    <option value="">اختر زراً</option>
+                    <option value="balance">رصيدي</option>
+                    <option value="my_orders">طلباتي</option>
+                    <option value="search_order">البحث عن طلب</option>
+                    <option value="back">رجوع</option>
+                </select>
+            </div>
             <button type="button" onclick="this.parentElement.remove()" style="background-color: #ff4444;">حذف</button>
         `;
-        
-        const typeSelect = buttonRow.querySelector('select');
-        typeSelect.addEventListener('change', function() {
-            if (this.value === 'callback') {
-                loadBotButtons(this.parentElement.querySelector('[name="button_value[]"]'));
-            }
-        });
         
         container.appendChild(buttonRow);
     }
 
-    function loadBotButtons(input) {
-        // قائمة الأزرار المتاحة في البوت
-        const botButtons = [
-            { id: 'balance', text: 'رصيدي' },
-            { id: 'my_orders', text: 'طلباتي' },
-            { id: 'search_order', text: 'البحث عن طلب' },
-            { id: 'back', text: 'رجوع' }
-        ];
-
-        const select = document.createElement('select');
-        select.innerHTML = '<option value="">اختر زراً</option>' +
-            botButtons.map(btn => `<option value="${btn.id}">${btn.text}</option>`).join('');
+    function handleButtonTypeChange(select) {
+        const container = select.closest('.button-row').querySelector('.button-value-container');
+        const textInput = container.querySelector('[name="button_value[]"]');
+        const buttonSelect = container.querySelector('[name="bot_button[]"]');
         
-        select.addEventListener('change', function() {
-            input.value = this.value;
-        });
+        if (select.value === 'callback') {
+            textInput.style.display = 'none';
+            buttonSelect.style.display = 'block';
+        } else {
+            textInput.style.display = 'block';
+            buttonSelect.style.display = 'none';
+            textInput.value = '';
+        }
+    }
 
-        input.parentElement.insertBefore(select, input);
-        input.style.display = 'none';
+    function updateButtonValue(select) {
+        const container = select.closest('.button-value-container');
+        const textInput = container.querySelector('[name="button_value[]"]');
+        textInput.value = select.value;
     }
 
     function updatePreview() {
         const message = document.getElementById('messageContent').value;
         const previewArea = document.getElementById('previewArea');
         
+        // تحسين معالجة النص الغامق
         let formattedMessage = message
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
             .replace(/_(.*?)_/g, '<em>$1</em>')
             .replace(/`(.*?)`/g, '<code>$1</code>')
             .replace(/\n/g, '<br>');
