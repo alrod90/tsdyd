@@ -935,14 +935,14 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         try:
             if is_admin:
                 # المدير يمكنه البحث في جميع الطلبات
-                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.rejection_note, u.telegram_id
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
                             WHERE o.id = ?''', (order_number,))
             else:
                 # المستخدم العادي يبحث في طلباته فقط
-                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.rejection_note, u.telegram_id
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
@@ -960,15 +960,12 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}"""
 
-                if order[3] == "rejected" and order[7]:  # إضافة سبب الرفض
-                    message += f"\nسبب الرفض: {order[7]}"
-
-                if order[6]:  # إضافة الملاحظة إذا وجدت
-                    message += f"\nملاحظة: {order[6]}"
+                if order[3] == "rejected" and order[6]:  # إضافة سبب الرفض
+                    message += f"\nسبب الرفض: {order[6]}"
 
                 # إضافة معرف التيليجرام فقط للمدير
                 if is_admin:
-                    message += f"\nمعرف التيليجرام لمقدم الطلب: {order[8]}"
+                    message += f"\nمعرف التيليجرام لمقدم الطلب: {order[7]}"
 
 
                 keyboard = [[InlineKeyboardButton("رجوع", callback_data='my_orders')]]
