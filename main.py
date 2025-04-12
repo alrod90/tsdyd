@@ -1854,7 +1854,7 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
             await bot.send_message(
                 chat_id=int(chat_id),
                 text=message,
-                parse_mode='MarkdownV2',
+                parse_mode='HTML',
                 disable_notification=not is_important
             )
             print(f"✅ تم إرسال الإشعار بنجاح للمستخدم {chat_id}")
