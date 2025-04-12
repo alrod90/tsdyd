@@ -429,28 +429,6 @@
         <h2>إرسال إشعار للمستخدمين</h2>
         <form action="/send_notification" method="post">
             <input type="text" name="message" placeholder="نص الإشعار" required>
-            <label class="switch">
-                <input type="checkbox" name="is_important" value="1">
-                <span class="slider"></span>
-            </label>
-            <span>إشعار مهم</span>
-            <div style="margin: 10px 0;">
-                <label>خيارات الإشعار:</label>
-                <select name="notification_type">
-                    <option value="all">جميع المستخدمين</option>
-                    <option value="active">المستخدمين النشطين فقط</option>
-                    <option value="inactive">المستخدمين غير النشطين</option>
-                </select>
-            </div>
-            <div style="margin: 10px 0;">
-                <label>نوع الإشعار:</label>
-                <select name="message_type">
-                    <option value="normal">نص عادي</option>
-                    <option value="alert">تنبيه</option>
-                    <option value="success">نجاح</option>
-                    <option value="warning">تحذير</option>
-                </select>
-            </div>
             <input type="submit" value="إرسال الإشعار">
         </form>
     </div>
