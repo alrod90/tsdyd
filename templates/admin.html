@@ -548,6 +548,7 @@
                 <th>رقم الطلب</th>
                 <th>معرف المستخدم</th>
                 <th>الشركة</th>
+                <th>الخدمة</th>
                 <th>المبلغ</th>
                 <th>معلومات الزبون</th>
                 <th>الحالة</th>
@@ -560,6 +561,7 @@
                 <td>{{ order[0] }}</td>
                 <td>{{ order[1] }}</td>
                 <td>{{ order[2] }}</td>
+                <td>{{ order[7] if order[7] else 'دفعة يدوية' }}</td>
                 <td>{{ order[3] }}</td>
                 <td>{{ order[4] }}</td>
                 <td>
