@@ -2112,7 +2112,8 @@ def change_order_status():
         conn = sqlite3.connect('store.db')
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
-        # استرجاع معلومات الطلبc.execute('''
+        # استرجاع معلومات الطلب والمنتج
+        c.execute('''
             SELECT o.user_id, o.amount, p.name
             FROM orders o 
             JOIN products p ON o.product_id = p.id 
@@ -2150,7 +2151,8 @@ def change_order_status():
 الشركة: {product_name}
 الحالة: قيد المعالجة"""
 
-        # تم إخفاء الملاحظة من الإشعارات
+        if note:
+            notification_message += f"\nملاحظة: {note}"
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -2215,7 +2217,8 @@ def change_order_status():
 الشركة: {product_name}
 الحالة الجديدة: قيد المعالجة"""
 
-        # تم إخفاء الملاحظة من الإشعارات
+        if note:
+            notification_message += f"\nملاحظة: {note}"
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
