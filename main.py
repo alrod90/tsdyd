@@ -2085,19 +2085,19 @@ def edit_user():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        # التحقق من وجود المستخدم أولاً
-        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+        # التحقق من وجود المستخدم أولاً باستخدام telegram_id
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (int(user_id),))
         user_data = c.fetchone()
         
         if not user_data:
             conn.close()
-            return "المستخدم غير موجود", 404
+            return redirect(url_for('admin_panel'))
 
         old_balance = user_data[0]
 
         # تحديث بيانات المستخدم
         c.execute('UPDATE users SET balance = ?, store_name = ?, note = ? WHERE telegram_id = ?',
-                  (new_balance, store_name, notes, user_id))
+                  (new_balance, store_name, notes, int(user_id)))
         conn.commit()
         conn.close()
 
