@@ -40,6 +40,14 @@ def sync_deployed_db():
             conn.commit()
             conn.close()
             print("تم إنشاء قاعدة بيانات جديدة")
+
+    # إضافة عمود store_name إذا لم يكن موجوداً
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN store_name TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # العمود موجود بالفعل
+
     except Exception as e:
         print(f"خطأ في التحقق من قاعدة البيانات: {str(e)}")
 
