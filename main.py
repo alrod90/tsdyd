@@ -2274,6 +2274,10 @@ def handle_order():
         product_name = order[2]
         current_balance = order[3]
 
+        # استرجاع بيانات الزبون
+        c.execute('SELECT customer_info FROM orders WHERE id = ?', (order_id,))
+        customer_info = c.fetchone()[0]
+
         if action == 'reject':
             if not rejection_note and action == 'reject':
                 if conn:
@@ -2294,6 +2298,7 @@ def handle_order():
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ المعاد لرصيدك: {amount} ليرة سوري
+بيانات الزبون: {customer_info}
 سبب الرفض: {rejection_note}
 رصيدك الحالي: {current_balance + amount} ليرة سوري"""
 
@@ -2305,7 +2310,8 @@ def handle_order():
             notification_message = f"""✅ تم قبول طلبك!
 رقم الطلب: {order_id}
 الشركة: {product_name}
-المبلغ: {amount} ليرة سوري"""
+المبلغ: {amount} ليرة سوري
+بيانات الزبون: {customer_info}"""
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
