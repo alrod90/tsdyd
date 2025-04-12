@@ -839,6 +839,7 @@
             <tr>
                 <th>الرقم</th>
                 <th>معرف تيليجرام</th>
+                <th>اسم المحل</th>
                 <th>الرصيد (ل.س)</th>
                 <th>ملاحظات</th>
             </tr>
@@ -846,6 +847,7 @@
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
+                <td>{{ user[6] if user[6] else 'غير محدد' }}</td>
                 <td>{{ user[2] }}</td>
                 <td>{{ user[5] if user[5] else '' }}</td>
                 <td>
@@ -1016,6 +1018,10 @@
                 <h3>تعديل رصيد المستخدم</h3>
                 <form action="/edit_user" method="post">
                     <input type="hidden" name="user_id" value="${telegramId}">
+                    <div style="margin: 10px 0;">
+                        <label>اسم المحل:</label>
+                        <input type="text" name="store_name" value="${store_name || ''}" placeholder="اسم المحل">
+                    </div>
                     <div style="margin: 10px 0;">
                         <label>الرصيد:</label>
                         <input type="number" name="balance" value="${balance}" step="0.01" required>

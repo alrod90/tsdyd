@@ -1854,7 +1854,7 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
             await bot.send_message(
                 chat_id=int(chat_id),
                 text=message,
-                parse_mode='MarkdownV2',
+                parse_mode='HTML',
                 disable_notification=not is_important
             )
             print(f"✅ تم إرسال الإشعار بنجاح للمستخدم {chat_id}")
@@ -2075,6 +2075,7 @@ def edit_user():
     try:
         user_id = request.form['user_id']
         new_balance = float(request.form['balance'])
+        store_name = request.form.get('store_name', '')
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
@@ -2082,9 +2083,9 @@ def edit_user():
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
         old_balance = c.fetchone()[0]
 
-        # تحديث الرصيد
-        c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
-                  (new_balance, user_id))
+        # تحديث الرصيد واسم المحل
+        c.execute('UPDATE users SET balance = ?, store_name = ? WHERE telegram_id = ?',
+                  (new_balance, store_name, user_id))
         conn.commit()
         conn.close()
 
