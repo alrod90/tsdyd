@@ -427,13 +427,85 @@
 
     <div class="section">
         <h2>إرسال إشعار للمستخدمين</h2>
-        <form action="/send_notification" method="post" id="notificationForm">
+        <form action="/send_notification" method="post" id="notificationForm" enctype="multipart/form-data">
             <div class="notification-options">
-                <label>نوع الإشعار:</label>
-                <select name="notification_type" onchange="toggleUserSelect(this.value)">
-                    <option value="all">إرسال للجميع</option>
-                    <option value="single">إرسال لمستخدم محدد</option>
-                </select>
+                <div class="appearance-options">
+                    <label>مظهر الإشعار:</label>
+                    <select name="appearance_style">
+                        <option value="default">افتراضي</option>
+                        <option value="success">نجاح</option>
+                        <option value="warning">تحذير</option>
+                        <option value="error">خطأ</option>
+                        <option value="info">معلومة</option>
+                    </select>
+                </div>
+
+                <div class="content-options">
+                    <label>نوع المحتوى:</label>
+                    <select name="content_type" onchange="toggleContentOptions(this.value)">
+                        <option value="products">المنتجات</option>
+                        <option value="orders">الطلبات</option>
+                        <option value="custom">رسالة مخصصة</option>
+                    </select>
+                </div>
+
+                <div id="products-options" class="hidden">
+                    <label>خيارات المنتجات:</label>
+                    <select name="products_option">
+                        <option value="all_products">جميع المنتجات</option>
+                        <option value="all_categories">جميع الأقسام</option>
+                        <option value="specific_category">قسم محدد</option>
+                        <option value="specific_product">منتج محدد</option>
+                    </select>
+                    <div id="category-select" class="hidden">
+                        <select name="category_id">
+                            {% for category in categories %}
+                            <option value="{{ category[2] }}">{{ category[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="product-select" class="hidden">
+                        <select name="product_id">
+                            {% for product in products %}
+                            <option value="{{ product[0] }}">{{ product[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div id="orders-options" class="hidden">
+                    <label>خيارات الطلبات:</label>
+                    <select name="orders_option">
+                        <option value="user_all">جميع طلباتي</option>
+                        <option value="user_pending">الطلبات المعلقة</option>
+                        <option value="user_accepted">الطلبات المقبولة</option>
+                        <option value="user_rejected">الطلبات المرفوضة</option>
+                        <option value="specific_order">طلب محدد</option>
+                    </select>
+                    <div id="order-select" class="hidden">
+                        <input type="number" name="order_id" placeholder="رقم الطلب">
+                    </div>
+                </div>
+
+                <div class="recipients-options">
+                    <label>إرسال إلى:</label>
+                    <select name="notification_type" onchange="toggleUserSelect(this.value)">
+                        <option value="all">جميع المستخدمين</option>
+                        <option value="single">مستخدم محدد</option>
+                    </select>
+                    <div id="userSelectDiv" class="hidden">
+                        <select name="user_id">
+                            {% for user in users %}
+                            <option value="{{ user[1] }}">{{ user[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="image-upload">
+                    <label>إرفاق صورة:</label>
+                    <input type="file" name="image" accept="image/*">
+                </div>
 
                 <div id="userSelectDiv" style="display: none;">
                     <label>اختر المستخدم:</label>
@@ -495,6 +567,40 @@
         document.getElementById('userSelectDiv').style.display = 
             value === 'single' ? 'block' : 'none';
     }
+
+    function toggleContentOptions(value) {
+        document.getElementById('products-options').style.display = 'none';
+        document.getElementById('orders-options').style.display = 'none';
+        document.getElementById('messageInput').parentElement.style.display = 'none';
+
+        if (value === 'products') {
+            document.getElementById('products-options').style.display = 'block';
+        } else if (value === 'orders') {
+            document.getElementById('orders-options').style.display = 'block';
+        } else {
+            document.getElementById('messageInput').parentElement.style.display = 'block';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const productsOption = document.querySelector('select[name="products_option"]');
+        if (productsOption) {
+            productsOption.addEventListener('change', function() {
+                document.getElementById('category-select').style.display = 
+                    this.value === 'specific_category' ? 'block' : 'none';
+                document.getElementById('product-select').style.display = 
+                    this.value === 'specific_product' ? 'block' : 'none';
+            });
+        }
+
+        const ordersOption = document.querySelector('select[name="orders_option"]');
+        if (ordersOption) {
+            ordersOption.addEventListener('change', function() {
+                document.getElementById('order-select').style.display = 
+                    this.value === 'specific_order' ? 'block' : 'none';
+            });
+        }
+    });
 
     function addButtonRow() {
         const container = document.getElementById('buttonsContainer');
