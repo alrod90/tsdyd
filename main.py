@@ -935,17 +935,23 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         try:
             if is_admin:
                 # المدير يمكنه البحث في جميع الطلبات
-                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id,
+                            COALESCE(m.name, s.name, '') as service_name
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
+                            LEFT JOIN megas m ON o.note = 'mega_' || m.id
+                            LEFT JOIN speeds s ON o.note = 'speed_' || s.id
                             WHERE o.id = ?''', (order_number,))
             else:
                 # المستخدم العادي يبحث في طلباته فقط
-                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id,
+                            COALESCE(m.name, s.name, '') as service_name
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
+                            LEFT JOIN megas m ON o.note = 'mega_' || m.id
+                            LEFT JOIN speeds s ON o.note = 'speed_' || s.id
                             WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
             order = c.fetchone()
 
@@ -955,7 +961,11 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
 الشركة: {order[1]}
-المبلغ: {order[2]} ليرة سوري
+"""
+                if order[9]:  # إضافة اسم الخدمة إذا وجدت
+                    message += f"الخدمة: {order[9]}\n"
+                
+                message += f"""المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}"""
@@ -963,7 +973,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
                 if order[3] == "rejected" and order[7]:  # إضافة سبب الرفض
                     message += f"\nسبب الرفض: {order[7]}"
 
-                if order[6]:  # إضافة الملاحظة إذا وجدت
+                if order[6] and not (order[6].startswith('mega_') or order[6].startswith('speed_')):  # إضافة الملاحظة فقط إذا لم تكن معرف خدمة
                     message += f"\nملاحظة: {order[6]}"
 
                 # إضافة معرف التيليجرام فقط للمدير
