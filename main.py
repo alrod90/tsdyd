@@ -679,6 +679,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn.close()
         return "WAITING_CUSTOMER_INFO"
     elif query.data == 'add_new_order':
+```python
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         c.execute('SELECT id, name FROM products WHERE is_active = 1')
@@ -1929,7 +1930,7 @@ def send_notification_route():
         button_texts = request.form.getlist('button_text[]')
         button_types = request.form.getlist('button_type[]')
         button_values = request.form.getlist('button_value[]')
-        
+
         # تجهيز الأزرار
         keyboard = []
         if button_texts:
@@ -1947,7 +1948,7 @@ def send_notification_route():
                 keyboard.append(row)
 
         reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
-        
+
         async def send_notifications():
             bot = telegram.Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
             conn = sqlite3.connect('store.db')
@@ -2119,7 +2120,7 @@ def toggle_distributor():
     try:
         user_id = request.form['user_id']
         conn = sqlite3.connect('store.db')
-        c = conn.cursor()
+        cc = conn.cursor()
         c.execute('''UPDATE users SET is_distributor = 
                      CASE WHEN is_distributor = 1 THEN 0 ELSE 1 END 
                      WHERE telegram_id = ?''', (user_id,))
@@ -2616,53 +2617,57 @@ if __name__ == '__main__':
     except AttributeError:
         pass  # للتوافق مع أنظمة Windows
 
-    # تهيئة قاعدة البيانات
-    init_db()
-
-    # التحقق من عدم وجود نسخة أخرى من البوت
-    import socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     try:
-        # استخدام ملف قفل لمنع تشغيل نسخ متعددة
-        if os.path.exists('bot.lock'):
-            try:
-                with open('bot.lock', 'r') as f:
-                    pid = int(f.read().strip())
+        init_db()
+
+        # التحقق من عدم وجود نسخة أخرى من البوت
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        try:
+            # استخدام ملف قفل لمنع تشغيل نسخ متعددة
+            if os.path.exists('bot.lock'):
                 try:
-                    os.kill(pid, 0)  # اختبار إذا كانت العملية نشطة
-                    print("هناك نسخة أخرى من البوت قيد التشغيل")
-                    exit(1)
-                except OSError:
-                    pass  # العملية غير موجودة
-            except:
-                pass
+                    with open('bot.lock', 'r') as f:
+                        pid = int(f.read().strip())
+                    try:
+                        os.kill(pid, 0)  # اختبار إذا كانت العملية نشطة
+                        print("هناك نسخة أخرى من البوت قيد التشغيل")
+                        exit(1)
+                    except OSError:
+                        pass  # العملية غير موجودة
+                except:
+                    pass
 
-        # تسجيل PID العملية الحالية
-        with open('bot.lock', 'w') as f:
-            f.write(str(os.getpid()))
+            # تسجيل PID العملية الحالية
+            with open('bot.lock', 'w') as f:
+                f.write(str(os.getpid()))
 
-        sock.bind(('0.0.0.0', 5001))  # منفذ للتحقق فقط
+            sock.bind(('0.0.0.0', 5001))  # منفذ للتحقق فقط
 
-        # تشغيل التطبيق
-        app.config['TEMPLATES_AUTO_RELOAD'] = True
-        app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # مدة الجلسة يوم كامل
-        flask_thread = Thread(target=run_flask)
-        flask_thread.start()
-        run_bot()
+            # تشغيل التطبيق
+            app.config['TEMPLATES_AUTO_RELOAD'] = True
+            app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # مدة الجلسة يوم كامل
+            flask_thread = Thread(target=run_flask)
+            flask_thread.start()
+            run_bot()
 
-    except socket.error:
-        print("هناك نسخة أخرى من البوت قيد التشغيل")
-        exit(1)
+        except socket.error:
+            print("هناك نسخة أخرى من البوت قيد التشغيل")
+            exit(1)
+        except Exception as e:
+            print(f"خطأ: {str(e)}")
+            if os.path.exists('bot.lock'):
+                os.remove('bot.lock')
+            exit(1)
+        finally:
+            sock.close()
+            if os.path.exists('bot.lock'):
+                os.remove('bot.lock')
     except Exception as e:
-        print(f"خطأ: {str(e)}")
-        if os.path.exists('bot.lock'):
-            os.remove('bot.lock')
+        print(f"Error initializing database: {str(e)}")
         exit(1)
-    finally:
-        sock.close()
-        if os.path.exists('bot.lock'):
-            os.remove('bot.lock')
+
 async def show_distributor_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("إضافة رصيد لمستخدم", callback_data='add_user_balance')],
