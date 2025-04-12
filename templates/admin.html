@@ -430,13 +430,13 @@
         <form action="/send_notification" method="post" id="notificationForm">
             <div class="notification-editor">
                 <textarea name="message" id="messageContent" placeholder="نص الإشعار" required></textarea>
-                
+
                 <div class="formatting-controls">
                     <button type="button" onclick="addFormatting('**', '**')" title="غامق">B</button>
                     <button type="button" onclick="addFormatting('_', '_')" title="مائل">I</button>
                     <button type="button" onclick="addFormatting('`', '`')" title="كود">C</button>
                 </div>
-                
+
                 <div class="buttons-editor">
                     <h4>إضافة أزرار</h4>
                     <div id="buttonsContainer"></div>
@@ -497,15 +497,6 @@
         margin-top: 10px;
         min-height: 100px;
     }
-    .preview-button {
-        margin: 10px 0;
-        padding: 8px 15px;
-        background: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
     .hidden {
         display: none;
     }
@@ -522,7 +513,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const notificationType = document.getElementsByName('notification_type');
         const userIdField = document.getElementById('userIdField');
-        
+
         notificationType.forEach(radio => {
             radio.addEventListener('change', function() {
                 userIdField.classList.toggle('hidden', this.value === 'all');
@@ -540,9 +531,13 @@
         const container = document.getElementById('buttonsContainer');
         const buttonRow = document.createElement('div');
         buttonRow.className = 'button-row';
-        
+
+        // الحصول على جميع الأزرار الموجودة
+        const existingButtons = document.querySelectorAll('[name="button_value[]"]');
+        const buttonValues = Array.from(existingButtons).map(btn => btn.value);
+
         buttonRow.innerHTML = `
-            <input type="text" name="button_text[]" placeholder="نص الزر" required>
+            <input type="text" name="button_text[]" placeholder="نص الزر" required onchange="updateButtonsList(this)">
             <select name="button_type[]" required onchange="handleButtonTypeChange(this)">
                 <option value="url">رابط خارجي</option>
                 <option value="callback">زر داخلي</option>
@@ -555,11 +550,13 @@
                     <option value="my_orders">طلباتي</option>
                     <option value="search_order">البحث عن طلب</option>
                     <option value="back">رجوع</option>
+                    <option value="support">التواصل مع الدعم الفني</option>
+                    <option value="info">معلومات الحساب</option>
                 </select>
             </div>
             <button type="button" onclick="this.parentElement.remove()" style="background-color: #ff4444;">حذف</button>
         `;
-        
+
         container.appendChild(buttonRow);
     }
 
@@ -567,7 +564,7 @@
         const container = select.closest('.button-row').querySelector('.button-value-container');
         const textInput = container.querySelector('[name="button_value[]"]');
         const buttonSelect = container.querySelector('[name="bot_button[]"]');
-        
+
         if (select.value === 'callback') {
             textInput.style.display = 'none';
             buttonSelect.style.display = 'block';
@@ -587,28 +584,28 @@
     function updatePreview() {
         const message = document.getElementById('messageContent').value;
         const previewArea = document.getElementById('previewArea');
-        
+
         // تحسين معالجة النص الغامق
         let formattedMessage = message
             .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
             .replace(/_(.*?)_/g, '<em>$1</em>')
             .replace(/`(.*?)`/g, '<code>$1</code>')
             .replace(/\n/g, '<br>');
-        
+
         previewArea.innerHTML = formattedMessage;
-        
+
         const buttons = document.getElementsByName('button_text[]');
         if (buttons.length > 0) {
             const buttonPreview = document.createElement('div');
             buttonPreview.style.marginTop = '10px';
-            
+
             buttons.forEach((button, index) => {
                 const btn = document.createElement('button');
                 btn.textContent = button.value || 'زر';
                 btn.style.margin = '5px';
                 buttonPreview.appendChild(btn);
             });
-            
+
             previewArea.appendChild(buttonPreview);
         }
     }
@@ -655,7 +652,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const notificationType = document.getElementsByName('notification_type');
         const userIdField = document.getElementById('userIdField');
-        
+
         notificationType.forEach(radio => {
             radio.addEventListener('change', function() {
                 userIdField.classList.toggle('hidden', this.value === 'all');
@@ -671,10 +668,10 @@
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const text = textarea.value;
-        
+
         const selectedText = text.substring(start, end);
         const replacement = prefix + selectedText + suffix;
-        
+
         textarea.value = text.substring(0, start) + replacement + text.substring(end);
         updatePreview();
     }
@@ -683,9 +680,13 @@
         const container = document.getElementById('buttonsContainer');
         const buttonRow = document.createElement('div');
         buttonRow.className = 'button-row';
-        
+
+        // الحصول على جميع الأزرار الموجودة
+        const existingButtons = document.querySelectorAll('[name="button_value[]"]');
+        const buttonValues = Array.from(existingButtons).map(btn => btn.value);
+
         buttonRow.innerHTML = `
-            <input type="text" name="button_text[]" placeholder="نص الزر" required>
+            <input type="text" name="button_text[]" placeholder="نص الزر" required onchange="updateButtonsList(this)">
             <select name="button_type[]" required onchange="handleButtonTypeChange(this)">
                 <option value="url">رابط خارجي</option>
                 <option value="callback">زر داخلي</option>
@@ -698,11 +699,13 @@
                     <option value="my_orders">طلباتي</option>
                     <option value="search_order">البحث عن طلب</option>
                     <option value="back">رجوع</option>
+                    <option value="support">التواصل مع الدعم الفني</option>
+                    <option value="info">معلومات الحساب</option>
                 </select>
             </div>
             <button type="button" onclick="this.parentElement.remove()" style="background-color: #ff4444;">حذف</button>
         `;
-        
+
         container.appendChild(buttonRow);
     }
 
@@ -710,7 +713,7 @@
         const container = select.closest('.button-row').querySelector('.button-value-container');
         const textInput = container.querySelector('[name="button_value[]"]');
         const buttonSelect = container.querySelector('[name="bot_button[]"]');
-        
+
         if (select.value === 'callback') {
             textInput.style.display = 'none';
             buttonSelect.style.display = 'block';
@@ -730,29 +733,29 @@
     function updatePreview() {
         const message = document.getElementById('messageContent').value;
         const previewArea = document.getElementById('previewArea');
-        
+
         // تحسين معالجة النص الغامق
         let formattedMessage = message
             .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
             .replace(/_(.*?)_/g, '<em>$1</em>')
             .replace(/`(.*?)`/g, '<code>$1</code>')
             .replace(/\n/g, '<br>');
-        
+
         previewArea.innerHTML = formattedMessage;
-        
+
         // عرض الأزرار في المعاينة
         const buttons = document.getElementsByName('button_text[]');
         if (buttons.length > 0) {
             const buttonPreview = document.createElement('div');
             buttonPreview.style.marginTop = '10px';
-            
+
             buttons.forEach((button, index) => {
                 const btn = document.createElement('button');
                 btn.textContent = button.value || 'زر';
                 btn.style.margin = '5px';
                 buttonPreview.appendChild(btn);
             });
-            
+
             previewArea.appendChild(buttonPreview);
         }
     }
@@ -793,7 +796,7 @@
                             {{ 'إلغاء التفعيل' if product[4] else 'تفعيل' }}
                         </button>
                     </form>
-                    <button onclick="showEditForm('{{ product[0] }}', '{{ product[1] }}', '{{ product[2] }}', '{{ product[3] }}')" style="margin-right: 10px;">
+                    <button onclick="showEditForm('{{ product[0] }}`', '{{ product[1] }}', '{{ product[2] }}', '{{ product[3] }}')" style="margin-right: 10px;">
                         تعديل
                     </button>
                     <form action="/delete_product" method="post" style="display: inline;">
