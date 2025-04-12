@@ -1255,19 +1255,19 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 
     # إرسال إشعار للمدير
     # تحديد نوع الطلب
-    order_type = ""
+    service_name = ""
     if context.user_data.get('selected_mega'):
         c.execute('SELECT name FROM megas WHERE id = ?', (context.user_data['selected_mega'],))
         mega = c.fetchone()
         if mega:
-            order_type = f"باقة: {mega[0]}"
+            service_name = mega[0]
     elif context.user_data.get('selected_speed'):
         c.execute('SELECT name FROM speeds WHERE id = ?', (context.user_data['selected_speed'],))
         speed = c.fetchone()
         if speed:
-            order_type = f"سرعة: {speed[0]}"
+            service_name = speed[0]
     else:
-        order_type = "دفعة يدوية"
+        service_name = "دفعة يدوية"
 
     # إرسال إشعار للمدير
     admin_message = f"""
@@ -1275,7 +1275,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 رقم الطلب: {order_id}
 معرف المشتري: {update.effective_user.id}
 الشركة: {product_name}
-نوع الطلب: {order_type}
+الخدمة: {service_name}
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
 """
