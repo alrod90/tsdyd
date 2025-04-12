@@ -427,11 +427,154 @@
 
     <div class="section">
         <h2>إرسال إشعار للمستخدمين</h2>
-        <form action="/send_notification" method="post">
-            <input type="text" name="message" placeholder="نص الإشعار" required>
+        <form action="/send_notification" method="post" id="notificationForm">
+            <div class="notification-editor">
+                <textarea name="message" id="messageContent" placeholder="نص الإشعار" required></textarea>
+                
+                <div class="formatting-controls">
+                    <button type="button" onclick="addFormatting('**', '**')" title="غامق">B</button>
+                    <button type="button" onclick="addFormatting('_', '_')" title="مائل">I</button>
+                    <button type="button" onclick="addFormatting('`', '`')" title="كود">C</button>
+                </div>
+                
+                <div class="buttons-editor">
+                    <h4>إضافة أزرار</h4>
+                    <div id="buttonsContainer"></div>
+                    <button type="button" onclick="addButton()" class="add-button">+ إضافة زر</button>
+                </div>
+
+                <div class="notification-options">
+                    <label>
+                        <input type="radio" name="notification_type" value="all" checked> إرسال للجميع
+                    </label>
+                    <label>
+                        <input type="radio" name="notification_type" value="individual"> إرسال لمستخدم محدد
+                    </label>
+                    <input type="number" name="user_id" placeholder="معرف المستخدم" class="hidden" id="userIdField">
+                </div>
+
+                <div class="preview-section">
+                    <h4>معاينة الإشعار</h4>
+                    <div id="previewArea" class="notification-preview"></div>
+                </div>
+            </div>
             <input type="submit" value="إرسال الإشعار">
         </form>
     </div>
+
+    <style>
+    .notification-editor {
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    .formatting-controls button {
+        margin: 5px;
+        padding: 5px 10px;
+        background: #2196F3;
+    }
+    .buttons-editor {
+        margin: 15px 0;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .button-row {
+        display: flex;
+        gap: 10px;
+        margin: 10px 0;
+        align-items: center;
+    }
+    .notification-preview {
+        background: white;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-top: 10px;
+        min-height: 100px;
+    }
+    .hidden {
+        display: none;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const notificationType = document.getElementsByName('notification_type');
+        const userIdField = document.getElementById('userIdField');
+        
+        notificationType.forEach(radio => {
+            radio.addEventListener('change', function() {
+                userIdField.classList.toggle('hidden', this.value === 'all');
+            });
+        });
+
+        const messageContent = document.getElementById('messageContent');
+        messageContent.addEventListener('input', updatePreview);
+    });
+
+    function addFormatting(prefix, suffix) {
+        const textarea = document.getElementById('messageContent');
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        
+        const selectedText = text.substring(start, end);
+        const replacement = prefix + selectedText + suffix;
+        
+        textarea.value = text.substring(0, start) + replacement + text.substring(end);
+        updatePreview();
+    }
+
+    function addButton() {
+        const container = document.getElementById('buttonsContainer');
+        const buttonRow = document.createElement('div');
+        buttonRow.className = 'button-row';
+        
+        buttonRow.innerHTML = `
+            <input type="text" name="button_text[]" placeholder="نص الزر" required>
+            <select name="button_type[]" required>
+                <option value="url">رابط خارجي</option>
+                <option value="callback">زر داخلي</option>
+            </select>
+            <input type="text" name="button_value[]" placeholder="الرابط أو معرف الزر" required>
+            <button type="button" onclick="this.parentElement.remove()" style="background-color: #ff4444;">حذف</button>
+        `;
+        
+        container.appendChild(buttonRow);
+    }
+
+    function updatePreview() {
+        const message = document.getElementById('messageContent').value;
+        const previewArea = document.getElementById('previewArea');
+        
+        // تحويل التنسيق إلى HTML
+        let formattedMessage = message
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/_(.*?)_/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+        
+        previewArea.innerHTML = formattedMessage;
+        
+        // عرض الأزرار في المعاينة
+        const buttons = document.getElementsByName('button_text[]');
+        if (buttons.length > 0) {
+            const buttonPreview = document.createElement('div');
+            buttonPreview.style.marginTop = '10px';
+            
+            buttons.forEach((button, index) => {
+                const btn = document.createElement('button');
+                btn.textContent = button.value || 'زر';
+                btn.style.margin = '5px';
+                buttonPreview.appendChild(btn);
+            });
+            
+            previewArea.appendChild(buttonPreview);
+        }
+    }
+    </script>
 
     <div class="section">
         <h2>إضافة رصيد</h2>
