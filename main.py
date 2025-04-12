@@ -676,11 +676,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn.close()
         return "WAITING_CUSTOMER_INFO"
     elif query.data == 'add_new_order':
-                conn = sqlite3.connect('store.db')
-                c = conn.cursor()
-                c.execute('SELECT id, name FROM products WHERE is_active= 1')
-                products = c.fetchall()
-                conn.close()
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT id, name FROM products WHERE is_active= 1')
+        products = c.fetchall()
+        conn.close()
 
         keyboard = []
         for product in products:
