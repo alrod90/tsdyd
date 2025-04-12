@@ -2081,16 +2081,23 @@ def edit_user():
         user_id = request.form['user_id']
         new_balance = float(request.form['balance'])
         store_name = request.form.get('store_name', '')
+        notes = request.form.get('notes', '')
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        # الحصول على الرصيد القديم
+        # التحقق من وجود المستخدم أولاً
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
-        old_balance = c.fetchone()[0]
+        user_data = c.fetchone()
+        
+        if not user_data:
+            conn.close()
+            return "المستخدم غير موجود", 404
 
-        # تحديث الرصيد واسم المحل
-        c.execute('UPDATE users SET balance = ?, store_name = ? WHERE telegram_id = ?',
-                  (new_balance, store_name, user_id))
+        old_balance = user_data[0]
+
+        # تحديث بيانات المستخدم
+        c.execute('UPDATE users SET balance = ?, store_name = ?, note = ? WHERE telegram_id = ?',
+                  (new_balance, store_name, notes, user_id))
         conn.commit()
         conn.close()
 
