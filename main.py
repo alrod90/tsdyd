@@ -2644,6 +2644,7 @@ def run_bot():
 if __name__ == '__main__':
     # ضبط المنطقة الزمنية
     os.environ['TZ'] = 'Asia/Damascus'
+    app.config['SERVER_NAME'] = None  # Allow all hostnames
     try:
         import time
         time.tzset()
