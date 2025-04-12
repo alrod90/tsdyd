@@ -79,7 +79,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), soraat TEXT, note TEXT)''')
+                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS megas
@@ -935,25 +935,17 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
         try:
             if is_admin:
                 # المدير يمكنه البحث في جميع الطلبات
-                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id,
-                            CASE 
-                                WHEN o.note LIKE 'mega_%' THEN (SELECT name FROM megas WHERE id = CAST(SUBSTR(o.note, 6) AS INTEGER))
-                                WHEN o.note LIKE 'speed_%' THEN (SELECT name FROM speeds WHERE id = CAST(SUBSTR(o.note, 7) AS INTEGER))
-                                ELSE ''
-                            END as service_name
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
                             WHERE o.id = ?''', (order_number,))
             else:
                 # المستخدم العادي يبحث في طلباته فقط
-                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id,
-                            COALESCE(m.name, s.name, '') as service_name
+                c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
-                            LEFT JOIN megas m ON o.note = 'mega_' || m.id
-                            LEFT JOIN speeds s ON o.note = 'speed_' || s.id
                             WHERE o.id = ? AND o.user_id = ?''', (order_number, update.effective_user.id))
             order = c.fetchone()
 
@@ -963,11 +955,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 تفاصيل الطلب:
 رقم الطلب: {order[0]}
 الشركة: {order[1]}
-"""
-                if order[9]:  # إضافة اسم الخدمة إذا وجدت
-                    message += f"الخدمة: {order[9]}\n"
-                
-                message += f"""المبلغ: {order[2]} ليرة سوري
+المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
 التاريخ: {order[5]}"""
@@ -975,7 +963,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
                 if order[3] == "rejected" and order[7]:  # إضافة سبب الرفض
                     message += f"\nسبب الرفض: {order[7]}"
 
-                if order[6] and not (order[6].startswith('mega_') or order[6].startswith('speed_')):  # إضافة الملاحظة فقط إذا لم تكن معرف خدمة
+                if order[6]:  # إضافة الملاحظة إذا وجدت
                     message += f"\nملاحظة: {order[6]}"
 
                 # إضافة معرف التيليجرام فقط للمدير
@@ -1266,18 +1254,20 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     conn.commit()
 
     # إرسال إشعار للمدير
-    # تحديد نوع الطلب واسمه
-    service_name = ""
+    # تحديد نوع الطلب
+    order_type = ""
     if context.user_data.get('selected_mega'):
         c.execute('SELECT name FROM megas WHERE id = ?', (context.user_data['selected_mega'],))
         mega = c.fetchone()
         if mega:
-            service_name = mega[0]
+            order_type = f"باقة: {mega[0]}"
     elif context.user_data.get('selected_speed'):
         c.execute('SELECT name FROM speeds WHERE id = ?', (context.user_data['selected_speed'],))
         speed = c.fetchone()
         if speed:
-            service_name = speed[0]
+            order_type = f"سرعة: {speed[0]}"
+    else:
+        order_type = "دفعة يدوية"
 
     # إرسال إشعار للمدير
     admin_message = f"""
@@ -1285,7 +1275,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 رقم الطلب: {order_id}
 معرف المشتري: {update.effective_user.id}
 الشركة: {product_name}
-الخدمة: {service_name if service_name else "دفعة يدوية"}
+نوع الطلب: {order_type}
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
 """
