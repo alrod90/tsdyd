@@ -1911,67 +1911,33 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
 
 @app.route('/send_notification', methods=['POST'])
 def send_notification_route():
-    try:
-        message = request.form['message']
-        notification_type = request.form['notification_type']
-        parse_mode = request.form['parse_mode']
-        if parse_mode == 'none':
-            parse_mode = None
-            
-        # جمع معلومات الأزرار
-        button_texts = request.form.getlist('button_text[]')
-        button_urls = request.form.getlist('button_url[]')
-        button_types = request.form.getlist('button_type[]')
-        
-        buttons = []
-        for text, url, btn_type in zip(button_texts, button_urls, button_types):
-            if text and url:
-                if btn_type == 'url':
-                    buttons.append([{"text": text, "url": url}])
-                else:
-                    buttons.append([{"text": text, "callback_data": url}])
-        
-        keyboard = None
-        if buttons:
-            keyboard = InlineKeyboardMarkup(buttons)
+    message = request.form['message']
+    user_id = request.form.get('user_id', None)
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
 
-        async def send_notifications():
-            bot = telegram.Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
-            conn = sqlite3.connect('store.db')
-            c = conn.cursor()
+    async def send_notifications():
+        bot = telegram.Bot(token=bot_token)
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
 
-            try:
-                if notification_type == 'single':
-                    user_id = request.form['user_id']
-                    await bot.send_message(
-                        chat_id=int(user_id),
-                        text=message,
-                        parse_mode=parse_mode,
-                        reply_markup=keyboard
-                    )
-                else:
-                    c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
-                    users = c.fetchall()
-                    for user in users:
-                        try:
-                            await bot.send_message(
-                                chat_id=user[0],
-                                text=message,
-                                parse_mode=parse_mode,
-                                reply_markup=keyboard
-                            )
-                        except Exception as e:
-                            print(f"Error sending message to {user[0]}: {e}")
-            except Exception as e:
-                print(f"Error sending notification: {e}")
-            finally:
-                conn.close()
+        try:
+            if user_id:
+                await bot.send_message(chat_id=int(user_id), text=message)
+            else:
+                c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+                users = c.fetchall()
+                for user in users:
+                    try:
+                        await bot.send_message(chat_id=user[0], text=message)
+                    except Exception as e:
+                        print(f"Error sending message to {user[0]}: {e}")
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+        finally:
+            conn.close()
 
-        asyncio.run(send_notifications())
-        return redirect(url_for('admin_panel'))
-    except Exception as e:
-        print(f"Error in send_notification_route: {str(e)}")
-        return f"حدث خطأ في إرسال الإشعار: {str(e)}", 500
+    asyncio.run(send_notifications())
+    return redirect(url_for('admin_panel'))
 
 @app.route('/add_order', methods=['POST'])
 def add_order():
