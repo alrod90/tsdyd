@@ -936,12 +936,14 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
             if is_admin:
                 # المدير يمكنه البحث في جميع الطلبات
                 c.execute('''SELECT o.id, p.name, o.amount, o.status, o.customer_info, o.created_at, o.note, o.rejection_note, u.telegram_id,
-                            COALESCE(m.name, s.name, '') as service_name
+                            CASE 
+                                WHEN o.note LIKE 'mega_%' THEN (SELECT name FROM megas WHERE id = CAST(SUBSTR(o.note, 6) AS INTEGER))
+                                WHEN o.note LIKE 'speed_%' THEN (SELECT name FROM speeds WHERE id = CAST(SUBSTR(o.note, 7) AS INTEGER))
+                                ELSE ''
+                            END as service_name
                             FROM orders o 
                             JOIN products p ON o.product_id = p.id 
                             JOIN users u ON o.user_id = u.telegram_id
-                            LEFT JOIN megas m ON o.note = 'mega_' || m.id
-                            LEFT JOIN speeds s ON o.note = 'speed_' || s.id
                             WHERE o.id = ?''', (order_number,))
             else:
                 # المستخدم العادي يبحث في طلباته فقط
