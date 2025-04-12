@@ -561,7 +561,15 @@
                 <td>{{ order[0] }}</td>
                 <td>{{ order[1] }}</td>
                 <td>{{ order[2] }}</td>
-                <td>{{ order[7] if order[7] else 'دفعة يدوية' }}</td>
+                <td>
+                    {% if order[7] and order[7].startswith('speed_') %}
+                        {{ speeds[order[7].split('_')[1]].name if speeds.get(order[7].split('_')[1]) }}
+                    {% elif order[7] and order[7].startswith('mega_') %}
+                        {{ megas[order[7].split('_')[1]].name if megas.get(order[7].split('_')[1]) }}
+                    {% else %}
+                        دفعة يدوية
+                    {% endif %}
+                </td>
                 <td>{{ order[3] }}</td>
                 <td>{{ order[4] }}</td>
                 <td>
