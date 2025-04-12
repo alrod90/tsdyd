@@ -2115,7 +2115,7 @@ def change_order_status():
         # استرجاع معلومات الطلب والمنتج
         c.execute('''
             SELECT o.user_id, o.amount, p.name
-            FROM orders o 
+            FROM orders o
             JOIN products p ON o.product_id = p.id 
             WHERE o.id = ?
         ''', (order_id,))
@@ -2151,8 +2151,7 @@ def change_order_status():
 الشركة: {product_name}
 الحالة: قيد المعالجة"""
 
-        if note:
-            notification_message += f"\nملاحظة: {note}"
+        # تم إخفاء الملاحظات
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -2217,8 +2216,7 @@ def change_order_status():
 الشركة: {product_name}
 الحالة الجديدة: قيد المعالجة"""
 
-        if note:
-            notification_message += f"\nملاحظة: {note}"
+        # تم إخفاء الملاحظات
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
