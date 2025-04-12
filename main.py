@@ -79,7 +79,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')now', '+3 hours')), note TEXT)''')
+                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS megas
@@ -2112,8 +2112,7 @@ def change_order_status():
         conn = sqlite3.connect('store.db')
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
-        # استرجاع معلومات الطلب والمنتج
-c.execute('''
+        # استرجاع معلومات الطلبc.execute('''
             SELECT o.user_id, o.amount, p.name
             FROM orders o 
             JOIN products p ON o.product_id = p.id 
