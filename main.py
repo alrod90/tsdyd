@@ -222,6 +222,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("رصيدي", callback_data='balance'),
         InlineKeyboardButton("طلباتي", callback_data='my_orders')
     ])
+    keyboard.append([
+        InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')
+    ])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
