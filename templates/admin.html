@@ -450,17 +450,166 @@
                     <label>
                         <input type="radio" name="notification_type" value="individual"> إرسال لمستخدم محدد
                     </label>
-                    <input type="number" name="user_id" placeholder="معرف المستخدم" class="hidden" id="userIdField">
+                    <select name="user_id" id="userIdField" class="hidden">
+                        <option value="">اختر المستخدم</option>
+                        {% for user in users %}
+                        <option value="{{ user[1] }}">{{ user[1] }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <div class="preview-section">
-                    <h4>معاينة الإشعار</h4>
-                    <div id="previewArea" class="notification-preview"></div>
-                </div>
+                <button type="button" onclick="showPreview()" class="preview-button">معاينة الإشعار</button>
+                <div id="previewArea" class="notification-preview hidden"></div>
             </div>
             <input type="submit" value="إرسال الإشعار">
         </form>
     </div>
+
+    <style>
+    .notification-editor {
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    .formatting-controls button {
+        margin: 5px;
+        padding: 5px 10px;
+        background: #2196F3;
+    }
+    .buttons-editor {
+        margin: 15px 0;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .button-row {
+        display: flex;
+        gap: 10px;
+        margin: 10px 0;
+        align-items: center;
+    }
+    .notification-preview {
+        background: white;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-top: 10px;
+        min-height: 100px;
+    }
+    .preview-button {
+        margin: 10px 0;
+        padding: 8px 15px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .hidden {
+        display: none;
+    }
+    #userIdField {
+        width: 100%;
+        padding: 8px;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const notificationType = document.getElementsByName('notification_type');
+        const userIdField = document.getElementById('userIdField');
+        
+        notificationType.forEach(radio => {
+            radio.addEventListener('change', function() {
+                userIdField.classList.toggle('hidden', this.value === 'all');
+            });
+        });
+    });
+
+    function showPreview() {
+        const previewArea = document.getElementById('previewArea');
+        previewArea.classList.remove('hidden');
+        updatePreview();
+    }
+
+    function addButton() {
+        const container = document.getElementById('buttonsContainer');
+        const buttonRow = document.createElement('div');
+        buttonRow.className = 'button-row';
+        
+        buttonRow.innerHTML = `
+            <input type="text" name="button_text[]" placeholder="نص الزر" required>
+            <select name="button_type[]" required>
+                <option value="url">رابط خارجي</option>
+                <option value="callback" onclick="loadBotButtons(this)">زر داخلي</option>
+            </select>
+            <input type="text" name="button_value[]" placeholder="الرابط أو معرف الزر" required>
+            <button type="button" onclick="this.parentElement.remove()" style="background-color: #ff4444;">حذف</button>
+        `;
+        
+        const typeSelect = buttonRow.querySelector('select');
+        typeSelect.addEventListener('change', function() {
+            if (this.value === 'callback') {
+                loadBotButtons(this.parentElement.querySelector('[name="button_value[]"]'));
+            }
+        });
+        
+        container.appendChild(buttonRow);
+    }
+
+    function loadBotButtons(input) {
+        // قائمة الأزرار المتاحة في البوت
+        const botButtons = [
+            { id: 'balance', text: 'رصيدي' },
+            { id: 'my_orders', text: 'طلباتي' },
+            { id: 'search_order', text: 'البحث عن طلب' },
+            { id: 'back', text: 'رجوع' }
+        ];
+
+        const select = document.createElement('select');
+        select.innerHTML = '<option value="">اختر زراً</option>' +
+            botButtons.map(btn => `<option value="${btn.id}">${btn.text}</option>`).join('');
+        
+        select.addEventListener('change', function() {
+            input.value = this.value;
+        });
+
+        input.parentElement.insertBefore(select, input);
+        input.style.display = 'none';
+    }
+
+    function updatePreview() {
+        const message = document.getElementById('messageContent').value;
+        const previewArea = document.getElementById('previewArea');
+        
+        let formattedMessage = message
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/_(.*?)_/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+        
+        previewArea.innerHTML = formattedMessage;
+        
+        const buttons = document.getElementsByName('button_text[]');
+        if (buttons.length > 0) {
+            const buttonPreview = document.createElement('div');
+            buttonPreview.style.marginTop = '10px';
+            
+            buttons.forEach((button, index) => {
+                const btn = document.createElement('button');
+                btn.textContent = button.value || 'زر';
+                btn.style.margin = '5px';
+                buttonPreview.appendChild(btn);
+            });
+            
+            previewArea.appendChild(buttonPreview);
+        }
+    }
+    </script>
 
     <style>
     .notification-editor {
