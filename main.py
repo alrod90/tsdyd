@@ -2168,7 +2168,7 @@ def change_order_status():
 
         # إعداد نص الإشعار
         if new_status == "accepted":
-            notification_message = f"""✅ تم قبول طلبك!
+            notification_message = f"""✅ تم قبول طلبك
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري"""
