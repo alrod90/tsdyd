@@ -42,14 +42,11 @@ def sync_deployed_db():
             print("تم إنشاء قاعدة بيانات جديدة")
 
     # إضافة عمود store_name إذا لم يكن موجوداً
-    try:
-        c.execute('ALTER TABLE users ADD COLUMN store_name TEXT')
-        conn.commit()
-    except sqlite3.OperationalError:
-        pass  # العمود موجود بالفعل
+    except sqlite3.OperationalError as e:
+        print(f"Database error: {str(e)}")
 
     except Exception as e:
-        print(f"خطأ في التحقق من قاعدة البيانات: {str(e)}")
+        print(f"Error syncing database: {str(e)}")
 
 def init_db():
     conn = sqlite3.connect('store.db')
@@ -682,7 +679,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ```python
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT id, name FROM products WHERE is_active = 1')
+        c.execute('SELECT id, name FROM products WHERE is_active= 1')
         products = c.fetchall()
         conn.close()
 
