@@ -676,7 +676,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for product in products:
-            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product_{product[0]}')])
+            keyboard.append([InlineKeyboardButton(product[1], callback_data=f'add_order_product```python
+_{product[0]}')])
         keyboard.append([InlineKeyboardButton("رجوع", callback_data='orders_menu')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -2113,7 +2114,7 @@ def change_order_status():
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
         # استرجاع معلومات الطلب والمنتج
-        c.execute('''
+c.execute('''
             SELECT o.user_id, o.amount, p.name
             FROM orders o 
             JOIN products p ON o.product_id = p.id 
@@ -2151,8 +2152,7 @@ def change_order_status():
 الشركة: {product_name}
 الحالة: قيد المعالجة"""
 
-        if note:
-            notification_message += f"\nملاحظة: {note}"
+        # تم إخفاء الملاحظة من الإشعارات
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -2217,8 +2217,7 @@ def change_order_status():
 الشركة: {product_name}
 الحالة الجديدة: قيد المعالجة"""
 
-        if note:
-            notification_message += f"\nملاحظة: {note}"
+        # تم إخفاء الملاحظة من الإشعارات
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
