@@ -79,7 +79,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), soraat TEXT, note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS megas
