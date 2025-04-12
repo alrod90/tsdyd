@@ -1851,10 +1851,10 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
 
     async def send_single_message(bot, chat_id, retry_count=0):
         try:
+            # إزالة parse_mode لتجنب مشاكل التنسيق
             await bot.send_message(
                 chat_id=int(chat_id),
                 text=message,
-                parse_mode='MarkdownV2',
                 disable_notification=not is_important
             )
             print(f"✅ تم إرسال الإشعار بنجاح للمستخدم {chat_id}")
@@ -1865,8 +1865,17 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
                 return await send_single_message(bot, chat_id, retry_count + 1)
             return False
         except telegram.error.BadRequest as e:
-            print(f"❌ خطأ في صيغة الرسالة للمستخدم {chat_id}: {str(e)}")
-            return False
+            print(f"❌ خطأ في إرسال الرسالة للمستخدم {chat_id}: {str(e)}")
+            # محاولة إرسال الرسالة بدون تنسيق خاص
+            try:
+                await bot.send_message(
+                    chat_id=int(chat_id),
+                    text=message,
+                    disable_notification=not is_important
+                )
+                return True
+            except:
+                return False
         except telegram.error.Unauthorized:
             print(f"🚫 المستخدم {chat_id} قام بحظر البوت")
             return False
