@@ -1268,6 +1268,8 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
             service_name = speed[0]
     else:
         service_name = "دفعة يدوية"
+        # تعيين نوع الخدمة كدفعة يدوية في حالة الدفع اليدوي
+        c.execute('UPDATE orders SET note = ? WHERE id = ?', ("دفعة يدوية", order_id))
 
     # إرسال إشعار للمدير
     admin_message = f"""
@@ -2324,10 +2326,10 @@ def edit_order_amount():
     try:
         order_id = request.form['order_id']
         new_amount = float(request.form['new_amount'])
-        
+
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
+
         # استرجاع معلومات الطلب الحالية
         c.execute('''SELECT o.amount, o.user_id, o.status, p.name, u.balance
                      FROM orders o 
@@ -2364,7 +2366,7 @@ def edit_order_amount():
 
         # تحديث مبلغ الطلب
         c.execute('UPDATE orders SET amount = ? WHERE id = ?', (new_amount, order_id))
-        
+
         # إعداد رسالة الإشعار
         notification_message = f"""تم تعديل مبلغ الطلب
 رقم الطلب: {order_id}
@@ -2387,7 +2389,7 @@ def edit_order_amount():
                 requests.post(telegram_api_url, json=payload)
         except Exception as e:
             print(f"Error sending notification: {str(e)}")
-        
+
         conn.close()
         return redirect(url_for('admin_panel'))
 
