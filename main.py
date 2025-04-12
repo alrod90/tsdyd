@@ -1245,11 +1245,18 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     amount = context.user_data['amount']
     customer_info = context.user_data['customer_info']
 
+    # تحديد نوع الخدمة
+    service_type = None
+    if 'selected_speed' in context.user_data and context.user_data['selected_speed']:
+        service_type = f"speed_{context.user_data['selected_speed']}"
+    elif 'selected_mega' in context.user_data and context.user_data['selected_mega']:
+        service_type = f"mega_{context.user_data['selected_mega']}"
+
     # خصم المبلغ من رصيد المستخدم وإنشاء الطلب
     c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
               (amount, update.effective_user.id))
-    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info) VALUES (?, ?, ?, ?)',
-              (update.effective_user.id, context.user_data['product_id'], amount, customer_info))
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, note) VALUES (?, ?, ?, ?, ?)',
+              (update.effective_user.id, context.user_data['product_id'], amount, customer_info, service_type))
     order_id = c.lastrowid
     conn.commit()
 
@@ -2105,7 +2112,6 @@ def change_order_status():
         conn = sqlite3.connect('store.db')
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
-
         # استرجاع معلومات الطلب والمنتج
         c.execute('''
             SELECT o.user_id, o.amount, p.name
