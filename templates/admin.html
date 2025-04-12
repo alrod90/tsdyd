@@ -434,7 +434,7 @@
                     <option value="all">إرسال للجميع</option>
                     <option value="single">إرسال لمستخدم محدد</option>
                 </select>
-                
+
                 <div id="userSelectDiv" style="display: none;">
                     <label>اختر المستخدم:</label>
                     <select name="user_id">
@@ -447,7 +447,7 @@
                 <div class="notification-content">
                     <label>نص الإشعار:</label>
                     <textarea name="message" id="messageInput" required></textarea>
-                    
+
                     <label>تنسيق النص:</label>
                     <select name="parse_mode">
                         <option value="none">بدون تنسيق</option>
@@ -461,17 +461,26 @@
                     <div id="buttonsContainer">
                         <div class="button-row">
                             <input type="text" name="button_text[]" placeholder="نص الزر">
-                            <input type="text" name="button_url[]" placeholder="رابط الزر">
-                            <select name="button_type[]">
+                            <select name="button_type[]" onchange="toggleButtonOptions(this)">
                                 <option value="url">رابط خارجي</option>
                                 <option value="callback">زر داخلي</option>
                             </select>
+                            <select name="button_url[]" class="internal-buttons" style="display: none;">
+                                <option value="back">رجوع</option>
+                                <option value="balance">رصيدي</option>
+                                <option value="my_orders">طلباتي</option>
+                                <option value="products_menu">قائمة المنتجات</option>
+                                <option value="orders_menu">قائمة الطلبات</option>
+                                <option value="users_menu">قائمة المستخدمين</option>
+                                <option value="balance_menu">قائمة الأرصدة</option>
+                            </select>
+                            <input type="text" name="button_url[]" class="external-url" placeholder="رابط الزر">
                             <button type="button" onclick="removeButtonRow(this)">حذف</button>
                         </div>
                     </div>
                     <button type="button" onclick="addButtonRow()">إضافة زر</button>
                 </div>
-                
+
                 <div class="preview-section">
                     <button type="button" onclick="previewNotification()">معاينة الإشعار</button>
                     <div id="previewArea"></div>
@@ -493,11 +502,20 @@
         newRow.className = 'button-row';
         newRow.innerHTML = `
             <input type="text" name="button_text[]" placeholder="نص الزر">
-            <input type="text" name="button_url[]" placeholder="رابط الزر">
-            <select name="button_type[]">
+            <select name="button_type[]" onchange="toggleButtonOptions(this)">
                 <option value="url">رابط خارجي</option>
                 <option value="callback">زر داخلي</option>
             </select>
+            <select name="button_url[]" class="internal-buttons" style="display: none;">
+                <option value="back">رجوع</option>
+                <option value="balance">رصيدي</option>
+                <option value="my_orders">طلباتي</option>
+                <option value="products_menu">قائمة المنتجات</option>
+                <option value="orders_menu">قائمة الطلبات</option>
+                <option value="users_menu">قائمة المستخدمين</option>
+                <option value="balance_menu">قائمة الأرصدة</option>
+            </select>
+            <input type="text" name="button_url[]" class="external-url" placeholder="رابط الزر">
             <button type="button" onclick="removeButtonRow(this)">حذف</button>
         `;
         container.appendChild(newRow);
@@ -521,7 +539,7 @@
         let preview = `<div class="notification-preview">
             <h4>معاينة الإشعار:</h4>
             <div class="message">${message}</div>`;
-        
+
         if (buttons.length > 0) {
             preview += '<div class="buttons">';
             buttons.forEach(button => {
@@ -532,6 +550,20 @@
         preview += '</div>';
 
         document.getElementById('previewArea').innerHTML = preview;
+    }
+
+    function toggleButtonOptions(selectElement) {
+        const buttonRow = selectElement.parentElement;
+        const internalButtons = buttonRow.querySelector('.internal-buttons');
+        const externalUrl = buttonRow.querySelector('.external-url');
+
+        if (selectElement.value === 'callback') {
+            internalButtons.style.display = 'block';
+            externalUrl.style.display = 'none';
+        } else {
+            internalButtons.style.display = 'none';
+            externalUrl.style.display = 'block';
+        }
     }
     </script>
 
