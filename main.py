@@ -79,7 +79,8 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
-                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT)''')
+                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')), note TEXT,
+                  order_type TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS categories
                      (id INTEGER PRIMARY KEY, name TEXT, identifier TEXT, is_active BOOLEAN DEFAULT 1)''')
     c.execute('''CREATE TABLE IF NOT EXISTS megas
@@ -1270,8 +1271,11 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     elif context.user_data.get('selected_speed'):
         order_type = f"speed_{context.user_data['selected_speed']}"
 
-    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, note) VALUES (?, ?, ?, ?, ?)',
-          (update.effective_user.id, context.user_data['product_id'], amount, customer_info, order_type))
+    c.execute('INSERT INTO orders (user_id, product_id, amount, customer_info, order_type) VALUES (?, ?, ?, ?, ?)',
+          (update.effective_user.id, context.user_data['product_id'], amount, customer_info, 
+           'mega_' + str(context.user_data.get('selected_mega')) if context.user_data.get('selected_mega') else 
+           'speed_' + str(context.user_data.get('selected_speed')) if context.user_data.get('selected_speed') else 
+           'manual'))
     order_id = c.lastrowid
     conn.commit()
 
