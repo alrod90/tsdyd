@@ -512,33 +512,6 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn.close()
         return
 
-    elif query.data == "contact_support":
-        # معالجة زر التواصل مع الدعم الفني
-        await query.message.edit_text(
-            "للتواصل مع الدعم الفني:\n@nourrod",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("رجوع", callback_data='back')]])
-        )
-        return
-
-    elif query.data == "account_info":
-        # معالجة زر معلومات الحساب
-        user_id = update.effective_user.id
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
-        balance = c.fetchone()[0]
-        conn.close()
-
-        info_message = f"""معلومات حسابك:
-معرف التيليجرام: {user_id}
-الرصيد الحالي: {balance} ليرة سوري"""
-
-        await query.message.edit_text(
-            info_message,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("رجوع", callback_data='back')]])
-        )
-        return
-
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
@@ -1354,7 +1327,7 @@ async def handle_new_order_user_id(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text("أدخل بيانات الزبون:")
         return "WAITING_NEW_ORDER_CUSTOMER_INFO"
     except ValueError:
-        await update.message.reply_text("معرف مستخدم غير صحيح، الرجاء المحاولة مرةأخرى.")
+        await update.message.reply_text("معرف مستخدم غير صحيح، الرجاء المحاولة مرة أخرى.")
         return ConversationHandler.END
 
 async def handle_new_order_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1869,7 +1842,7 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False, reply_markup=None):
+async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
     """
     دالة محسنة لإرسال الإشعارات للمستخدمين
     """
@@ -1882,8 +1855,7 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
                 chat_id=int(chat_id),
                 text=message,
                 parse_mode='HTML',
-                disable_notification=not is_important,
-                reply_markup=reply_markup
+                disable_notification=not is_important
             )
             print(f"✅ تم إرسال الإشعار بنجاح للمستخدم {chat_id}")
             return True
@@ -1949,7 +1921,7 @@ def send_notification_route():
         button_texts = request.form.getlist('button_text[]')
         button_types = request.form.getlist('button_type[]')
         button_values = request.form.getlist('button_value[]')
-
+        
         # تجهيز الأزرار
         keyboard = []
         if button_texts:
@@ -1967,7 +1939,7 @@ def send_notification_route():
                 keyboard.append(row)
 
         reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
-
+        
         async def send_notifications():
             bot = telegram.Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
             conn = sqlite3.connect('store.db')
@@ -2055,12 +2027,8 @@ def add_order():
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}"""
 
-        keyboard = [
-            [InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         try:
-            asyncio.run(send_notification(bot, notification_message, user_id, reply_markup=reply_markup))
+            asyncio.run(send_notification(bot, notification_message, user_id))
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2095,12 +2063,8 @@ def add_balance():
 المبلغ المضاف: {amount} ليرة سوري
 رصيدك الحالي: {new_balance} ليرة سوري"""
 
-    keyboard = [
-        [InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     try:
-        asyncio.run(send_notification(bot, notification_message, user_id, reply_markup=reply_markup))
+        asyncio.run(send_notification(bot, notification_message, user_id))
     except Exception as e:
         print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2116,7 +2080,7 @@ def edit_user():
 
         # الحصول على الرصيد القديم
         c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
-        old_balance =c.fetchone()[0]
+        old_balance = c.fetchone()[0]
 
         # تحديث الرصيد
         c.execute('UPDATE users SET balance = ? WHERE telegram_id = ?',
@@ -2131,12 +2095,8 @@ def edit_user():
 الرصيد السابق: {old_balance} ليرة سوري
 الرصيد الجديد: {new_balance} ليرة سوري"""
 
-        keyboard = [
-            [InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         try:
-            asyncio.run(send_notification(bot, notification_message, user_id, reply_markup=reply_markup))
+            asyncio.run(send_notification(bot, notification_message, user_id))
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2230,11 +2190,7 @@ def change_order_status():
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        keyboard = [
-            [InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        asyncio.run(send_notification(bot, notification_message, user_id, reply_markup=reply_markup))
+        asyncio.run(send_notification(bot, notification_message, user_id))
 
         conn.commit()
 
@@ -2299,12 +2255,8 @@ def change_order_status():
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        keyboard = [
-            [InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         try:
-            asyncio.run(send_notification(bot, notification_message, user_id, reply_markup=reply_markup))
+            asyncio.run(send_notification(bot, notification_message, user_id))
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2398,12 +2350,8 @@ def handle_order():
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        keyboard = [
-            [InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
         try:
-            asyncio.run(send_notification(bot, notification_message, user_id, reply_markup=reply_markup))
+            asyncio.run(send_notification(bot, notification_message, user_id))
         except Exception as e:
             print(f"خطأ في إرسال الإشعار: {str(e)}")
 
@@ -2745,11 +2693,7 @@ async def handle_add_user_balance(update: Update, context: ContextTypes.DEFAULT_
         # إرسال إشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         bot = telegram.Bot(token=bot_token)
-        keyboard = [
-            [InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        asyncio.run(send_notification(bot, f"تم إضافة {amount} ليرة سوري إلى رصيدك من قبل الموزع", user_id, reply_markup=reply_markup))
+        asyncio.run(send_notification(bot, f"تم إضافة {amount} ليرة سوري إلى رصيدك من قبل الموزع", user_id))
 
         conn.close()
         await update.message.reply_text("تمت العملية بنجاح")
