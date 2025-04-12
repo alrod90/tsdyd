@@ -1,4 +1,3 @@
-
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
@@ -8,7 +7,6 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
 from kivy.core.window import Window
 from kivy.uix.spinner import Spinner
-from kivy.clock import Clock
 import sqlite3
 import os
 import requests
@@ -18,15 +16,22 @@ class BillPaymentApp(App):
     def build(self):
         # تعيين خلفية التطبيق
         Window.clearcolor = (0.9, 0.9, 0.9, 1)
-        
+
         # التخطيط الرئيسي
         self.main_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
-        
+
         # تسجيل الدخول
         self.login_layout = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None, height=200)
         self.telegram_id = TextInput(
-            hint_text='معرف التيلجرام',
+            hint_text='رقم الهاتف',
             multiline=False,
+            size_hint_y=None,
+            height=40
+        )
+        self.password = TextInput(
+            hint_text='كلمة المرور',
+            multiline=False,
+            password=True,
             size_hint_y=None,
             height=40
         )
@@ -38,62 +43,65 @@ class BillPaymentApp(App):
             on_press=self.login
         )
         self.login_layout.add_widget(self.telegram_id)
+        self.login_layout.add_widget(self.password)
         self.login_layout.add_widget(self.login_button)
-        
+
         # القائمة الرئيسية (مخفية في البداية)
         self.menu_layout = BoxLayout(orientation='vertical', spacing=10)
         self.menu_layout.opacity = 0
-        
+
         # عرض الرصيد
         self.balance_label = Label(
             text='',
             size_hint_y=None,
             height=50
         )
-        
+
         # قائمة الأقسام
         self.categories_layout = GridLayout(cols=2, spacing=10, size_hint_y=None)
         self.categories_layout.bind(minimum_height=self.categories_layout.setter('height'))
-        
+
         # منطقة الطلبات
         self.orders_layout = BoxLayout(orientation='vertical', spacing=10)
         self.orders_scroll = ScrollView(size_hint=(1, None), size=(Window.width, Window.height * 0.4))
         self.orders_grid = GridLayout(cols=1, spacing=10, size_hint_y=None)
         self.orders_grid.bind(minimum_height=self.orders_grid.setter('height'))
         self.orders_scroll.add_widget(self.orders_grid)
-        
+
         # إضافة كل العناصر للتخطيط الرئيسي
         self.menu_layout.add_widget(self.balance_label)
         self.menu_layout.add_widget(self.categories_layout)
         self.menu_layout.add_widget(self.orders_scroll)
-        
+
         self.main_layout.add_widget(self.login_layout)
         self.main_layout.add_widget(self.menu_layout)
-        
+
         # تحديث البيانات كل 30 ثانية
         Clock.schedule_interval(self.update_data, 30)
-        
+
         return self.main_layout
 
     def login(self, instance):
+        phone = self.telegram_id.text
+        password = self.password.text
+
         try:
-            user_id = int(self.telegram_id.text)
             conn = sqlite3.connect('store.db')
             c = conn.cursor()
-            c.execute('SELECT balance, is_active FROM users WHERE telegram_id = ?', (user_id,))
+            c.execute('SELECT id, balance FROM users WHERE phone = ? AND password = ?', (phone, password))
             result = c.fetchone()
-            
-            if result and result[1]:  # التحقق من وجود المستخدم وأنه نشط
-                self.current_user_id = user_id
+            conn.close()
+            if result:
+                self.current_user_id = result[0]
                 self.login_layout.opacity = 0
                 self.menu_layout.opacity = 1
                 self.update_data(None)
             else:
-                self.show_message("معرف غير صحيح أو الحساب معطل")
-                
-            conn.close()
-        except ValueError:
-            self.show_message("الرجاء إدخال معرف صحيح")
+                self.show_message("رقم هاتف أو كلمة مرور خاطئة")
+        except Exception as e:
+            self.show_message(f"حدث خطأ: {str(e)}")
+
+
 
     def update_data(self, dt):
         if hasattr(self, 'current_user_id'):
@@ -104,10 +112,9 @@ class BillPaymentApp(App):
     def update_balance(self):
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (self.current_user_id,))
+        c.execute('SELECT balance FROM users WHERE id = ?', (self.current_user_id,))
         result = c.fetchone()
         conn.close()
-        
         if result:
             self.balance_label.text = f'رصيدك: {result[0]} ليرة سورية'
 
@@ -117,7 +124,6 @@ class BillPaymentApp(App):
         c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
         categories = c.fetchall()
         conn.close()
-        
         self.categories_layout.clear_widgets()
         for category in categories:
             btn = Button(
@@ -135,11 +141,8 @@ class BillPaymentApp(App):
         c.execute('SELECT id, name FROM products WHERE category = ? AND is_active = 1', (category,))
         products = c.fetchall()
         conn.close()
-        
-        # إنشاء نافذة منبثقة للمنتجات
         self.products_layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
         self.products_layout.bind(minimum_height=self.products_layout.setter('height'))
-        
         for product in products:
             btn = Button(
                 text=product[1],
@@ -152,32 +155,24 @@ class BillPaymentApp(App):
     def show_product_options(self, product_id):
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
-        # التحقق من وجود باقات وسرعات
         c.execute('SELECT COUNT(*) FROM speeds WHERE product_id = ? AND is_active = 1', (product_id,))
         has_speeds = c.fetchone()[0] > 0
-        
         c.execute('SELECT COUNT(*) FROM megas WHERE product_id = ? AND is_active = 1', (product_id,))
         has_megas = c.fetchone()[0] > 0
-        
         conn.close()
-        
-        # إنشاء نافذة منبثقة للخيارات
         options_layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
-        
         if has_speeds:
             speed_btn = Button(text='السرعات', size_hint_y=None, height=50)
             speed_btn.bind(on_press=lambda x: self.show_speeds(product_id))
             options_layout.add_widget(speed_btn)
-            
         if has_megas:
             mega_btn = Button(text='الباقات', size_hint_y=None, height=50)
             mega_btn.bind(on_press=lambda x: self.show_megas(product_id))
             options_layout.add_widget(mega_btn)
-            
         manual_btn = Button(text='دفعة يدوية', size_hint_y=None, height=50)
         manual_btn.bind(on_press=lambda x: self.show_manual_payment(product_id))
         options_layout.add_widget(manual_btn)
+
 
     def update_orders(self):
         conn = sqlite3.connect('store.db')
@@ -191,7 +186,6 @@ class BillPaymentApp(App):
         ''', (self.current_user_id,))
         orders = c.fetchall()
         conn.close()
-        
         self.orders_grid.clear_widgets()
         for order in orders:
             status = "قيد المعالجة" if order[3] == "pending" else "مقبول" if order[3] == "accepted" else "مرفوض"
@@ -204,7 +198,17 @@ class BillPaymentApp(App):
 
     def show_message(self, message):
         popup_label = Label(text=message)
-        # إظهار رسالة منبثقة
+        # إظهار رسالة منبثقة  (This needs implementation using a popup library)
+
+    def show_speeds(self, product_id):
+        pass # Implement speed selection
+
+    def show_megas(self, product_id):
+        pass # Implement mega selection
+
+    def show_manual_payment(self, product_id):
+        pass # Implement manual payment
+
 
 if __name__ == '__main__':
     BillPaymentApp().run()
