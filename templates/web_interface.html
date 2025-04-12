@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <title>نظام تسديد الفواتير</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+            text-align: right;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <h1>نظام تسديد الفواتير</h1>
+            <div id="balance">رصيدك: <span id="balanceAmount">0</span> ليرة سوري</div>
+        </div>
+
+        <div class="section">
+            <h2>الخدمات المتوفرة</h2>
+            <div id="services"></div>
+        </div>
+
+        <div class="section">
+            <h2>طلباتي</h2>
+            <div id="orders"></div>
+        </div>
+    </div>
+
+    <script>
+        async function loadServices() {
+            const response = await fetch('/api/services');
+            const services = await response.json();
+            const servicesDiv = document.getElementById('services');
+            services.forEach(service => {
+                const button = document.createElement('button');
+                button.className = 'button';
+                button.textContent = service.name;
+                button.onclick = () => showServiceDetails(service);
+                servicesDiv.appendChild(button);
+            });
+        }
+
+        async function loadOrders() {
+            const response = await fetch('/api/orders');
+            const orders = await response.json();
+            const ordersDiv = document.getElementById('orders');
+            orders.forEach(order => {
+                const div = document.createElement('div');
+                div.className = 'section';
+                div.innerHTML = `
+                    <p>رقم الطلب: ${order.id}</p>
+                    <p>الخدمة: ${order.service}</p>
+                    <p>المبلغ: ${order.amount} ل.س</p>
+                    <p>الحالة: ${order.status}</p>
+                `;
+                ordersDiv.appendChild(div);
+            });
+        }
+
+        async function loadBalance() {
+            const response = await fetch('/api/balance');
+            const balance = await response.json();
+            document.getElementById('balanceAmount').textContent = balance.amount;
+        }
+
+        // تحميل البيانات عند فتح الصفحة
+        loadServices();
+        loadOrders();
+        loadBalance();
+    </script>
+</body>
+</html>

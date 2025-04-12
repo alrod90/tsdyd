@@ -1503,6 +1503,49 @@ def delete_category():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/web')
+def web_interface():
+    return render_template('web_interface.html')
+
+@app.route('/api/services')
+def get_services():
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT id, name, category FROM products WHERE is_active = 1')
+    services = [{'id': row[0], 'name': row[1], 'category': row[2]} for row in c.fetchall()]
+    conn.close()
+    return jsonify(services)
+
+@app.route('/api/orders')
+def get_orders():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify([])
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('''SELECT o.id, p.name, o.amount, o.status 
+                 FROM orders o 
+                 JOIN products p ON o.product_id = p.id 
+                 WHERE o.user_id = ?''', (user_id,))
+    orders = [{'id': row[0], 'service': row[1], 'amount': row[2], 'status': row[3]} 
+             for row in c.fetchall()]
+    conn.close()
+    return jsonify(orders)
+
+@app.route('/api/balance')
+def get_balance():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'amount': 0})
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+    balance = c.fetchone()
+    conn.close()
+    return jsonify({'amount': balance[0] if balance else 0})
+
 @app.route('/')
 def admin_panel():
     try:
