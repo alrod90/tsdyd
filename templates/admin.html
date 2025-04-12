@@ -427,11 +427,149 @@
 
     <div class="section">
         <h2>إرسال إشعار للمستخدمين</h2>
-        <form action="/send_notification" method="post">
-            <input type="text" name="message" placeholder="نص الإشعار" required>
+        <form action="/send_notification" method="post" id="notificationForm">
+            <div class="notification-options">
+                <label>نوع الإشعار:</label>
+                <select name="notification_type" onchange="toggleUserSelect(this.value)">
+                    <option value="all">إرسال للجميع</option>
+                    <option value="single">إرسال لمستخدم محدد</option>
+                </select>
+                
+                <div id="userSelectDiv" style="display: none;">
+                    <label>اختر المستخدم:</label>
+                    <select name="user_id">
+                        {% for user in users %}
+                        <option value="{{ user[1] }}">{{ user[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="notification-content">
+                    <label>نص الإشعار:</label>
+                    <textarea name="message" id="messageInput" required></textarea>
+                    
+                    <label>تنسيق النص:</label>
+                    <select name="parse_mode">
+                        <option value="none">بدون تنسيق</option>
+                        <option value="HTML">HTML</option>
+                        <option value="Markdown">Markdown</option>
+                    </select>
+                </div>
+
+                <div class="buttons-section">
+                    <label>الأزرار المرفقة:</label>
+                    <div id="buttonsContainer">
+                        <div class="button-row">
+                            <input type="text" name="button_text[]" placeholder="نص الزر">
+                            <input type="text" name="button_url[]" placeholder="رابط الزر">
+                            <select name="button_type[]">
+                                <option value="url">رابط خارجي</option>
+                                <option value="callback">زر داخلي</option>
+                            </select>
+                            <button type="button" onclick="removeButtonRow(this)">حذف</button>
+                        </div>
+                    </div>
+                    <button type="button" onclick="addButtonRow()">إضافة زر</button>
+                </div>
+                
+                <div class="preview-section">
+                    <button type="button" onclick="previewNotification()">معاينة الإشعار</button>
+                    <div id="previewArea"></div>
+                </div>
+            </div>
             <input type="submit" value="إرسال الإشعار">
         </form>
     </div>
+
+    <script>
+    function toggleUserSelect(value) {
+        document.getElementById('userSelectDiv').style.display = 
+            value === 'single' ? 'block' : 'none';
+    }
+
+    function addButtonRow() {
+        const container = document.getElementById('buttonsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'button-row';
+        newRow.innerHTML = `
+            <input type="text" name="button_text[]" placeholder="نص الزر">
+            <input type="text" name="button_url[]" placeholder="رابط الزر">
+            <select name="button_type[]">
+                <option value="url">رابط خارجي</option>
+                <option value="callback">زر داخلي</option>
+            </select>
+            <button type="button" onclick="removeButtonRow(this)">حذف</button>
+        `;
+        container.appendChild(newRow);
+    }
+
+    function removeButtonRow(button) {
+        button.parentElement.remove();
+    }
+
+    function previewNotification() {
+        const message = document.getElementById('messageInput').value;
+        const parseMode = document.querySelector('select[name="parse_mode"]').value;
+        const buttons = Array.from(document.getElementsByClassName('button-row')).map(row => {
+            return {
+                text: row.querySelector('[name="button_text[]"]').value,
+                url: row.querySelector('[name="button_url[]"]').value,
+                type: row.querySelector('[name="button_type[]"]').value
+            };
+        });
+
+        let preview = `<div class="notification-preview">
+            <h4>معاينة الإشعار:</h4>
+            <div class="message">${message}</div>`;
+        
+        if (buttons.length > 0) {
+            preview += '<div class="buttons">';
+            buttons.forEach(button => {
+                preview += `<button class="preview-button">${button.text}</button>`;
+            });
+            preview += '</div>';
+        }
+        preview += '</div>';
+
+        document.getElementById('previewArea').innerHTML = preview;
+    }
+    </script>
+
+    <style>
+    .notification-options {
+        margin: 20px 0;
+    }
+    .notification-content textarea {
+        width: 100%;
+        min-height: 100px;
+        margin: 10px 0;
+    }
+    .button-row {
+        margin: 10px 0;
+        display: flex;
+        gap: 10px;
+    }
+    .preview-section {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+    }
+    .notification-preview {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 10px;
+    }
+    .preview-button {
+        margin: 5px;
+        padding: 5px 15px;
+        background: #2196F3;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    </style>
 
     <div class="section">
         <h2>إضافة رصيد</h2>
