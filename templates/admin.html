@@ -562,16 +562,16 @@
                 <td>{{ order[1] }}</td>
                 <td>{{ order[2] }}</td>
                 <td>
-                    {% if order[7] %}
-                        {% if 'mega_' in order[7] %}
-                            {% set mega_id = order[7].split('_')[1] %}
+                    {% if order[8] %}
+                        {% if 'mega_' in order[8] %}
+                            {% set mega_id = order[8].split('_')[1] %}
                             {% for mega in megas %}
                                 {% if mega.id|string == mega_id %}
                                     {{ mega.name }}
                                 {% endif %}
                             {% endfor %}
-                        {% elif 'speed_' in order[7] %}
-                            {% set speed_id = order[7].split('_')[1] %}
+                        {% elif 'speed_' in order[8] %}
+                            {% set speed_id = order[8].split('_')[1] %}
                             {% for speed in speeds %}
                                 {% if speed.id|string == speed_id %}
                                     {{ speed.name }}
