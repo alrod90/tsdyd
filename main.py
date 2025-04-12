@@ -1839,12 +1839,35 @@ def edit_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
-async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
+async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False, parse_mode=None, buttons=None, image_path=None):
     """
-    دالة محسنة لإرسال الإشعارات للمستخدمين
+    دالة محسنة لإرسال الإشعارات للمستخدمين مع دعم الخيارات الجديدة
     """
     MAX_RETRIES = 3
     RETRY_DELAY = 1  # ثانية
+
+    async def send_single_message(bot, chat_id, retry_count=0):
+        try:
+            if image_path:
+                with open(image_path, 'rb') as photo:
+                    await bot.send_photo(
+                        chat_id=int(chat_id),
+                        photo=photo,
+                        caption=message,
+                        parse_mode=parse_mode,
+                        reply_markup=buttons,
+                        disable_notification=not is_important
+                    )
+            else:
+                await bot.send_message(
+                    chat_id=int(chat_id),
+                    text=message,
+                    parse_mode=parse_mode,
+                    reply_markup=buttons,
+                    disable_notification=not is_important
+                )
+            print(f"✅ تم إرسال الإشعار بنجاح للمستخدم {chat_id}")
+            return True
 
     async def send_single_message(bot, chat_id, retry_count=0):
         try:
@@ -1915,8 +1938,40 @@ def send_notification_route():
         message = request.form['message']
         notification_type = request.form['notification_type']
         parse_mode = request.form['parse_mode']
+        appearance_style = request.form.get('appearance_style', 'default')
+        content_type = request.form.get('content_type', 'custom')
+        
         if parse_mode == 'none':
             parse_mode = None
+
+        # معالجة نوع المحتوى
+        if content_type == 'products':
+            products_option = request.form.get('products_option')
+            if products_option == 'specific_category':
+                category_id = request.form.get('category_id')
+                # إضافة معلومات القسم المحدد للرسالة
+                message = f"معلومات عن القسم: {category_id}\n" + message
+            elif products_option == 'specific_product':
+                product_id = request.form.get('product_id')
+                # إضافة معلومات المنتج المحدد للرسالة
+                message = f"معلومات عن المنتج: {product_id}\n" + message
+
+        elif content_type == 'orders':
+            orders_option = request.form.get('orders_option')
+            if orders_option == 'specific_order':
+                order_id = request.form.get('order_id')
+                # إضافة معلومات الطلب المحدد للرسالة
+                message = f"معلومات عن الطلب رقم: {order_id}\n" + message
+
+        # معالجة مظهر الإشعار
+        if appearance_style != 'default':
+            icons = {
+                'success': '✅',
+                'warning': '⚠️',
+                'error': '❌',
+                'info': 'ℹ️'
+            }
+            message = f"{icons.get(appearance_style, '')} {message}"
             
         # جمع معلومات الأزرار
         button_texts = request.form.getlist('button_text[]')
