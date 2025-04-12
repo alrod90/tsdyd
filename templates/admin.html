@@ -562,13 +562,15 @@
                 <td>{{ order[1] }}</td>
                 <td>{{ order[2] }}</td>
                 <td>
-                    {% if order[7] and 'speed_' in order[7] %}
+                    {% if not order[7] %}
+                        دفعة يدوية
+                    {% elif order[7].startswith('speed_') %}
                         {% for speed in speeds %}
                             {% if 'speed_' + speed.id|string == order[7] %}
                                 {{ speed.name }}
                             {% endif %}
                         {% endfor %}
-                    {% elif order[7] and 'mega_' in order[7] %}
+                    {% elif order[7].startswith('mega_') %}
                         {% for mega in megas %}
                             {% if 'mega_' + mega.id|string == order[7] %}
                                 {{ mega.name }}
