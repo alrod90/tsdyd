@@ -512,6 +512,33 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn.close()
         return
 
+    elif query.data == "contact_support":
+        # معالجة زر التواصل مع الدعم الفني
+        await query.message.edit_text(
+            "للتواصل مع الدعم الفني:\n@nourrod",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("رجوع", callback_data='back')]])
+        )
+        return
+
+    elif query.data == "account_info":
+        # معالجة زر معلومات الحساب
+        user_id = update.effective_user.id
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+        balance = c.fetchone()[0]
+        conn.close()
+
+        info_message = f"""معلومات حسابك:
+معرف التيليجرام: {user_id}
+الرصيد الحالي: {balance} ليرة سوري"""
+
+        await query.message.edit_text(
+            info_message,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("رجوع", callback_data='back')]])
+        )
+        return
+
     elif query.data.startswith('buy_'):
         product_id = int(query.data.split('_')[1])
         context.user_data['product_id'] = product_id
