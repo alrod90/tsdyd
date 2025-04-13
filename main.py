@@ -48,6 +48,15 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
+    
+    # إضافة عمود store_name إذا لم يكن موجوداً
+    c.execute("PRAGMA table_info(users)")
+    columns = [column[1] for column in c.fetchall()]
+    if 'store_name' not in columns:
+        c.execute('ALTER TABLE users ADD COLUMN store_name TEXT')
+        # تعيين اسم المحل الافتراضي لجميع المستخدمين
+        c.execute('UPDATE users SET store_name = "محل " || telegram_id WHERE store_name IS NULL')
+        conn.commit()
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
