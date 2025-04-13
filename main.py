@@ -75,7 +75,8 @@ def init_db():
 
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
+                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT,
+                  store_name TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -2163,6 +2164,19 @@ def toggle_distributor():
     except Exception as e:
         print(f"Error in toggle_distributor: {str(e)}")
         return "حدث خطأ في تغيير صلاحية الموزع", 500
+
+@app.route('/edit_store_name', methods=['POST'])
+def edit_store_name():
+    telegram_id = request.form['telegram_id']
+    store_name = request.form['store_name']
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, telegram_id))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('admin_panel'))
 
 @app.route('/toggle_user', methods=['POST'])
 def toggle_user():
