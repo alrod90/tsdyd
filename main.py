@@ -1891,7 +1891,7 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
 
     try:
         bot = telegram.Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
-        
+
         if user_id:
             # إرسال لمستخدم محدد
             success = await send_single_message(bot, user_id)
@@ -1965,7 +1965,7 @@ def send_notification_route():
         button_texts = request.form.getlist('button_text[]')
         button_types = request.form.getlist('button_type[]')
         button_values = request.form.getlist('button_value[]')
-        
+
         # تجهيز الأزرار
         keyboard = []
         if button_texts:
@@ -1983,7 +1983,7 @@ def send_notification_route():
                 keyboard.append(row)
 
         reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
-        
+
         async def send_notifications():
             bot = telegram.Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
             conn = sqlite3.connect('store.db')
