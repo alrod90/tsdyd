@@ -796,8 +796,7 @@
                             {{ 'إلغاء التفعيل' if product[4] else 'تفعيل' }}
                         </button>
                     </form>
-                    <button onclick="showEditForm('{{ product[0] }}`', '{{ product[1] }}', '{{ product[2] }}', '{{ product[3] }}')" style="margin-right: 10px;">
-                        تعديل
+                    <button onclick="showEditForm('{{ product[0] }}`', '{{ product[1] }}', '{{ product[2] }}', '{{ product[3] }}')" style="margin-right: 10px;">                        تعديل
                     </button>
                     <form action="/delete_product" method="post" style="display: inline;">
                         <input type="hidden" name="product_id" value="{{ product[0] }}">
