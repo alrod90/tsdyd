@@ -2254,8 +2254,28 @@ def change_order_status():
         amount = order_info[1]
         product_name = order_info[2]
 
+        # التحقق من الحالة السابقة للطلب
+        c.execute('SELECT status, amount, user_id FROM orders WHERE id = ?', (order_id,))
+        previous_order = c.fetchone()
+        old_status = previous_order[0]
+        amount = previous_order[1]
+        user_id = previous_order[2]
+
+        # إذا كان الطلب مرفوضاً سابقاً وتم تغييره إلى مقبول أو قيد المعالجة
+        if old_status == 'rejected' and new_status in ['accepted', 'pending']:
+            # التحقق من رصيد المستخدم
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+            user_balance = c.fetchone()[0]
+            
+            if user_balance < amount:
+                conn.close()
+                return "رصيد المستخدم غير كافٍ لتغيير حالة الطلب", 400
+            
+            # خصم المبلغ من جديد
+            c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id))
+
         # تحديث حالة الطلب
-        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note =? WHERE id= ?',
+        c.execute('UPDATE orders SET status = ?, note = ?, rejection_note = ? WHERE id = ?',
                  (new_status, note, rejection_note if new_status == 'rejected' else None, order_id))
 
         # إعداد نص الإشعار
