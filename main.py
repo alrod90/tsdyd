@@ -2175,14 +2175,28 @@ def toggle_distributor():
 
 @app.route('/update_store_name', methods=['POST'])
 def update_store_name():
-    user_id = request.form['user_id']
-    store_name = request.form['store_name']
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
-    conn.commit()
-    conn.close()
-    return 'success'
+    try:
+        user_id = request.form['user_id']
+        store_name = request.form['store_name']
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # التحقق من وجود العمود
+        c.execute("PRAGMA table_info(users)")
+        columns = [column[1] for column in c.fetchall()]
+        if 'store_name' not in columns:
+            c.execute('ALTER TABLE users ADD COLUMN store_name TEXT DEFAULT NULL')
+            
+        # تحديث اسم المحل
+        c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
+        conn.commit()
+        conn.close()
+        return 'success'
+    except Exception as e:
+        print(f"Error in update_store_name: {str(e)}")
+        if conn:
+            conn.close()
+        return 'error', 500
 
 @app.route('/toggle_user', methods=['POST'])
 def toggle_user():
