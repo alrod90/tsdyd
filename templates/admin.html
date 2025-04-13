@@ -847,11 +847,11 @@
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
-                <td>{{ user[6] if user[6] else 'لا يوجد' }}</td>
+                <td>{{ user[6] if user[6] else 'محل ' + (user[1]|string) }}</td>
                 <td>{{ user[2] }}</td>
                 <td>{{ user[5] if user[5] else '' }}</td>
                 <td>
-                    <button onclick="showEditStoreName('{{ user[1] }}', '{{ user[6] if user[6] else '' }}')" style="margin-right: 10px; background-color: #2196F3;">
+                    <button onclick="showEditStoreName('{{ user[1] }}', '{{ user[6] if user[6] else 'محل ' + (user[1]|string) }}')" style="margin-right: 10px; background-color: #2196F3;">
                         تعديل اسم المحل
                     </button>
                     <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}', '{{ user[5] if user[5] else '' }}')" style="margin-right: 10px;">
@@ -1230,6 +1230,20 @@ function showEditStoreName(userId, currentName) {
     modal.classList.add('modal');
     modal.appendChild(content);
     document.body.appendChild(modal);
+    
+    // Add event listeners after adding to DOM
+    const form = modal.querySelector('form');
+    const cancelButton = modal.querySelector('button[type="button"]');
+    
+    form.addEventListener('submit', function(e) {
+        if (!validateForm(this)) {
+            e.preventDefault();
+        }
+    });
+    
+    cancelButton.addEventListener('click', function() {
+        modal.remove();
+    });
 }
 
 function validateForm(form) {
