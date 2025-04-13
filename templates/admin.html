@@ -847,7 +847,7 @@
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
-                <td onclick="showEditStoreName('{{ user[1] }}', '{{ user[7] if user[7] else user[1] }}')" style="cursor: pointer;">{{ user[7] if user[7] else user[1] }}</td>
+                <td onclick="showEditStoreName('{{ user[1] }}', '{{ user[7] if user[7] else user[1] }}')" style="cursor: pointer; text-decoration: underline;">{{ user[7] if user[7] else user[1] }}</td>
                 <td>{{ user[2] }}</td>
                 <td>{{ user[5] if user[5] else '' }}</td>
                 <td>
@@ -1023,6 +1023,39 @@
                     <div style="margin-top: 20px;">
                         <button type="submit" style="background-color: #4CAF50;">حفظ التغييرات</button>
                         <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+
+    function showEditStoreName(telegram_id, current_name) {
+        var modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+
+        var content = document.createElement('div');
+        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto; text-align: right;';
+
+        content.innerHTML = `
+            <h3>تعديل اسم المحل</h3>
+            <form action="/edit_store_name" method="post" onsubmit="return validateStoreName(this);">
+                <input type="hidden" name="telegram_id" value="${telegram_id}">
+                <input type="text" name="store_name" value="${current_name}" placeholder="اسم المحل" required>
+                <div style="margin-top: 20px;">
+                    <button type="submit" style="background-color: #4CAF50;">حفظ</button>
+                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                </div>
+            </form>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    }
+
+    function validateStoreName(form) {
+        var storeName = form.store_name.value.trim();
+        if (!storeName) {
+            alert('الرجاء إدخال اسم المحل');
+            return false;
+        }
+        return true;
+    }
+
                     </div>
                 </form>
             `;

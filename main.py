@@ -2177,6 +2177,7 @@ def edit_store_name():
     try:
         telegram_id = request.form['telegram_id']
         store_name = request.form['store_name']
+        
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
@@ -2186,9 +2187,20 @@ def edit_store_name():
         if 'store_name' not in columns:
             c.execute("ALTER TABLE users ADD COLUMN store_name TEXT DEFAULT NULL")
             conn.commit()
-            
+        
+        # تحديث اسم المحل
         c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, telegram_id))
         conn.commit()
+        
+        # إرسال إشعار للمستخدم
+        try:
+            bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+            bot = telegram.Bot(token=bot_token)
+            notification_message = f"تم تحديث اسم المحل الخاص بك إلى: {store_name}"
+            asyncio.run(send_notification(context=None, message=notification_message, user_id=telegram_id))
+        except Exception as e:
+            print(f"Error sending notification: {str(e)}")
+        
         conn.close()
         return redirect(url_for('admin_panel'))
     except Exception as e:
