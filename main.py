@@ -1848,12 +1848,28 @@ def edit_store_name():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        # Update store name
-        c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
+        # Verify the user exists
+        c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (user_id,))
+        if not c.fetchone():
+            conn.close()
+            return "المستخدم غير موجود", 404
+            
+        # Update store name with explicit type conversion
+        c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (str(store_name), str(user_id)))
         conn.commit()
-        conn.close()
         
+        # Verify update was successful
+        c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
+        updated_name = c.fetchone()
+        
+        if not updated_name or updated_name[0] != store_name:
+            conn.rollback()
+            conn.close()
+            return "فشل تحديث اسم المحل", 500
+            
+        conn.close()
         return redirect(url_for('admin_panel'))
+        
     except Exception as e:
         print(f"Error in edit_store_name: {str(e)}")
         return "حدث خطأ في تعديل اسم المحل", 500
