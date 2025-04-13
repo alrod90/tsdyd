@@ -110,40 +110,6 @@
         .hidden-table {
             display: none;
         }
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1; /* Sit on top */
-            left: 0;
-            top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgb(0,0,0); /* Fallback color */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto; /* 15% from the top and centered */
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%; /* Could be more or less, depending on screen size */
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -804,7 +770,7 @@
         </form>
     </div>
 
-    <div classsection">
+    <div class="section">
         <h2>المنتجات</h2>
         <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
         <table class="hidden-table">
@@ -830,7 +796,7 @@
                             {{ 'إلغاء التفعيل' if product[4] else 'تفعيل' }}
                         </button>
                     </form>
-                    <button onclick="showEditForm('{{ product[0] }}`', '{{ product[1]}}', '{{ product[2] }}', '{{ product[3] }}')" style="margin-right: 10px;">
+                    <button onclick="showEditForm('{{ product[0] }}`', '{{ product[1] }}', '{{ product[2] }}', '{{ product[3] }}')" style="margin-right: 10px;">
                         تعديل
                     </button>
                     <form action="/delete_product" method="post" style="display: inline;">
@@ -873,21 +839,16 @@
             <tr>
                 <th>الرقم</th>
                 <th>معرف تيليجرام</th>
-                <th>اسم المحل</th>
                 <th>الرصيد (ل.س)</th>
                 <th>ملاحظات</th>
             </tr>
             {% for user in users %}
-            <tr data-user-id="{{ user[1] }}">
+            <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
-                <td>{{ user[6] if user[6] else 'محل ' + (user[1]|string) }}</td>
                 <td>{{ user[2] }}</td>
                 <td>{{ user[5] if user[5] else '' }}</td>
                 <td>
-                    <button onclick="showEditStoreName('{{ user[1] }}', '{{ user[6] if user[6] else 'محل ' + (user[1]|string) }}')" style="margin-right: 10px; background-color: #2196F3;">
-                        تعديل اسم المحل
-                    </button>
                     <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}', '{{ user[5] if user[5] else '' }}')" style="margin-right: 10px;">
                         تعديل
                     </button>
@@ -1238,84 +1199,3 @@
     </script>
 </body>
 </html>
-<script>
-function showEditStoreName(userId, currentName) {
-    var modal = document.createElement('div');
-    modal.classList.add('modal');
-    modal.innerHTML = `
-        <div class="modal-content">
-            <span class="close" onclick="this.parentElement.style.display='none';">&times;</span>
-            <h3 style="margin-bottom: 20px;">تعديل اسم المحل</h3>
-            <form id="editStoreNameForm" onsubmit="return handleStoreNameSubmit(event, this);">
-                <input type="hidden" name="user_id" value="${userId}">
-                <input type="text" name="store_name" value="${currentName}" placeholder="اسم المحل" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;" required>
-                <div style="margin-top: 20px; text-align: center;">
-                    <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-left: 10px; cursor: pointer;">تأكيد</button>
-                    <button type="button" onclick="this.closest('.modal').remove()" style="background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">إلغاء</button>
-                </div>
-            </form>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    modal.style.display = 'block';
-}
-
-function handleStoreNameSubmit(event, form) {
-    event.preventDefault();
-    if (!validateForm(form)) return false;
-
-    const formData = new FormData(form);
-    const userId = formData.get('user_id');
-    const newStoreName = formData.get('store_name');
-
-    fetch('/edit_store_name', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.text();
-    })
-    .then(() => {
-        // تحديث اسم المحل في الجدول مباشرة
-        const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
-        if (userRow) {
-            const storeNameCell = userRow.querySelector('td:nth-child(3)');
-            if (storeNameCell) {
-                storeNameCell.textContent = newStoreName;
-                // إضافة تأكيد بصري للتحديث
-                storeNameCell.style.backgroundColor = '#e8f5e9';
-                setTimeout(() => {
-                    storeNameCell.style.backgroundColor = '';
-                }, 2000);
-            }
-        }
-        // إغلاق النافذة المنبثقة
-        const modal = form.closest('.modal');
-        if (modal) {
-            modal.remove();
-        }
-        // عرض رسالة نجاح
-        alert('تم تحديث اسم المحل بنجاح');
-        // تحديث الصفحة للتأكد من تحديث البيانات
-        location.reload();
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('حدث خطأ أثناء تحديث اسم المحل');
-    });
-
-    return false;
-}
-
-function validateForm(form) {
-    var storeName = form.store_name.value.trim();
-    if (!storeName) {
-        alert('الرجاء إدخال اسم المحل');
-        return false;
-    }
-    return true;
-}
-</script>

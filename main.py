@@ -48,15 +48,6 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
-    
-    # إضافة عمود store_name إذا لم يكن موجوداً
-    c.execute("PRAGMA table_info(users)")
-    columns = [column[1] for column in c.fetchall()]
-    if 'store_name' not in columns:
-        c.execute('ALTER TABLE users ADD COLUMN store_name TEXT')
-        # تعيين اسم المحل الافتراضي لجميع المستخدمين
-        c.execute('UPDATE users SET store_name = "محل " || telegram_id WHERE store_name IS NULL')
-        conn.commit()
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -84,8 +75,7 @@ def init_db():
 
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT,
-                  store_name TEXT)''')
+                  phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -1839,56 +1829,6 @@ def delete_product():
         print(f"Error in delete_product: {str(e)}")
         return "حدث خطأ في حذف المنتج", 500
 
-@app.route('/edit_store_name', methods=['POST'])
-def edit_store_name():
-    try:
-        user_id = request.form['user_id']
-        store_name = request.form['store_name'].strip()
-        
-        if not store_name:
-            return "اسم المحل لا يمكن أن يكون فارغاً", 400
-            
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        try:
-            # Verify the user exists
-            c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (user_id,))
-            if not c.fetchone():
-                return "المستخدم غير موجود", 404
-                
-            # Update store name with explicit UPDATE statement
-            c.execute('''
-                UPDATE users 
-                SET store_name = ? 
-                WHERE telegram_id = ? 
-                AND (store_name IS NULL OR store_name != ?)
-            ''', (store_name, user_id, store_name))
-            conn.commit()
-            
-            # Send notification only if the update was successful
-            if c.rowcount > 0:
-                try:
-                    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-                    if bot_token:
-                        notification_message = f"تم تحديث اسم المحل الخاص بك إلى: {store_name}"
-                        asyncio.run(send_notification(None, notification_message, user_id))
-                except Exception as e:
-                    print(f"Error sending notification: {str(e)}")
-            
-            return redirect(url_for('admin_panel'))
-            
-        except sqlite3.Error as e:
-            print(f"Database error: {str(e)}")
-            return "حدث خطأ في قاعدة البيانات", 500
-            
-        finally:
-            conn.close()
-            
-    except Exception as e:
-        print(f"Error in edit_store_name: {str(e)}")
-        return "حدث خطأ في تعديل اسم المحل", 500
-
 @app.route('/edit_product', methods=['POST'])
 def edit_product():
     product_id = request.form['product_id']
@@ -2814,52 +2754,3 @@ def toggle_distributor():
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
-@app.route('/edit_store_name', methods=['POST'])
-def edit_store_name():
-    try:
-        user_id = request.form['user_id']
-        store_name = request.form['store_name'].strip()
-        
-        if not store_name:
-            return "اسم المحل لا يمكن أن يكون فارغاً", 400
-            
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        try:
-            # Verify the user exists
-            c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (user_id,))
-            if not c.fetchone():
-                return "المستخدم غير موجود", 404
-                
-            # Update store name with explicit UPDATE statement
-            c.execute('''
-                UPDATE users 
-                SET store_name = ? 
-                WHERE telegram_id = ? 
-                AND (store_name IS NULL OR store_name != ?)
-            ''', (store_name, user_id, store_name))
-            conn.commit()
-            
-            # Send notification only if the update was successful
-            if c.rowcount > 0:
-                try:
-                    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-                    if bot_token:
-                        notification_message = f"تم تحديث اسم المحل الخاص بك إلى: {store_name}"
-                        asyncio.run(send_notification(None, notification_message, user_id))
-                except Exception as e:
-                    print(f"Error sending notification: {str(e)}")
-            
-            return redirect(url_for('admin_panel'))
-            
-        except sqlite3.Error as e:
-            print(f"Database error: {str(e)}")
-            return "حدث خطأ في قاعدة البيانات", 500
-            
-        finally:
-            conn.close()
-            
-    except Exception as e:
-        print(f"Error in edit_store_name: {str(e)}")
-        return "حدث خطأ في تعديل اسم المحل", 500
