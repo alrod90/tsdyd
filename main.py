@@ -2123,7 +2123,7 @@ def edit_user():
         c = conn.cursor()
 
         # الحصول على الرصيد القديم
-        c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+        c.execute('SELECTbalance FROM users WHERE telegram_id = ?', (user_id,))
         old_balance = c.fetchone()[0]
 
         # تحديث الرصيد
