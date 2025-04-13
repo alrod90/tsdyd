@@ -1212,38 +1212,20 @@ function showEditStoreName(userId, currentName) {
     var content = document.createElement('div');
     content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto; position: relative; top: 50%; transform: translateY(-50%);';
 
-    // Set default store name as user ID if no current name exists
-    var defaultStoreName = currentName || 'محل ' + userId;
-
     content.innerHTML = `
         <h3 style="margin-bottom: 20px;">تعديل اسم المحل</h3>
-        <form action="/edit_store_name" method="post" onsubmit="return validateForm(this);">
+        <form action="/edit_store_name" method="post">
             <input type="hidden" name="user_id" value="${userId}">
-            <input type="text" name="store_name" value="${defaultStoreName}" placeholder="اسم المحل" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;" required>
+            <input type="text" name="store_name" value="${currentName}" placeholder="اسم المحل" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;" required>
             <div style="margin-top: 20px; text-align: center;">
                 <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-left: 10px; cursor: pointer;">حفظ</button>
-                <button type="button" onclick="this.closest('.modal').remove()" style="background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">إلغاء</button>
+                <button type="button" onclick="this.closest('div').parentElement.remove()" style="background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">إلغاء</button>
             </div>
         </form>
     `;
 
-    modal.classList.add('modal');
     modal.appendChild(content);
     document.body.appendChild(modal);
-    
-    // Add event listeners after adding to DOM
-    const form = modal.querySelector('form');
-    const cancelButton = modal.querySelector('button[type="button"]');
-    
-    form.addEventListener('submit', function(e) {
-        if (!validateForm(this)) {
-            e.preventDefault();
-        }
-    });
-    
-    cancelButton.addEventListener('click', function() {
-        modal.remove();
-    });
 }
 
 function validateForm(form) {
