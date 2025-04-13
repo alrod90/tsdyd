@@ -1857,16 +1857,17 @@ def edit_store_name():
             if not c.fetchone():
                 return "المستخدم غير موجود", 404
                 
-            # Update store name
-            c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
+            # Update store name with explicit UPDATE statement
+            c.execute('''
+                UPDATE users 
+                SET store_name = ? 
+                WHERE telegram_id = ? 
+                AND (store_name IS NULL OR store_name != ?)
+            ''', (store_name, user_id, store_name))
             conn.commit()
             
-            # Verify update was successful
-            c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
-            result = c.fetchone()
-            
-            if result and result[0] == store_name:
-                # Send notification to user about store name update
+            # Send notification only if the update was successful
+            if c.rowcount > 0:
                 try:
                     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
                     if bot_token:

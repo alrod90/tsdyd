@@ -1215,7 +1215,7 @@ function showEditStoreName(userId, currentName) {
 
     content.innerHTML = `
         <h3 style="margin-bottom: 20px;">تعديل اسم المحل</h3>
-        <form id="editStoreForm" onsubmit="return handleStoreNameSubmit(event, this);">
+        <form action="/edit_store_name" method="post">
             <input type="hidden" name="user_id" value="${userId}">
             <input type="text" name="store_name" value="${currentName}" placeholder="اسم المحل" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;" required>
             <div style="margin-top: 20px; text-align: center;">
