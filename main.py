@@ -76,7 +76,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
                   phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT,
-                  store_name TEXT)''')
+                  store_name TEXT DEFAULT NULL)''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders
                  (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                   customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -1538,7 +1538,7 @@ def admin_panel():
                      (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
         c.execute('''CREATE TABLE IF NOT EXISTS users
                      (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
+                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT, store_name TEXT DEFAULT NULL)''')
         c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
@@ -2122,7 +2122,7 @@ def edit_user():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
 
-        # الحصول على الرصيد القديم
+        # الحصولعلى الرصيد القديم
         c.execute('SELECTbalance FROM users WHERE telegram_id = ?', (user_id,))
         old_balance = c.fetchone()[0]
 
@@ -2519,7 +2519,7 @@ def get_db_connection():
                      (id INTEGER PRIMARY KEY, name TEXT, category TEXT, is_active BOOLEAN DEFAULT 1)''')
         c.execute('''CREATE TABLE IF NOT EXISTS users
                      (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT)''')
+                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT, store_name TEXT DEFAULT NULL)''')
         c.execute('''CREATE TABLE IF NOT EXISTS orders
                      (id INTEGER PRIMARY KEY, user_id INTEGER, product_id INTEGER, amount REAL, 
                       customer_info TEXT, status TEXT DEFAULT 'pending', rejection_note TEXT,
