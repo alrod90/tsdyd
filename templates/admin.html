@@ -839,6 +839,7 @@
             <tr>
                 <th>الرقم</th>
                 <th>معرف تيليجرام</th>
+                <th>اسم المحل</th>
                 <th>الرصيد (ل.س)</th>
                 <th>ملاحظات</th>
             </tr>
@@ -846,6 +847,7 @@
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
+                <td onclick="editStoreName('{{ user[1] }}', '{{ user.store_name if user.store_name else user[1] }}')" style="cursor: pointer;">{{ user.store_name if user.store_name else user[1] }}</td>
                 <td>{{ user[2] }}</td>
                 <td>{{ user[5] if user[5] else '' }}</td>
                 <td>
@@ -1195,6 +1197,23 @@
             }
         }
         return true;
+    }
+    function editStoreName(userId, currentName) {
+        var newName = prompt('أدخل اسم المحل:', currentName);
+        if (newName !== null && newName.trim() !== '') {
+            fetch('/update_store_name', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `user_id=${userId}&store_name=${encodeURIComponent(newName)}`
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                }
+            });
+        }
     }
     </script>
 </body>
