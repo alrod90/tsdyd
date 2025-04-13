@@ -1830,6 +1830,25 @@ def delete_product():
         print(f"Error in delete_product: {str(e)}")
         return "حدث خطأ في حذف المنتج", 500
 
+@app.route('/edit_store_name', methods=['POST'])
+def edit_store_name():
+    try:
+        user_id = request.form['user_id']
+        store_name = request.form['store_name']
+        
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # Update store name
+        c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
+        conn.commit()
+        conn.close()
+        
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in edit_store_name: {str(e)}")
+        return "حدث خطأ في تعديل اسم المحل", 500
+
 @app.route('/edit_product', methods=['POST'])
 def edit_product():
     product_id = request.form['product_id']
