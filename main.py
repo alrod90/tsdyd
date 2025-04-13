@@ -2178,6 +2178,10 @@ def update_store_name():
     try:
         user_id = request.form['user_id']
         store_name = request.form['store_name']
+        
+        # طباعة القيم للتأكد من استلامها
+        print(f"Updating store name for user {user_id} to {store_name}")
+        
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
@@ -2186,17 +2190,39 @@ def update_store_name():
         columns = [column[1] for column in c.fetchall()]
         if 'store_name' not in columns:
             c.execute('ALTER TABLE users ADD COLUMN store_name TEXT DEFAULT NULL')
+            conn.commit()
+            
+        # التحقق من وجود المستخدم
+        c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (user_id,))
+        if not c.fetchone():
+            conn.close()
+            return 'user not found', 404
             
         # تحديث اسم المحل
         c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
+        
+        # التحقق من عدد الصفوف المتأثرة
+        if c.rowcount == 0:
+            conn.close()
+            return 'no update occurred', 400
+            
         conn.commit()
-        conn.close()
-        return 'success'
+        
+        # التحقق من نجاح التحديث
+        c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
+        result = c.fetchone()
+        if result and result[0] == store_name:
+            conn.close()
+            return 'success'
+        else:
+            conn.close()
+            return 'verification failed', 500
+            
     except Exception as e:
         print(f"Error in update_store_name: {str(e)}")
-        if conn:
+        if 'conn' in locals() and conn:
             conn.close()
-        return 'error', 500
+        return str(e), 500
 
 @app.route('/toggle_user', methods=['POST'])
 def toggle_user():
