@@ -2238,6 +2238,31 @@ def change_order_status():
         conn = sqlite3.connect('store.db')
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
+
+        # التحقق من الحالة السابقة للطلب والمبلغ
+        c.execute('SELECT status, amount, user_id FROM orders WHERE id = ?', (order_id,))
+        order_info = c.fetchone()
+        
+        if not order_info:
+            conn.close()
+            return "الطلب غير موجود", 404
+            
+        old_status = order_info['status']
+        amount = order_info['amount']
+        user_id = order_info['user_id']
+
+        # إذا كان الطلب مرفوضاً سابقاً وتم تغييره إلى مقبول أو قيد المعالجة
+        if old_status == 'rejected' and new_status in ['accepted', 'pending']:
+            # التحقق من رصيد المستخدم
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
+            user_balance = c.fetchone()[0]
+            
+            if user_balance < amount:
+                conn.close()
+                return "رصيد المستخدم غير كافٍ لتغيير حالة الطلب", 400
+            
+            # خصم المبلغ من جديد
+            c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?', (amount, user_id))
         # استرجاع معلومات الطلب والمنتج
         c.execute('''
             SELECT o.user_id, o.amount, p.name
