@@ -225,8 +225,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     c.execute('SELECT status, shutdown_reason FROM bot_status WHERE id = 1')
     bot_status = c.fetchone()
     
-    if bot_status and bot_status[0] == 'shutdown':
-        await update.message.reply_text(f"عذراً، البوت متوقف مؤقتاً.\nسبب الإيقاف: {bot_status[1]}")
+    # التحقق مما إذا كان المستخدم هو المدير
+    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (update.effective_user.id,))
+    is_admin = c.fetchone() is not None
+    
+    if bot_status and bot_status[0] == 'shutdown' and not is_admin:
+        await update.message.reply_text(f"عذرا الخدمة متوقفة حاليا\nسبب الإيقاف: {bot_status[1]}")
         conn.close()
         return ConversationHandler.END
         
