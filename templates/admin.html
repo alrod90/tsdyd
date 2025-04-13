@@ -1200,19 +1200,19 @@
     function editStoreName(userId, currentName) {
         var newName = prompt('أدخل اسم المحل:', currentName);
         if (newName !== null && newName.trim() !== '') {
+            var formData = new FormData();
+            formData.append('user_id', userId);
+            formData.append('store_name', newName);
+            
             fetch('/update_store_name', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `user_id=${userId}&store_name=${encodeURIComponent(newName)}`
+                body: formData
             })
-            .then(response => response.text())
-            .then(result => {
-                if (result === 'success') {
+            .then(response => {
+                if (response.ok) {
                     window.location.reload();
                 } else {
-                    alert('حدث خطأ أثناء تحديث اسم المحل');
+                    throw new Error('فشل في تحديث اسم المحل');
                 }
             })
             .catch(error => {

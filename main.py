@@ -2179,24 +2179,23 @@ def update_store_name():
         user_id = request.form['user_id']
         store_name = request.form['store_name']
         
+        if not user_id or not store_name:
+            return "بيانات غير صحيحة", 400
+            
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
-        
-        # التحقق من وجود العمود store_name
-        c.execute('''CREATE TABLE IF NOT EXISTS users 
-                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
-                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT,
-                      store_name TEXT DEFAULT NULL)''')
         
         # تحديث اسم المحل
         c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
         conn.commit()
         
         # التحقق من نجاح التحديث
-        c.execute('SELECT store_name FROM users WHERE telegram_id = ? AND store_name = ?', (user_id, store_name))
-        if c.fetchone():
+        c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
+        result = c.fetchone()
+        
+        if result and result[0] == store_name:
             conn.close()
-            return redirect(url_for('admin_panel'))
+            return "success", 200
         else:
             conn.close()
             return "فشل تحديث اسم المحل", 500
@@ -2205,7 +2204,7 @@ def update_store_name():
         print(f"خطأ في تحديث اسم المحل: {str(e)}")
         if 'conn' in locals():
             conn.close()
-        return f"حدث خطأ: {str(e)}", 500
+        return "حدث خطأ في تحديث اسم المحل", 500
 
 @app.route('/toggle_user', methods=['POST'])
 def toggle_user():
