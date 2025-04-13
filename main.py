@@ -47,6 +47,17 @@ def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     
+    # إضافة جدول رسالة الترحيب
+    c.execute('''CREATE TABLE IF NOT EXISTS welcome_message 
+                 (id INTEGER PRIMARY KEY, message TEXT)''')
+    
+    # إضافة رسالة الترحيب الافتراضية إذا كانت غير موجودة
+    c.execute('SELECT COUNT(*) FROM welcome_message')
+    if c.fetchone()[0] == 0:
+        default_message = "اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م"
+        c.execute('INSERT INTO welcome_message (message) VALUES (?)', (default_message,))
+        conn.commit()
+    
     # إضافة عمود store_name إذا لم يكن موجوداً
     try:
         c.execute("ALTER TABLE users ADD COLUMN store_name TEXT DEFAULT NULL")
@@ -236,7 +247,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
+    # جلب رسالة الترحيب من قاعدة البيانات
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT message FROM welcome_message WHERE id = 1')
+    welcome_message = c.fetchone()[0]
+    conn.close()
+    
+    await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -1512,11 +1530,25 @@ def delete_category():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/update_welcome_message', methods=['POST'])
+def update_welcome_message():
+    message = request.form['welcome_message']
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE welcome_message SET message = ? WHERE id = 1', (message,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
 @app.route('/')
 def admin_panel():
     try:
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # جلب رسالة الترحيب
+        c.execute('SELECT message FROM welcome_message WHERE id = 1')
+        welcome_message = c.fetchone()[0]
 
         # إضافة جدول الباقات إذا لم يكن موجوداً
         c.execute('''CREATE TABLE IF NOT EXISTS packages
@@ -1638,7 +1670,7 @@ def admin_panel():
             for row in c.fetchall()
         ]
         conn.close()
-        return render_template('admin.html', categories=categories, products=products, users=users, orders=orders, speeds=speeds, megas=megas)
+        return render_template('admin.html', categories=categories, products=products, users=users, orders=orders, speeds=speeds, megas=megas, welcome_message=welcome_message)
     except Exception as e:
         print(f"Error in admin_panel: {str(e)}")
         if conn:
