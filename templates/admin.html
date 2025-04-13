@@ -97,6 +97,32 @@
             transform: translateX(26px);
         }
         .pagination-controls {
+
+<script>
+function showEditStoreName(userId, currentName) {
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
+
+    var content = document.createElement('div');
+    content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+
+    content.innerHTML = `
+        <h3>تعديل اسم المحل</h3>
+        <form action="/edit_store_name" method="post">
+            <input type="hidden" name="user_id" value="${userId}">
+            <input type="text" name="store_name" value="${currentName}" placeholder="اسم المحل" style="width: 100%; padding: 8px; margin: 10px 0;">
+            <div style="margin-top: 20px;">
+                <button type="submit" style="background-color: #4CAF50;">حفظ</button>
+                <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+            </div>
+        </form>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+}
+</script>
+
             margin: 10px 0;
             text-align: center;
         }
@@ -839,6 +865,7 @@
             <tr>
                 <th>الرقم</th>
                 <th>معرف تيليجرام</th>
+                <th>اسم المحل</th>
                 <th>الرصيد (ل.س)</th>
                 <th>ملاحظات</th>
             </tr>
@@ -846,9 +873,13 @@
             <tr>
                 <td>{{ user[0] }}</td>
                 <td>{{ user[1] }}</td>
+                <td>{{ user[6] if user[6] else 'لا يوجد' }}</td>
                 <td>{{ user[2] }}</td>
                 <td>{{ user[5] if user[5] else '' }}</td>
                 <td>
+                    <button onclick="showEditStoreName('{{ user[1] }}', '{{ user[6] if user[6] else '' }}')" style="margin-right: 10px; background-color: #2196F3;">
+                        تعديل اسم المحل
+                    </button>
                     <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}', '{{ user[5] if user[5] else '' }}')" style="margin-right: 10px;">
                         تعديل
                     </button>
