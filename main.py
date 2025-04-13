@@ -2525,11 +2525,16 @@ def edit_order_amount():
 def get_db_connection():
     """إنشاء اتصال بقاعدة البيانات المحلية فقط"""
     try:
-        conn = sqlite3.connect('store.db', timeout=20)
-        conn.execute("PRAGMA busy_timeout = 10000")
+        conn = sqlite3.connect('store.db', timeout=30)
+        conn.execute("PRAGMA busy_timeout = 30000")
         conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA synchronous = NORMAL")
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA timezone = '+03:00'")
         return conn
+    except sqlite3.Error as e:
+        print(f"خطأ في الاتصال بقاعدة البيانات: {str(e)}")
+        raise
 
         # إذا لم تكن موجودة، قم بإنشاء قاعدة بيانات جديدة
         conn = sqlite3.connect('store.db')
