@@ -48,6 +48,13 @@ def init_db():
     c = conn.cursor()
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
+
+    # إضافة عمود store_name إذا لم يكن موجوداً
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN store_name TEXT DEFAULT NULL")
+        conn.commit()
+    except:
+        pass  # العمود موجود بالفعل
     c.execute("""
         CREATE TRIGGER IF NOT EXISTS update_timestamp 
         AFTER INSERT ON orders 
@@ -2172,6 +2179,14 @@ def edit_store_name():
         store_name = request.form['store_name']
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # التحقق من وجود العمود
+        c.execute("PRAGMA table_info(users)")
+        columns = [column[1] for column in c.fetchall()]
+        if 'store_name' not in columns:
+            c.execute("ALTER TABLE users ADD COLUMN store_name TEXT DEFAULT NULL")
+            conn.commit()
+            
         c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, telegram_id))
         conn.commit()
         conn.close()
