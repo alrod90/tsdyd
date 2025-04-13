@@ -2818,27 +2818,31 @@ def toggle_distributor():
 def edit_store_name():
     try:
         user_id = request.form['user_id']
-        store_name = request.form['store_name']
+        store_name = request.form['store_name'].strip()
         
+        if not store_name:
+            return "اسم المحل لا يمكن أن يكون فارغاً", 400
+            
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
         try:
-            # First verify the user exists
+            # Verify the user exists
             c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (user_id,))
             if not c.fetchone():
                 return "المستخدم غير موجود", 404
                 
-            # Update store name
-            c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
+            # Update store name with explicit UPDATE statement
+            c.execute('''
+                UPDATE users 
+                SET store_name = ? 
+                WHERE telegram_id = ? 
+                AND (store_name IS NULL OR store_name != ?)
+            ''', (store_name, user_id, store_name))
             conn.commit()
             
-            # Verify update was successful
-            c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
-            result = c.fetchone()
-            
-            if result and result[0] == store_name:
-                # Send notification to user about store name update
+            # Send notification only if the update was successful
+            if c.rowcount > 0:
                 try:
                     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
                     if bot_token:

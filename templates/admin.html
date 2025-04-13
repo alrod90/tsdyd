@@ -110,6 +110,40 @@
         .hidden-table {
             display: none;
         }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -770,7 +804,7 @@
         </form>
     </div>
 
-    <div class="section">
+    <div classsection">
         <h2>المنتجات</h2>
         <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
         <table class="hidden-table">
@@ -1208,60 +1242,22 @@
 function showEditStoreName(userId, currentName) {
     var modal = document.createElement('div');
     modal.classList.add('modal');
-    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
-
-    var content = document.createElement('div');
-    content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto; position: relative; top: 50%; transform: translateY(-50%);';
-
-    content.innerHTML = `
-        <h3 style="margin-bottom: 20px;">تعديل اسم المحل</h3>
-        <form id="editStoreNameForm" onsubmit="return handleStoreNameSubmit(event, this);">
-            <input type="hidden" name="user_id" value="${userId}">
-            <input type="text" name="store_name" value="${currentName}" placeholder="اسم المحل" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;" required>
-            <div style="margin-top: 20px; text-align: center;">
-                <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-left: 10px; cursor: pointer;">حفظ</button>
-                <button type="button" onclick="this.closest('.modal').remove()" style="background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">إلغاء</button>
-            </div>
-        </form>
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close" onclick="this.parentElement.style.display='none';">&times;</span>
+            <h3 style="margin-bottom: 20px;">تعديل اسم المحل</h3>
+            <form id="editStoreNameForm" onsubmit="return handleStoreNameSubmit(event, this);">
+                <input type="hidden" name="user_id" value="${userId}">
+                <input type="text" name="store_name" value="${currentName}" placeholder="اسم المحل" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;" required>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-left: 10px; cursor: pointer;">تأكيد</button>
+                    <button type="button" onclick="this.closest('.modal').remove()" style="background-color: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">إلغاء</button>
+                </div>
+            </form>
+        </div>
     `;
-
-    modal.appendChild(content);
     document.body.appendChild(modal);
-}
-
-function handleStoreNameSubmit(event, form) {
-    event.preventDefault();
-    
-    const formData = new FormData(form);
-    const userId = formData.get('user_id');
-    const newStoreName = formData.get('store_name');
-
-    fetch('/edit_store_name', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (response.ok) {
-            // Update the store name in the table
-            const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
-            if (userRow) {
-                const storeNameCell = userRow.querySelector('td:nth-child(3)');
-                if (storeNameCell) {
-                    storeNameCell.textContent = newStoreName;
-                }
-            }
-            // Close the modal
-            form.closest('.modal').remove();
-        } else {
-            alert('حدث خطأ أثناء تحديث اسم المحل');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('حدث خطأ أثناء تحديث اسم المحل');
-    });
-
-    return false;
+    modal.style.display = 'block';
 }
 
 function handleStoreNameSubmit(event, form) {
@@ -1277,20 +1273,22 @@ function handleStoreNameSubmit(event, form) {
         body: formData
     })
     .then(response => {
-        if (response.ok) {
-            // Update the store name in the table
-            const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
-            if (userRow) {
-                const storeNameCell = userRow.querySelector('td:nth-child(3)');
-                if (storeNameCell) {
-                    storeNameCell.textContent = newStoreName;
-                }
-            }
-            // Close the modal
-            form.closest('.modal').remove();
-        } else {
-            alert('حدث خطأ أثناء تحديث اسم المحل');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
         }
+        return response.text();
+    })
+    .then(() => {
+        // Update the store name in the table immediately
+        const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
+        if (userRow) {
+            const storeNameCell = userRow.querySelector('td:nth-child(3)');
+            if (storeNameCell) {
+                storeNameCell.textContent = newStoreName;
+            }
+        }
+        // Close the modal
+        form.closest('.modal').remove();
     })
     .catch(error => {
         console.error('Error:', error);
@@ -1298,24 +1296,6 @@ function handleStoreNameSubmit(event, form) {
     });
 
     return false;
-}
-
-function validateForm(form) {
-    var storeName = form.store_name.value.trim();
-    if (!storeName) {
-        alert('الرجاء إدخال اسم المحل');
-        return false;
-    }
-    return true;
-}
-
-function validateForm(form) {
-    var storeName = form.store_name.value.trim();
-    if (!storeName) {
-        alert('الرجاء إدخال اسم المحل');
-        return false;
-    }
-    return true;
 }
 
 function validateForm(form) {
