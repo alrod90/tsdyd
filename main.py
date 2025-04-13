@@ -46,6 +46,14 @@ def sync_deployed_db():
 def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+    
+    # إضافة عمود store_name إذا لم يكن موجوداً
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN store_name TEXT DEFAULT NULL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # العمود موجود بالفعل
+    
     # ضبط المنطقة الزمنية لقاعدة البيانات وتنسيق التاريخ
     c.execute("PRAGMA timezone = '+03:00'")
     c.execute("""
