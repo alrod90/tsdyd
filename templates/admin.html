@@ -849,6 +849,9 @@
                     <button onclick="showEditUserForm('{{ user[0] }}', '{{ user[1] }}', '{{ user[2] }}', '{{ user[5] if user[5] else '' }}')" style="margin-right: 10px;">
                         تعديل
                     </button>
+                    <button onclick="showNotificationForm('{{ user[1] }}')" style="margin-right: 10px;">
+                        إرسال إشعار
+                    </button>
                     <form action="/toggle_user" method="post" style="display: inline;">
                         <input type="hidden" name="user_id" value="{{ user[1] }}">
                         <button type="submit" style="background-color: {{ '#ff4444' if user[3] else '#4CAF50' }}">
