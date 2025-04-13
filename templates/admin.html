@@ -1215,7 +1215,7 @@ function showEditStoreName(userId, currentName) {
 
     content.innerHTML = `
         <h3 style="margin-bottom: 20px;">تعديل اسم المحل</h3>
-        <form action="/edit_store_name" method="post">
+        <form id="editStoreNameForm" onsubmit="return handleStoreNameSubmit(event, this);">
             <input type="hidden" name="user_id" value="${userId}">
             <input type="text" name="store_name" value="${currentName}" placeholder="اسم المحل" style="width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;" required>
             <div style="margin-top: 20px; text-align: center;">
@@ -1227,6 +1227,41 @@ function showEditStoreName(userId, currentName) {
 
     modal.appendChild(content);
     document.body.appendChild(modal);
+}
+
+function handleStoreNameSubmit(event, form) {
+    event.preventDefault();
+    
+    const formData = new FormData(form);
+    const userId = formData.get('user_id');
+    const newStoreName = formData.get('store_name');
+
+    fetch('/edit_store_name', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // Update the store name in the table
+            const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
+            if (userRow) {
+                const storeNameCell = userRow.querySelector('td:nth-child(3)');
+                if (storeNameCell) {
+                    storeNameCell.textContent = newStoreName;
+                }
+            }
+            // Close the modal
+            form.closest('.modal').remove();
+        } else {
+            alert('حدث خطأ أثناء تحديث اسم المحل');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('حدث خطأ أثناء تحديث اسم المحل');
+    });
+
+    return false;
 }
 
 function handleStoreNameSubmit(event, form) {
