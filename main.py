@@ -47,9 +47,19 @@ def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     
-    # إضافة جدول رسالة الترحيب
+    # إضافة جدول رسالة الترحيب وحالة البوت
     c.execute('''CREATE TABLE IF NOT EXISTS welcome_message 
                  (id INTEGER PRIMARY KEY, message TEXT)''')
+                 
+    c.execute('''CREATE TABLE IF NOT EXISTS bot_status
+                 (id INTEGER PRIMARY KEY, status TEXT DEFAULT 'running',
+                  shutdown_reason TEXT, shutdown_time TIMESTAMP)''')
+    
+    # إضافة حالة البوت الافتراضية إذا لم تكن موجودة
+    c.execute('SELECT COUNT(*) FROM bot_status')
+    if c.fetchone()[0] == 0:
+        c.execute('INSERT INTO bot_status (status) VALUES (?)', ('running',))
+        conn.commit()
     
     # إضافة رسالة الترحيب الافتراضية إذا كانت غير موجودة
     c.execute('SELECT COUNT(*) FROM welcome_message')
@@ -208,10 +218,20 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("حدث خطأ في الوصول للوحة التحكم، الرجاء المحاولة مرة أخرى")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
-    user_id = update.effective_user.id
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
+    
+    # التحقق من حالة البوت
+    c.execute('SELECT status, shutdown_reason FROM bot_status WHERE id = 1')
+    bot_status = c.fetchone()
+    
+    if bot_status and bot_status[0] == 'shutdown':
+        await update.message.reply_text(f"عذراً، البوت متوقف مؤقتاً.\nسبب الإيقاف: {bot_status[1]}")
+        conn.close()
+        return ConversationHandler.END
+        
+    # إضافة المستخدم إلى قاعدة البيانات إذا لم يكن موجوداً
+    user_id = update.effective_user.id
     c.execute('SELECT * FROM users WHERE telegram_id = ?', (user_id,))
     if not c.fetchone():
         c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
@@ -1540,11 +1560,42 @@ def update_welcome_message():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/toggle_bot_status', methods=['POST'])
+def toggle_bot_status():
+    action = request.form.get('action')
+    shutdown_reason = request.form.get('shutdown_reason')
+    
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    
+    if action == 'shutdown':
+        c.execute('''UPDATE bot_status SET 
+                     status = 'shutdown',
+                     shutdown_reason = ?,
+                     shutdown_time = datetime('now')
+                     WHERE id = 1''', (shutdown_reason,))
+    else:
+        c.execute('''UPDATE bot_status SET 
+                     status = 'running',
+                     shutdown_reason = NULL,
+                     shutdown_time = NULL
+                     WHERE id = 1''')
+    
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_panel'))
+
 @app.route('/')
 def admin_panel():
     try:
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
+        
+        # جلب حالة البوت
+        c.execute('SELECT status, shutdown_reason FROM bot_status WHERE id = 1')
+        bot_status_info = c.fetchone()
+        bot_status = bot_status_info[0] if bot_status_info else 'running'
+        shutdown_reason = bot_status_info[1] if bot_status_info else None
         
         # جلب رسالة الترحيب
         c.execute('SELECT message FROM welcome_message WHERE id = 1')
