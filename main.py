@@ -2179,50 +2179,33 @@ def update_store_name():
         user_id = request.form['user_id']
         store_name = request.form['store_name']
         
-        # طباعة القيم للتأكد من استلامها
-        print(f"Updating store name for user {user_id} to {store_name}")
-        
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        # التحقق من وجود العمود
-        c.execute("PRAGMA table_info(users)")
-        columns = [column[1] for column in c.fetchall()]
-        if 'store_name' not in columns:
-            c.execute('ALTER TABLE users ADD COLUMN store_name TEXT DEFAULT NULL')
-            conn.commit()
-            
-        # التحقق من وجود المستخدم
-        c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (user_id,))
-        if not c.fetchone():
-            conn.close()
-            return 'user not found', 404
-            
+        # التحقق من وجود العمود store_name
+        c.execute('''CREATE TABLE IF NOT EXISTS users 
+                     (id INTEGER PRIMARY KEY, telegram_id INTEGER, balance REAL, 
+                      phone_number TEXT, is_active BOOLEAN DEFAULT 1, note TEXT,
+                      store_name TEXT DEFAULT NULL)''')
+        
         # تحديث اسم المحل
         c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
-        
-        # التحقق من عدد الصفوف المتأثرة
-        if c.rowcount == 0:
-            conn.close()
-            return 'no update occurred', 400
-            
         conn.commit()
         
         # التحقق من نجاح التحديث
-        c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
-        result = c.fetchone()
-        if result and result[0] == store_name:
+        c.execute('SELECT store_name FROM users WHERE telegram_id = ? AND store_name = ?', (user_id, store_name))
+        if c.fetchone():
             conn.close()
-            return 'success'
+            return redirect(url_for('admin_panel'))
         else:
             conn.close()
-            return 'verification failed', 500
+            return "فشل تحديث اسم المحل", 500
             
     except Exception as e:
-        print(f"Error in update_store_name: {str(e)}")
-        if 'conn' in locals() and conn:
+        print(f"خطأ في تحديث اسم المحل: {str(e)}")
+        if 'conn' in locals():
             conn.close()
-        return str(e), 500
+        return f"حدث خطأ: {str(e)}", 500
 
 @app.route('/toggle_user', methods=['POST'])
 def toggle_user():
