@@ -1279,16 +1279,28 @@ function handleStoreNameSubmit(event, form) {
         return response.text();
     })
     .then(() => {
-        // Update the store name in the table immediately
+        // تحديث اسم المحل في الجدول مباشرة
         const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
         if (userRow) {
             const storeNameCell = userRow.querySelector('td:nth-child(3)');
             if (storeNameCell) {
                 storeNameCell.textContent = newStoreName;
+                // إضافة تأكيد بصري للتحديث
+                storeNameCell.style.backgroundColor = '#e8f5e9';
+                setTimeout(() => {
+                    storeNameCell.style.backgroundColor = '';
+                }, 2000);
             }
         }
-        // Close the modal
-        form.closest('.modal').remove();
+        // إغلاق النافذة المنبثقة
+        const modal = form.closest('.modal');
+        if (modal) {
+            modal.remove();
+        }
+        // عرض رسالة نجاح
+        alert('تم تحديث اسم المحل بنجاح');
+        // تحديث الصفحة للتأكد من تحديث البيانات
+        location.reload();
     })
     .catch(error => {
         console.error('Error:', error);
