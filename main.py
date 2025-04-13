@@ -1844,37 +1844,39 @@ def edit_product():
 
 async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, user_id=None, is_important=False):
     """
-    دالة محسنة لإرسال الإشعارات للمستخدمين
+    دالة محسنة لإرسال الإشعارات للمستخدمين مع التأكد من الإرسال
     """
-    MAX_RETRIES = 3
-    RETRY_DELAY = 1  # ثانية
+    MAX_RETRIES = 5
+    RETRY_DELAY = 2  # ثانية
 
     async def send_single_message(bot, chat_id, retry_count=0):
         try:
-            # إزالة parse_mode لتجنب مشاكل التنسيق
             await bot.send_message(
                 chat_id=int(chat_id),
                 text=message,
+                parse_mode='HTML',
                 disable_notification=not is_important
             )
             print(f"✅ تم إرسال الإشعار بنجاح للمستخدم {chat_id}")
             return True
         except telegram.error.RetryAfter as e:
+            print(f"⏳ انتظار قبل إعادة المحاولة للمستخدم {chat_id}")
             if retry_count < MAX_RETRIES:
                 await asyncio.sleep(e.retry_after)
                 return await send_single_message(bot, chat_id, retry_count + 1)
             return False
         except telegram.error.BadRequest as e:
             print(f"❌ خطأ في إرسال الرسالة للمستخدم {chat_id}: {str(e)}")
-            # محاولة إرسال الرسالة بدون تنسيق خاص
             try:
+                # محاولة إرسال بدون تنسيق
                 await bot.send_message(
                     chat_id=int(chat_id),
                     text=message,
                     disable_notification=not is_important
                 )
                 return True
-            except:
+            except Exception as inner_e:
+                print(f"❌ فشل الإرسال البديل للمستخدم {chat_id}: {str(inner_e)}")
                 return False
         except telegram.error.Unauthorized:
             print(f"🚫 المستخدم {chat_id} قام بحظر البوت")
@@ -1885,6 +1887,38 @@ async def send_notification(context: ContextTypes.DEFAULT_TYPE, message: str, us
                 await asyncio.sleep(RETRY_DELAY)
                 return await send_single_message(bot, chat_id, retry_count + 1)
             return False
+
+    try:
+        bot = telegram.Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
+        
+        if user_id:
+            # إرسال لمستخدم محدد
+            success = await send_single_message(bot, user_id)
+            if not success:
+                print(f"⚠️ فشل إرسال الإشعار للمستخدم {user_id} بعد كل المحاولات")
+            return success
+        else:
+            # إرسال لجميع المستخدمين النشطين
+            conn = sqlite3.connect('store.db')
+            c = conn.cursor()
+            c.execute('SELECT telegram_id FROM users WHERE is_active = 1')
+            users = c.fetchall()
+            conn.close()
+
+            success_count = 0
+            total_users = len(users)
+
+            for user in users:
+                if await send_single_message(bot, user[0]):
+                    success_count += 1
+                await asyncio.sleep(0.5)  # تأخير بين الرسائل
+
+            print(f"📊 تم إرسال الإشعارات بنجاح لـ {success_count} من {total_users} مستخدم")
+            return success_count > 0
+
+    except Exception as e:
+        print(f"❌ خطأ في نظام الإشعارات: {str(e)}")
+        return False
 
     try:
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
