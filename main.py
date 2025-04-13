@@ -1843,33 +1843,47 @@ def delete_product():
 def edit_store_name():
     try:
         user_id = request.form['user_id']
-        store_name = request.form['store_name']
+        store_name = request.form['store_name'].strip()
         
+        if not store_name:
+            return "اسم المحل لا يمكن أن يكون فارغاً", 400
+            
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        # Verify the user exists
-        c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (user_id,))
-        if not c.fetchone():
-            conn.close()
-            return "المستخدم غير موجود", 404
+        try:
+            # Verify the user exists
+            c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (user_id,))
+            if not c.fetchone():
+                return "المستخدم غير موجود", 404
+                
+            # Update store name
+            c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
+            conn.commit()
             
-        # Update store name with explicit type conversion
-        c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (str(store_name), str(user_id)))
-        conn.commit()
-        
-        # Verify update was successful
-        c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
-        updated_name = c.fetchone()
-        
-        if not updated_name or updated_name[0] != store_name:
-            conn.rollback()
-            conn.close()
-            return "فشل تحديث اسم المحل", 500
+            # Verify update was successful
+            c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
+            result = c.fetchone()
             
-        conn.close()
-        return redirect(url_for('admin_panel'))
-        
+            if result and result[0] == store_name:
+                # Send notification to user about store name update
+                try:
+                    bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+                    if bot_token:
+                        notification_message = f"تم تحديث اسم المحل الخاص بك إلى: {store_name}"
+                        asyncio.run(send_notification(None, notification_message, user_id))
+                except Exception as e:
+                    print(f"Error sending notification: {str(e)}")
+            
+            return redirect(url_for('admin_panel'))
+            
+        except sqlite3.Error as e:
+            print(f"Database error: {str(e)}")
+            return "حدث خطأ في قاعدة البيانات", 500
+            
+        finally:
+            conn.close()
+            
     except Exception as e:
         print(f"Error in edit_store_name: {str(e)}")
         return "حدث خطأ في تعديل اسم المحل", 500
