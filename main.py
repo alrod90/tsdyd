@@ -2185,20 +2185,27 @@ def update_store_name():
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
         
-        # تحديث اسم المحل
-        c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, user_id))
-        conn.commit()
-        
-        # التحقق من نجاح التحديث
-        c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (user_id,))
-        result = c.fetchone()
-        
-        if result and result[0] == store_name:
+        try:
+            # تحديث اسم المحل
+            c.execute('UPDATE users SET store_name = ? WHERE telegram_id = ?', (store_name, str(user_id)))
+            conn.commit()
+            
+            # التحقق من نجاح التحديث
+            c.execute('SELECT store_name FROM users WHERE telegram_id = ?', (str(user_id),))
+            result = c.fetchone()
+            
+            if result:
+                conn.close()
+                return redirect(url_for('admin_panel'))
+            else:
+                conn.close()
+                return "المستخدم غير موجود", 404
+                
+        except sqlite3.Error as sql_error:
+            print(f"خطأ في قاعدة البيانات: {str(sql_error)}")
+            conn.rollback()
             conn.close()
-            return "success", 200
-        else:
-            conn.close()
-            return "فشل تحديث اسم المحل", 500
+            return "خطأ في قاعدة البيانات", 500
             
     except Exception as e:
         print(f"خطأ في تحديث اسم المحل: {str(e)}")
