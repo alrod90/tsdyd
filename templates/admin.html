@@ -1234,22 +1234,31 @@
         modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;';
 
         var content = document.createElement('div');
-        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto;';
+        content.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; margin: 50px auto; text-align: right;';
 
         content.innerHTML = `
             <h3>تعديل اسم المحل</h3>
-            <form action="/edit_store_name" method="post">
+            <form action="/edit_store_name" method="post" onsubmit="return validateStoreName(this);">
                 <input type="hidden" name="telegram_id" value="${telegram_id}">
-                <input type="text" name="store_name" value="${current_name}" placeholder="اسم المحل" required>
+                <input type="text" name="store_name" value="${current_name}" placeholder="اسم المحل" required style="width: 100%; padding: 8px; margin: 10px 0;">
                 <div style="margin-top: 20px;">
-                    <button type="submit" style="background-color: #4CAF50;">حفظ</button>
-                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336;">إلغاء</button>
+                    <button type="submit" style="background-color: #4CAF50; padding: 8px 15px; margin-left: 10px;">حفظ</button>
+                    <button type="button" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background-color: #f44336; padding: 8px 15px;">إلغاء</button>
                 </div>
             </form>
         `;
 
         modal.appendChild(content);
         document.body.appendChild(modal);
+    }
+
+    function validateStoreName(form) {
+        var storeName = form.store_name.value.trim();
+        if (!storeName) {
+            alert('الرجاء إدخال اسم المحل');
+            return false;
+        }
+        return true;
     }
     </script>
 </body>
