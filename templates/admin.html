@@ -1208,10 +1208,17 @@
                 },
                 body: `user_id=${userId}&store_name=${encodeURIComponent(newName)}`
             })
-            .then(response => {
-                if (response.ok) {
-                    location.reload();
+            .then(response => response.text())
+            .then(result => {
+                if (result === 'success') {
+                    window.location.reload();
+                } else {
+                    alert('حدث خطأ أثناء تحديث اسم المحل');
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('حدث خطأ أثناء تحديث اسم المحل');
             });
         }
     }
