@@ -2430,17 +2430,19 @@ def change_order_status():
         user_id = current_order[1]
         amount = current_order[2]
 
-        # إذا كان الطلب مرفوضاً سابقاً وتم تغييره إلى مقبول أو قيد المعالجة
-        if old_status == 'rejected' and new_status in ['accepted', 'pending']:
+        # التحقق من رصيد المستخدم عند التغيير من مرفوض إلى قيد المعالجة أو مقبول
+        if current_status == 'rejected' and (new_status == 'pending' or new_status == 'accepted'):
             c.execute('SELECT balance FROM users WHERE telegram_id = ?', (user_id,))
             user_balance = c.fetchone()[0]
             if user_balance < amount:
                 conn.close()
                 return "رصيد المستخدم غير كافي لتغيير حالة الطلب", 400
+            # خصم المبلغ
             c.execute('UPDATE users SET balance = balance - ? WHERE telegram_id = ?',
                      (amount, user_id))
-        # إذا كان الطلب مقبولاً أو قيد المعالجة وتم تغييره إلى مرفوض
-        elif old_status in ['accepted', 'pending'] and new_status == 'rejected':
+
+        # إعادة المبلغ عند التغيير إلى مرفوض
+        elif current_status != 'rejected' and new_status == 'rejected':
             c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?',
                      (amount, user_id))
 
