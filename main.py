@@ -2397,10 +2397,10 @@ def change_order_status():
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري"""
         elif new_status == "rejected":
-            notification_message = f"""❌ تم رفض طلبك
-رقم الطلب: {order_id}
-الشركة: {product_name}
-المبلغ: {amount} ليرة سوري"""
+            notification_message = f"""<b>❌ تم رفض طلبك</b>
+<b>رقم الطلب:</b> {order_id}
+<b>الشركة:</b> {product_name}
+<b>المبلغ:</b> {amount} ليرة سوري"""
             if rejection_note:
                 notification_message += f"\nسبب الرفض: {rejection_note}"
         else:
@@ -2457,10 +2457,10 @@ def change_order_status():
         # إعداد رسالة الإشعار
         notification_message = ""
         if new_status == "accepted":
-            notification_message = f"""✅ تم قبول طلبك!
-رقم الطلب: {order_id}
-الشركة: {product_name}
-المبلغ: {amount} ليرة سوري"""
+            notification_message = f"""<b>✅ تم قبول طلبك!</b>
+<b>رقم الطلب:</b> {order_id}
+<b>الشركة:</b> {product_name}
+<b>المبلغ:</b> {amount} ليرة سوري"""
         elif new_status == "rejected":
             notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
 رقم الطلب: {order_id}
