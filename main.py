@@ -2323,18 +2323,6 @@ def change_order_status():
             return "بيانات غير صحيحة", 400
 
         conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-        
-        # التحقق من الحالة السابقة للطلب والمبلغ
-        c.execute('SELECT status, amount, user_id FROM orders WHERE id = ?', (order_id,))
-        order_info = c.fetchone()
-        
-        if order_info and order_info[0] in ['accepted', 'pending'] and new_status == 'rejected':
-            # إعادة المبلغ للمستخدم
-            c.execute('UPDATE users SET balance = balance + ? WHERE telegram_id = ?', 
-                     (order_info[1], order_info[2]))
-
-        conn = sqlite3.connect('store.db')
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
 
