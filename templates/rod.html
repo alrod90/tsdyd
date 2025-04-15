@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <title>السجل المالي</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+            text-align: right;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .search-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .search-section input, .search-section select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .operation-add {
+            color: green;
+        }
+        .operation-subtract {
+            color: red;
+        }
+        .operation-edit {
+            color: blue;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>السجل المالي للمستخدمين</h1>
+        
+        <div class="search-section">
+            <form method="POST" action="/view_user_financial_log">
+                <input type="text" name="operation_id" placeholder="رقم العملية">
+                <input type="text" name="user_id" placeholder="معرف المستخدم">
+                <input type="date" name="date" placeholder="التاريخ">
+                <button type="submit">بحث</button>
+            </form>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>رقم العملية</th>
+                    <th>معرف المستخدم</th>
+                    <th>نوع العملية</th>
+                    <th>المبلغ</th>
+                    <th>الرصيد بعد العملية</th>
+                    <th>التفاصيل</th>
+                    <th>التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in financial_logs %}
+                <tr>
+                    <td>{{ log[0] }}</td>
+                    <td>{{ log[1] }}</td>
+                    <td class="operation-{{ log[2] }}">
+                        {% if log[2] == 'add' %}
+                        إضافة رصيد
+                        {% elif log[2] == 'subtract' %}
+                        خصم رصيد
+                        {% else %}
+                        تعديل رصيد
+                        {% endif %}
+                    </td>
+                    <td>{{ log[3] }}</td>
+                    <td>{{ log[4] }}</td>
+                    <td>{{ log[5] }}</td>
+                    <td>{{ log[6] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
