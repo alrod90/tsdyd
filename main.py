@@ -47,16 +47,6 @@ def init_db():
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     
-    # إضافة جدول السجل المالي
-    c.execute('''CREATE TABLE IF NOT EXISTS financial_log
-                 (id INTEGER PRIMARY KEY,
-                  user_id INTEGER,
-                  amount REAL,
-                  type TEXT,
-                  description TEXT,
-                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')),
-                  FOREIGN KEY(user_id) REFERENCES users(telegram_id))''')
-    
     # إضافة جدول رسالة الترحيب وحالة البوت
     c.execute('''CREATE TABLE IF NOT EXISTS welcome_message 
                  (id INTEGER PRIMARY KEY, message TEXT)''')
@@ -2731,8 +2721,7 @@ def run_bot():
 
     # Add handlers
     application.add_handler(CommandHandler("orders", orders))
-    application.add_handler(CommandHandler("financial_log", view_financial_log))
-    
+
     # إضافة ConversationHandler للتعامل مع عملية الشراء
     conv_handler = ConversationHandler(
         entry_points=[
@@ -2951,53 +2940,3 @@ def toggle_distributor():
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
-async def view_financial_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    
-    # التحقق من صلاحيات المدير
-    c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (user_id,))
-    is_admin = c.fetchone() is not None
-    
-    if is_admin and context.args:
-        # المدير يمكنه عرض سجل أي مستخدم
-        target_user_id = int(context.args[0])
-        c.execute('''SELECT amount, type, description, created_at 
-                     FROM financial_log 
-                     WHERE user_id = ? 
-                     ORDER BY created_at DESC LIMIT 20''', (target_user_id,))
-        message = f"السجل المالي للمستخدم {target_user_id}:\n\n"
-    else:
-        # المستخدم العادي يرى سجله فقط
-        c.execute('''SELECT amount, type, description, created_at 
-                     FROM financial_log 
-                     WHERE user_id = ? 
-                     ORDER BY created_at DESC LIMIT 20''', (user_id,))
-        message = "سجلك المالي:\n\n"
-    
-    logs = c.fetchall()
-    conn.close()
-    
-    if not logs:
-        await update.message.reply_text("لا توجد عمليات مالية في السجل")
-        return
-        
-    for log in logs:
-        amount = log[0]
-        operation_type = "+" if log[1] == "add" else "-"
-        description = log[2]
-        date = log[3]
-        message += f"{operation_type}{amount} ل.س - {description}\n{date}\n──────────────\n"
-    
-    keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(message, reply_markup=reply_markup)
-
-def log_financial_transaction(user_id: int, amount: float, type: str, description: str):
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    c.execute('''INSERT INTO financial_log (user_id, amount, type, description)
-                 VALUES (?, ?, ?, ?)''', (user_id, amount, type, description))
-    conn.commit()
-    conn.close()
