@@ -672,6 +672,13 @@
     .hidden {
         display: none;
     }
+    #userIdField {
+        width: 100%;
+        padding: 8px;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
     </style>
 
     <script>
@@ -1222,7 +1229,7 @@
             var formData = new FormData();
             formData.append('user_id', userId);
             formData.append('store_name', newName);
-            
+
             fetch('/update_store_name', {
                 method: 'POST',
                 body: formData

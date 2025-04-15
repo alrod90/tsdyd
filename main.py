@@ -1589,6 +1589,27 @@ def toggle_bot_status():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/rod')
+def financial_log():
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor() 
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS financial_log
+                 (id INTEGER PRIMARY KEY,
+                  user_id INTEGER,
+                  operation_type TEXT,
+                  amount REAL,
+                  balance_after REAL,
+                  details TEXT,
+                  created_at TIMESTAMP DEFAULT (datetime('now', '+3 hours')))''')
+    conn.commit()
+    
+    c.execute('''SELECT * FROM financial_log ORDER BY created_at DESC''')
+    financial_logs = c.fetchall()
+    conn.close()
+    
+    return render_template('rod.html', financial_logs=financial_logs)
+
 @app.route('/')
 def admin_panel():
     try:
