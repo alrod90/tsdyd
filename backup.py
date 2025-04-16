@@ -73,22 +73,22 @@ def sync_from_deployed():
     try:
         import requests
         
-        # الاتصال بالنسخة المنشورة للحصول على الطلبات
+        # الاتصال بالنسخة المنشورة للحصول على قاعدة البيانات
         response = requests.get('https://alrod.replit.app/get_db')
         
         if response.status_code == 200:
-            # حفظ النسخة المنشورة مؤقتاً
-            with open('deployed.db', 'wb') as f:
+            # عمل نسخة احتياطية من قاعدة البيانات المحلية
+            if os.path.exists('store.db'):
+                backup_dir = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                os.makedirs(backup_dir, exist_ok=True)
+                shutil.copy2('store.db', f'{backup_dir}/store.db')
+                print(f"تم عمل نسخة احتياطية في: {backup_dir}")
+            
+            # استبدال قاعدة البيانات المحلية بالمنشورة
+            with open('store.db', 'wb') as f:
                 f.write(response.content)
             
-            # دمج البيانات مع النسخة المحلية
-            merge_databases('deployed.db', 'store.db')
-            
-            # حذف الملف المؤقت
-            if os.path.exists('deployed.db'):
-                os.remove('deployed.db')
-                
-            print("تم جلب ودمج البيانات من النسخة المنشورة بنجاح")
+            print("تم جلب واستبدال البيانات من النسخة المنشورة بنجاح")
         else:
             print(f"فشل في الاتصال بالنسخة المنشورة: {response.status_code}")
         print(f"تم مزامنة البيانات من النسخة المنشورة: {deployed_db}")
