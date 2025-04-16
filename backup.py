@@ -71,18 +71,26 @@ def create_backup():
 def sync_from_deployed():
     """مزامنة البيانات من النسخة المنشورة"""
     try:
-        backup_folders = [d for d in os.listdir('.') if d.startswith('backup_') and os.path.isdir(d)]
-        if not backup_folders:
-            raise Exception("لم يتم العثور على مجلد النسخ الاحتياطية")
-
-        latest_backup = max(backup_folders)
-        deployed_db = f'{latest_backup}/store.db'
-
-        if not os.path.exists(deployed_db):
-            raise Exception("لم يتم العثور على قاعدة البيانات المنشورة")
-
-        # دمج البيانات بدلاً من النسخ المباشر
-        merge_databases(deployed_db, 'store.db')
+        import requests
+        
+        # الاتصال بالنسخة المنشورة للحصول على الطلبات
+        response = requests.get('https://alrod.replit.app/get_db')
+        
+        if response.status_code == 200:
+            # حفظ النسخة المنشورة مؤقتاً
+            with open('deployed.db', 'wb') as f:
+                f.write(response.content)
+            
+            # دمج البيانات مع النسخة المحلية
+            merge_databases('deployed.db', 'store.db')
+            
+            # حذف الملف المؤقت
+            if os.path.exists('deployed.db'):
+                os.remove('deployed.db')
+                
+            print("تم جلب ودمج البيانات من النسخة المنشورة بنجاح")
+        else:
+            print(f"فشل في الاتصال بالنسخة المنشورة: {response.status_code}")
         print(f"تم مزامنة البيانات من النسخة المنشورة: {deployed_db}")
 
     except Exception as e:
