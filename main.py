@@ -218,9 +218,6 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("حدث خطأ في الوصول للوحة التحكم، الرجاء المحاولة مرة أخرى")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # إنهاء أي محادثة جارية
-    context.user_data.clear()
-    
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     
