@@ -1580,6 +1580,58 @@ def download_backup():
         print(f"Error in download_backup: {str(e)}")
         return "حدث خطأ في تحميل النسخة الاحتياطية", 500
 
+@app.route('/restore_backup', methods=['POST'])
+def restore_backup():
+    try:
+        if 'backup_file' not in request.files:
+            return "لم يتم اختيار ملف", 400
+            
+        file = request.files['backup_file']
+        if file.filename == '':
+            return "لم يتم اختيار ملف", 400
+            
+        if not file.filename.endswith('.zip'):
+            return "يجب أن يكون الملف بصيغة ZIP", 400
+
+        # إنشاء مجلد مؤقت لاستخراج الملفات
+        temp_dir = "temp_restore_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # حفظ وفك ضغط الملف
+        zip_path = os.path.join(temp_dir, "backup.zip")
+        file.save(zip_path)
+        shutil.unpack_archive(zip_path, temp_dir, 'zip')
+        
+        # التحقق من وجود الملفات المطلوبة
+        required_files = ['store.db', 'main.py']
+        required_dirs = ['templates']
+        
+        for req_file in required_files:
+            if not os.path.exists(os.path.join(temp_dir, req_file)):
+                shutil.rmtree(temp_dir)
+                return f"ملف {req_file} غير موجود في النسخة الاحتياطية", 400
+                
+        for req_dir in required_dirs:
+            if not os.path.exists(os.path.join(temp_dir, req_dir)):
+                shutil.rmtree(temp_dir)
+                return f"مجلد {req_dir} غير موجود في النسخة الاحتياطية", 400
+
+        # نسخ الملفات إلى المواقع الصحيحة
+        shutil.copy2(os.path.join(temp_dir, 'store.db'), 'store.db')
+        shutil.copy2(os.path.join(temp_dir, 'main.py'), 'main.py')
+        shutil.rmtree('templates')
+        shutil.copytree(os.path.join(temp_dir, 'templates'), 'templates')
+
+        # تنظيف المجلد المؤقت
+        shutil.rmtree(temp_dir)
+        
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in restore_backup: {str(e)}")
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        return "حدث خطأ في استعادة النسخة الاحتياطية", 500
+
 @app.route('/update_welcome_message', methods=['POST'])
 def update_welcome_message():
     message = request.form['welcome_message']
