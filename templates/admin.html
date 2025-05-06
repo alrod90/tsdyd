@@ -672,6 +672,13 @@
     .hidden {
         display: none;
     }
+    #userIdField {
+        width: 100%;
+        padding: 8px;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
     </style>
 
     <script>
@@ -1222,7 +1229,7 @@
             var formData = new FormData();
             formData.append('user_id', userId);
             formData.append('store_name', newName);
-            
+
             fetch('/update_store_name', {
                 method: 'POST',
                 body: formData
@@ -1241,5 +1248,24 @@
         }
     }
     </script>
+
+    <div class="section">
+        <h2>النسخ الاحتياطية</h2>
+        <div style="display: flex; gap: 10px; flex-direction: column;">
+            <form action="/download_backup" method="get" style="margin: 0;">
+                <button type="submit" style="background-color: #2196F3;">
+                    تحميل نسخة احتياطية على جهازي
+                </button>
+            </form>
+
+            <form action="/restore_backup" method="post" enctype="multipart/form-data" style="margin-top: 10px;">
+                <input type="file" name="backup_file" accept=".zip" required style="margin-bottom: 10px;">
+                <button type="submit" style="background-color: #4CAF50;">
+                    استعادة نسخة احتياطية من جهازي
+                </button>
+            </form>
+        </div>
+    </div>
+
 </body>
 </html>
