@@ -6,7 +6,8 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, ContextTypes,
     ConversationHandler, MessageHandler, filters
 )
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
+from datetime import datetime
 import sqlite3
 import shutil
 
@@ -1553,6 +1554,31 @@ def delete_category():
     conn.commit()
     conn.close()
     return redirect(url_for('admin_panel'))
+
+@app.route('/download_backup')
+def download_backup():
+    try:
+        # إنشاء مجلد مؤقت للنسخة الاحتياطية
+        backup_dir = "temp_backup_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+        os.makedirs(backup_dir, exist_ok=True)
+
+        # نسخ الملفات الأساسية
+        shutil.copy2('store.db', f'{backup_dir}/store.db')
+        shutil.copytree('templates', f'{backup_dir}/templates')
+        shutil.copy2('main.py', f'{backup_dir}/main.py')
+
+        # إنشاء ملف مضغوط
+        backup_filename = f'site_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
+        shutil.make_archive(backup_filename[:-4], 'zip', backup_dir)
+
+        # تنظيف المجلد المؤقت
+        shutil.rmtree(backup_dir)
+
+        # إرسال الملف للتحميل
+        return send_file(backup_filename, as_attachment=True)
+    except Exception as e:
+        print(f"Error in download_backup: {str(e)}")
+        return "حدث خطأ في تحميل النسخة الاحتياطية", 500
 
 @app.route('/update_welcome_message', methods=['POST'])
 def update_welcome_message():
