@@ -11,7 +11,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["sh", "-c", "python main.py"]
+run = ["sh", "-c", "python main.py --host=0.0.0.0 --port=5000"]
 deploymentTarget = "gce"
 
 [workflows]
