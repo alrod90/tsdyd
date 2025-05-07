@@ -225,6 +225,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # التحقق من حالة البوت
     c.execute('SELECT status, shutdown_reason FROM bot_status WHERE id = 1')
     bot_status = c.fetchone()
+
+    # التحقق من وجود رقم هاتف للمستخدم
+    c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+    user_phone = c.fetchone()
+
+    if not user_phone or not user_phone[0]:
+        keyboard = [[KeyboardButton("مشاركة رقم الهاتف", request_contact=True)]]
+        reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+        await update.message.reply_text(
+            "مرحباً! نحتاج إلى رقم هاتفك للمتابعة.\nالرجاء الضغط على الزر أدناه لمشاركة رقم هاتفك:",
+            reply_markup=reply_markup
+        )
+        return "WAITING_PHONE_NUMBER"
     
     # التحقق مما إذا كان المستخدم هو المدير
     c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (update.effective_user.id,))
@@ -280,6 +293,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
     
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
+
+async def handle_phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message.contact:
+        await update.message.reply_text("الرجاء مشاركة رقم هاتفك باستخدام الزر المخصص")
+        return "WAITING_PHONE_NUMBER"
+
+    phone_number = update.message.contact.phone_number
+    user_id = update.effective_user.id
+
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('UPDATE users SET phone_number = ? WHERE telegram_id = ?', (phone_number, user_id))
+    conn.commit()
+    conn.close()
+
+    reply_markup = ReplyKeyboardRemove()
+    await update.message.reply_text("شكراً لمشاركة رقم هاتفك! يمكنك الآن استخدام البوت.", reply_markup=reply_markup)
+    return await start(update, context)
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -2790,6 +2821,9 @@ def run_bot():
             CallbackQueryHandler(button_click, pattern="^(?!cancel$).*$")
         ],
         states={
+            "WAITING_PHONE_NUMBER": [
+                MessageHandler(filters.CONTACT, handle_phone_number)
+            ],
             "WAITING_SEARCH_ORDER_NUMBER": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number),
                 CallbackQueryHandler(button_click, pattern="^back$")
