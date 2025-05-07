@@ -226,11 +226,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     c.execute('SELECT status, shutdown_reason FROM bot_status WHERE id = 1')
     bot_status = c.fetchone()
 
-    # التحقق من وجود رقم هاتف للمستخدم
-    c.execute('SELECT phone_number FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-    user_phone = c.fetchone()
-
-    if not user_phone or not user_phone[0]:
+    # التحقق من وجود المستخدم وإضافته إذا لم يكن موجوداً
+    user_id = update.effective_user.id
+    c.execute('SELECT * FROM users WHERE telegram_id = ?', (user_id,))
+    user = c.fetchone()
+    
+    if not user:
         keyboard = [[KeyboardButton("مشاركة رقم الهاتف", request_contact=True)]]
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
         await update.message.reply_text(
@@ -300,11 +301,25 @@ async def handle_phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE
         return "WAITING_PHONE_NUMBER"
 
     phone_number = update.message.contact.phone_number
-    user_id = update.effective_user.id
+    old_user_id = update.effective_user.id
 
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
-    c.execute('UPDATE users SET phone_number = ? WHERE telegram_id = ?', (phone_number, user_id))
+    
+    # التحقق من وجود الرقم مسبقاً
+    c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (phone_number,))
+    existing_phone = c.fetchone()
+    
+    if existing_phone:
+        # تحديث الرصيد للرقم الموجود
+        c.execute('UPDATE users SET balance = balance + (SELECT balance FROM users WHERE telegram_id = ?) WHERE telegram_id = ?', 
+                 (old_user_id, phone_number))
+        # حذف السجل القديم
+        c.execute('DELETE FROM users WHERE telegram_id = ?', (old_user_id,))
+    else:
+        # تحديث المعرف ليكون رقم الهاتف
+        c.execute('UPDATE users SET telegram_id = ? WHERE telegram_id = ?', (phone_number, old_user_id))
+    
     conn.commit()
     conn.close()
 
