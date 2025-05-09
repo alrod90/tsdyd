@@ -242,11 +242,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
         conn.commit()
 
-    welcome_message = f"""مرحبا بك في نظام تسديد الفواتير
-معرف التيليجرام الخاص بك هو: {user_id}
-يمكنك استخدام هذا المعرف للتواصل مع الإدارة.
-"""
-    await update.message.reply_text(welcome_message)
+    await update.message.reply_text("مرحبا بك في نظام تسديد الفواتير")
 
     # جلب الأقسام النشطة من قاعدة البيانات
     c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
@@ -339,9 +335,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = c.fetchone()
         balance = result[0] if result else 0
         conn.close()
-        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text(f"رصيدك الحالي: {balance} ليرة سوري", reply_markup=reply_markup)
+        await query.message.edit_text(f"""رصيدك الحالي: {balance} ليرة سوري
+معرف التيليجرام الخاص بك هو: {update.effective_user.id}
+يمكنك استخدام هذا المعرف للتواصل مع الإدارة.""", reply_markup=reply_markup)
 
     elif query.data == 'my_orders':
         keyboard = [
