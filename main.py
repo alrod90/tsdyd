@@ -249,25 +249,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     categories = c.fetchall()
     conn.close()
 
-    # إنشاء أزرار الأقسام
+    # إنشاء أزرار Reply Keyboard
     keyboard = []
     row = []
     for i, category in enumerate(categories):
-        row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
+        row.append(category[0])  # إضافة اسم القسم فقط
         if len(row) == 3 or i == len(categories) - 1:
             keyboard.append(row)
             row = []
 
     # إضافة أزرار الرصيد والطلبات
-    keyboard.append([
-        InlineKeyboardButton("رصيدي", callback_data='balance'),
-        InlineKeyboardButton("طلباتي", callback_data='my_orders')
-    ])
-    keyboard.append([
-        InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')
-    ])
+    keyboard.append(["رصيدي", "طلباتي"])
+    keyboard.append(["التواصل مع الدعم الفني"])
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     # جلب رسالة الترحيب من قاعدة البيانات
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
@@ -2903,6 +2898,56 @@ def run_bot():
         per_chat=True
     )
 
+    # إضافة معالج للرسائل النصية
+    async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        text = update.message.text
+        
+        # التحقق من الأقسام
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        c.execute('SELECT identifier FROM categories WHERE name = ? AND is_active = 1', (text,))
+        category = c.fetchone()
+        
+        if category:
+            # معالجة اختيار القسم
+            c.execute('SELECT * FROM products WHERE category = ? AND is_active = 1', (category[0],))
+            products = c.fetchall()
+            keyboard = []
+            for product in products:
+                keyboard.append([product[1]])  # اسم المنتج
+            keyboard.append(["رجوع للقائمة الرئيسية"])
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            await update.message.reply_text("اختر الشركة:", reply_markup=reply_markup)
+            
+        elif text == "رصيدي":
+            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
+            result = c.fetchone()
+            balance = result[0] if result else 0
+            await update.message.reply_text(f"""رصيدك الحالي: {balance} ليرة سوري
+معرف التيليجرام الخاص بك هو: {update.effective_user.id}
+يمكنك استخدام هذا المعرف للتواصل مع الإدارة.""")
+            
+        elif text == "طلباتي":
+            await orders(update, context)
+            
+        elif text == "التواصل مع الدعم الفني":
+            await update.message.reply_text("يمكنك التواصل مع الدعم الفني عبر: @nourrod")
+            
+        elif text == "رجوع للقائمة الرئيسية":
+            await start(update, context)
+            
+        else:
+            # التحقق مما إذا كان النص هو اسم منتج
+            c.execute('SELECT id FROM products WHERE name = ? AND is_active = 1', (text,))
+            product = c.fetchone()
+            if product:
+                context.user_data['product_id'] = product[0]
+                await update.message.reply_text("الرجاء إدخال بيانات الزبون:")
+                return "WAITING_CUSTOMER_INFO"
+        
+        conn.close()
+
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
     application.add_handler(conv_handler)
 
     # Run bot
