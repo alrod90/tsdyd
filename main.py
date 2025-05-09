@@ -173,58 +173,6 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
         keyboard.append(["رجوع للقائمة الرئيسية"])
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         await update.message.reply_text(f"الشركات المتوفرة في قسم {text}:", reply_markup=reply_markup)
-    else:
-        # التعامل مع المنتجات والخيارات الأخرى
-        if text == "رصيدي":
-            c.execute('SELECT balance FROM users WHERE telegram_id = ?', (update.effective_user.id,))
-            balance = c.fetchone()[0]
-            keyboard = [["رجوع للقائمة الرئيسية"]]
-            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await update.message.reply_text(
-                f"""رصيدك الحالي: {balance} ليرة سوري
-معرف التيليجرام الخاص بك هو: {update.effective_user.id}
-يمكنك استخدام هذا المعرف للتواصل مع الإدارة.""",
-                reply_markup=reply_markup
-            )
-        elif text == "طلباتي":
-            keyboard = [
-                ["البحث برقم الطلب", "البحث ببيانات الزبون"],
-                ["رجوع للقائمة الرئيسية"]
-            ]
-            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await update.message.reply_text("اختر طريقة البحث:", reply_markup=reply_markup)
-        elif text == "التواصل مع الدعم الفني":
-            await update.message.reply_text("يمكنك التواصل مع الدعم الفني عبر: @nourrod")
-        elif text == "رجوع للقائمة الرئيسية":
-            await start(update, context)
-        else:
-            # التحقق مما إذا كان النص اسم منتج
-            c.execute('SELECT id FROM products WHERE name = ? AND is_active = 1', (text,))
-            product = c.fetchone()
-            if product:
-                context.user_data['product_id'] = product[0]
-                keyboard = [["إدخال بيانات الزبون"], ["رجوع للقائمة الرئيسية"]]
-                reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-                await update.message.reply_text("الرجاء إدخال بيانات الزبون:", reply_markup=reply_markup)
-                return "WAITING_CUSTOMER_INFO"
-    
-    conn.close()
-    return ConversationHandler.END
-    
-    if category:
-        # عرض المنتجات في القسم
-        c.execute('SELECT name FROM products WHERE category = ? AND is_active = 1', (category[0],))
-        products = c.fetchall()
-        keyboard = []
-        row = []
-        for i, product in enumerate(products):
-            row.append(product[0])
-            if len(row) == 2 or i == len(products) - 1:
-                keyboard.append(row)
-                row = []
-        keyboard.append(["رجوع للقائمة الرئيسية"])
-        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        await update.message.reply_text(f"الشركات المتوفرة في قسم {text}:", reply_markup=reply_markup)
     
     # التعامل مع المنتجات
     elif text == "رصيدي":
