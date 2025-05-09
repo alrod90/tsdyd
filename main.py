@@ -242,8 +242,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
         conn.commit()
 
-    await update.message.reply_text("مرحبا بك في نظام تسديد الفواتير")
-
     # جلب الأقسام النشطة من قاعدة البيانات
     c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
     categories = c.fetchall()
@@ -337,7 +335,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text(f"""رصيدك الحالي: {balance} ليرة سوري
+        await query.message.edit_text(f"""مرحبا بك في نظام تسديد الفواتير
+رصيدك الحالي: {balance} ليرة سوري
 معرف التيليجرام الخاص بك هو: {update.effective_user.id}
 يمكنك استخدام هذا المعرف للتواصل مع الإدارة.""", reply_markup=reply_markup)
 
