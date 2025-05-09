@@ -2928,7 +2928,12 @@ def run_bot():
 يمكنك استخدام هذا المعرف للتواصل مع الإدارة.""")
             
         elif text == "طلباتي":
-            await orders(update, context)
+            keyboard = [
+                ["البحث برقم الطلب", "البحث ببيانات الزبون"],
+                ["رجوع للقائمة الرئيسية"]
+            ]
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            await update.message.reply_text("اختر طريقة البحث:", reply_markup=reply_markup)
             
         elif text == "التواصل مع الدعم الفني":
             await update.message.reply_text("يمكنك التواصل مع الدعم الفني عبر: @nourrod")
@@ -2942,7 +2947,9 @@ def run_bot():
             product = c.fetchone()
             if product:
                 context.user_data['product_id'] = product[0]
-                await update.message.reply_text("الرجاء إدخال بيانات الزبون:")
+                keyboard = [["إلغاء العملية"]]
+                reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+                await update.message.reply_text("الرجاء إدخال بيانات الزبون:", reply_markup=reply_markup)
                 return "WAITING_CUSTOMER_INFO"
         
         conn.close()
