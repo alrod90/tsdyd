@@ -490,31 +490,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return "WAITING_ADD_USER_BALANCE"
 
     elif query.data == 'back':
-        conn = sqlite3.connect('store.db')
-        c = conn.cursor()
-
-        # جلب الأقسام النشطة
-        c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
-        categories = c.fetchall()
-
-        # إنشاء أزرار الأقسام
-        keyboard = []
-        row = []
-        for i, category in enumerate(categories):
-            row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
-            if len(row) == 3 or i == len(categories) - 1:
-                keyboard.append(row)
-                row = []
-
-        # إضافة أزرار الرصيد والطلبات
-        keyboard.append([
-            InlineKeyboardButton("رصيدي", callback_data='balance'),
-            InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ])
-
-        conn.close()
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
+        await start(update, context)
 
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
