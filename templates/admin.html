@@ -1250,6 +1250,29 @@
     </script>
 
     <div class="section">
+        <h2>حذف جميع البيانات</h2>
+        <div style="background-color: #ffebee; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+            <h3 style="color: #c62828;">تحذير!</h3>
+            <p>هذه العملية ستؤدي إلى:</p>
+            <ul>
+                <li>حذف جميع الطلبات</li>
+                <li>تصفير أرصدة جميع المستخدمين (باستثناء المدير)</li>
+            </ul>
+            <p>هذه العملية لا يمكن التراجع عنها!</p>
+        </div>
+        <form action="/delete_all_data" method="post" onsubmit="return confirmDeletion()">
+            <input type="text" name="confirm_deletion" placeholder="اكتب DELETE_ALL للتأكيد" required>
+            <button type="submit" style="background-color: #dc3545;">حذف جميع البيانات</button>
+        </form>
+    </div>
+
+    <script>
+    function confirmDeletion() {
+        return confirm('هل أنت متأكد من حذف جميع البيانات؟ هذه العملية لا يمكن التراجع عنها!');
+    }
+    </script>
+
+    <div class="section">
         <h2>النسخ الاحتياطية</h2>
         <div style="display: flex; gap: 10px; flex-direction: column;">
             <form action="/download_backup" method="get" style="margin: 0;">

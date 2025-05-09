@@ -225,20 +225,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # التحقق من حالة البوت
     c.execute('SELECT status, shutdown_reason FROM bot_status WHERE id = 1')
     bot_status = c.fetchone()
-
-    # التحقق من وجود المستخدم وإضافته إذا لم يكن موجوداً
-    user_id = update.effective_user.id
-    c.execute('SELECT * FROM users WHERE telegram_id = ?', (user_id,))
-    user = c.fetchone()
-    
-    if not user:
-        keyboard = [[KeyboardButton("مشاركة رقم الهاتف", request_contact=True)]]
-        reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
-        await update.message.reply_text(
-            "مرحباً! نحتاج إلى رقم هاتفك للمتابعة.\nالرجاء الضغط على الزر أدناه لمشاركة رقم هاتفك:",
-            reply_markup=reply_markup
-        )
-        return "WAITING_PHONE_NUMBER"
     
     # التحقق مما إذا كان المستخدم هو المدير
     c.execute('SELECT id FROM users WHERE telegram_id = ? AND id = 1', (update.effective_user.id,))
@@ -294,38 +280,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
     
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
-
-async def handle_phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message.contact:
-        await update.message.reply_text("الرجاء مشاركة رقم هاتفك باستخدام الزر المخصص")
-        return "WAITING_PHONE_NUMBER"
-
-    phone_number = update.message.contact.phone_number
-    old_user_id = update.effective_user.id
-
-    conn = sqlite3.connect('store.db')
-    c = conn.cursor()
-    
-    # التحقق من وجود الرقم مسبقاً
-    c.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (phone_number,))
-    existing_phone = c.fetchone()
-    
-    if existing_phone:
-        # تحديث الرصيد للرقم الموجود
-        c.execute('UPDATE users SET balance = balance + (SELECT balance FROM users WHERE telegram_id = ?) WHERE telegram_id = ?', 
-                 (old_user_id, phone_number))
-        # حذف السجل القديم
-        c.execute('DELETE FROM users WHERE telegram_id = ?', (old_user_id,))
-    else:
-        # تحديث المعرف ليكون رقم الهاتف
-        c.execute('UPDATE users SET telegram_id = ? WHERE telegram_id = ?', (phone_number, old_user_id))
-    
-    conn.commit()
-    conn.close()
-
-    reply_markup = ReplyKeyboardRemove()
-    await update.message.reply_text("شكراً لمشاركة رقم هاتفك! يمكنك الآن استخدام البوت.", reply_markup=reply_markup)
-    return await start(update, context)
 
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -2010,6 +1964,28 @@ def toggle_product():
     conn.close()
     return redirect(url_for('admin_panel'))
 
+@app.route('/delete_all_data', methods=['POST'])
+def delete_all_data():
+    try:
+        if not request.form.get('confirm_deletion') == 'DELETE_ALL':
+            return "يجب تأكيد عملية الحذف", 400
+
+        conn = sqlite3.connect('store.db')
+        c = conn.cursor()
+        
+        # حذف جميع الطلبات
+        c.execute('DELETE FROM orders')
+        
+        # تصفير أرصدة المستخدمين مع الحفاظ على حساب المدير
+        c.execute('UPDATE users SET balance = 0 WHERE id != 1')
+        
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_panel'))
+    except Exception as e:
+        print(f"Error in delete_all_data: {str(e)}")
+        return "حدث خطأ في حذف البيانات", 500
+
 @app.route('/delete_product', methods=['POST'])
 def delete_product():
     try:
@@ -2836,9 +2812,6 @@ def run_bot():
             CallbackQueryHandler(button_click, pattern="^(?!cancel$).*$")
         ],
         states={
-            "WAITING_PHONE_NUMBER": [
-                MessageHandler(filters.CONTACT, handle_phone_number)
-            ],
             "WAITING_SEARCH_ORDER_NUMBER": [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_order_number),
                 CallbackQueryHandler(button_click, pattern="^back$")
