@@ -242,30 +242,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c.execute('INSERT INTO users (telegram_id, balance) VALUES (?, ?)', (user_id, 0))
         conn.commit()
 
+    await update.message.reply_text("مرحبا بك في نظام تسديد الفواتير")
+
     # جلب الأقسام النشطة من قاعدة البيانات
     c.execute('SELECT name, identifier FROM categories WHERE is_active = 1')
     categories = c.fetchall()
-
-    # إنشاء أزرار الأقسام
-    keyboard = []
-    row = []
-    for i, category in enumerate(categories):
-        row.append(InlineKeyboardButton(category[0], callback_data=f'cat_{category[1]}'))
-        if len(row) == 3 or i == len(categories) - 1:
-            keyboard.append(row)
-            row = []
-
-    # إضافة أزرار الرصيد والطلبات
-    keyboard.append([
-        InlineKeyboardButton("رصيدي", callback_data='balance'),
-        InlineKeyboardButton("طلباتي", callback_data='my_orders')
-    ])
-    keyboard.append([
-        InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')
-    ])
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م", reply_markup=reply_markup)
     conn.close()
 
     # إنشاء أزرار الأقسام
@@ -356,8 +337,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text(f"""مرحبا بك في نظام تسديد الفواتير
-رصيدك الحالي: {balance} ليرة سوري
+        await query.message.edit_text(f"""رصيدك الحالي: {balance} ليرة سوري
 معرف التيليجرام الخاص بك هو: {update.effective_user.id}
 يمكنك استخدام هذا المعرف للتواصل مع الإدارة.""", reply_markup=reply_markup)
 
@@ -546,10 +526,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text(f"""مرحبا بك في نظام تسديد الفواتير
-رصيدك الحالي: {balance} ليرة سوري
-معرف التيليجرام الخاص بك هو: {update.effective_user.id}
-يمكنك استخدام هذا المعرف للتواصل مع الإدارة""", reply_markup=reply_markup)
+        await query.message.edit_text(f"رصيدك الحالي: {balance} ليرة سوري", reply_markup=reply_markup)
         return
 
     elif query.data == 'add_balance':
