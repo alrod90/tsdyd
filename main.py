@@ -515,7 +515,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         conn.close()
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text('اهلا بك في تسديد الفواتير الرجاء الاختيار علما ان مدة التسديد تتراوح بين 10 والساعتين عدا العطل والضغط يوجد تاخير والدوام من 9ص حتى 9 م', reply_markup=reply_markup)
+        await query.message.edit_text("اختر من القائمة:", reply_markup=reply_markup)
 
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
