@@ -1011,6 +1011,7 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
+<b>رد الخدمة:</b> {note}
 التاريخ: {order[5]}"""
 
                 if order[3] == "rejected" and order[6]:  # إضافة سبب الرفض
@@ -2651,7 +2652,8 @@ def handle_order():
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري
-بيانات الزبون: {customer_info}"""
+بيانات الزبون: {customer_info}
+في حال كان الطلب استعلام سيصلك اشعار اخر مع رد الخدمة"""
 
         # إرسال الإشعار للمستخدم
         bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
