@@ -1011,7 +1011,6 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
 المبلغ: {order[2]} ليرة سوري
 الحالة: {status_text}
 بيانات الزبون: {order[4]}
-<b>رد الخدمة:</b> {note}
 التاريخ: {order[5]}"""
 
                 if order[3] == "rejected" and order[6]:  # إضافة سبب الرفض
