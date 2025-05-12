@@ -2473,7 +2473,7 @@ def change_order_status():
 
         # إعداد نص الإشعار
         if new_status == "accepted":
-            notification_message = f"""✅ تم قبول طلبك
+            notification_message = f"""✅ تم تحديث الطلب
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري"""
@@ -2538,10 +2538,11 @@ def change_order_status():
         # إعداد رسالة الإشعار
         notification_message = ""
         if new_status == "accepted":
-            notification_message = f"""<b>✅ تم قبول طلبك!</b>
+            notification_message = f"""<b>✅ تم تحديث حالة طلبك</b>
 <b>رقم الطلب:</b> {order_id}
 <b>الشركة:</b> {product_name}
-<b>المبلغ:</b> {amount} ليرة سوري"""
+<b>المبلغ:</b> {amount} ليرة سوري
+<b>رد الخدمة:</b> {note}"""
         elif new_status == "rejected":
             notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
 رقم الطلب: {order_id}
@@ -2650,6 +2651,7 @@ def handle_order():
 رقم الطلب: {order_id}
 الشركة: {product_name}
 المبلغ: {amount} ليرة سوري
+في حال كان الطلب استعلام سيصلك اشعار اخر مع رد الخدمة
 بيانات الزبون: {customer_info}"""
 
         # إرسال الإشعار للمستخدم
