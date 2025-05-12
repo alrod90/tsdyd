@@ -2476,7 +2476,7 @@ def change_order_status():
             notification_message = f"""✅ تم تحديث الطلب
 رقم الطلب: {order_id}
 الشركة: {product_name}
-بيانات الزبون: {customer_info}"""
+المبلغ: {amount} ليرة سوري"""
         elif new_status == "rejected":
             notification_message = f"""<b>❌ تم رفض طلبك</b>
 <b>رقم الطلب:</b> {order_id}
@@ -2488,7 +2488,6 @@ def change_order_status():
             notification_message = f"""🕒 تم تحديث حالة طلبك
 رقم الطلب: {order_id}
 الشركة: {product_name}
-بيانات الزبون: {customer_info}
 الحالة: قيد المعالجة"""
 
         # تم إخفاء الملاحظات
@@ -2542,13 +2541,12 @@ def change_order_status():
             notification_message = f"""<b>✅ تم تحديث حالة طلبك</b>
 <b>رقم الطلب:</b> {order_id}
 <b>الشركة:</b> {product_name}
-بيانات الزبون: {customer_info}
+<b>المبلغ:</b> {amount} ليرة سوري
 <b>رد الخدمة:</b> {note}"""
         elif new_status == "rejected":
             notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
 رقم الطلب: {order_id}
 الشركة: {product_name}
-بيانات الزبون: {customer_info}
 المبلغ المعاد: {amount} ليرة سوري"""
             if rejection_note:
                 notification_message += f"\nسبب الرفض: {rejection_note}"
@@ -2556,7 +2554,6 @@ def change_order_status():
             notification_message = f"""🕒 تم تحديث حالة طلبك
 رقم الطلب: {order_id}
 الشركة: {product_name}
-بيانات الزبون: {customer_info}
 الحالة الجديدة: قيد المعالجة"""
 
         # تم إخفاء الملاحظات
