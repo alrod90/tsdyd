@@ -571,7 +571,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c = conn.cursor()
 
         try:
-            # التحقق من وجود باقات أو سرعات للمنتج
+            # التحقق من وجود استعلامات أو سرعات للمنتج
             c.execute('SELECT name FROM products WHERE id = ?', (product_id,))
             product = c.fetchone()
 
@@ -586,7 +586,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             row = []
             if has_megas:
-                row.append(InlineKeyboardButton("الباقات", callback_data=f'megas_{product_id}'))
+                row.append(InlineKeyboardButton("الاستعلامات", callback_data=f'megas_{product_id}'))
 
             if has_speeds:
                 row.append(InlineKeyboardButton("السرعات", callback_data=f'speeds_{product_id}'))
@@ -623,7 +623,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("اختر الباقة المناسبة:", reply_markup=reply_markup)
+        await query.message.edit_text("اختر الاستعلام المناسب:", reply_markup=reply_markup)
         return
 
     elif query.data.startswith('speeds_'):
@@ -670,7 +670,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['amount'] = item[1]  # السعر
             context.user_data['customer_info'] = None  # تهيئة بيانات الزبون
 
-            # حفظ معرف الباقة أو السرعة المختارة
+            # حفظ معرف الاستعلام أو السرعة المختارة
             if item_type == 'mega':
                 context.user_data['selected_mega'] = item_id
                 context.user_data['selected_speed'] = None
@@ -826,7 +826,7 @@ async def handle_customer_info(update: Update, context: ContextTypes.DEFAULT_TYP
     customer_info = update.message.text
     context.user_data['customer_info'] = customer_info
 
-    # إذا كان المبلغ محدد مسبقاً (من اختيار باقة أو سرعة)
+    # إذا كان المبلغ محدد مسبقاً (من اختيار استعلام أو سرعة)
     if 'amount' in context.user_data:
         amount = context.user_data['amount']
         await update.message.reply_text(
@@ -1664,7 +1664,7 @@ def admin_panel():
         c.execute('SELECT message FROM welcome_message WHERE id = 1')
         welcome_message = c.fetchone()[0]
 
-        # إضافة جدول الباقات إذا لم يكن موجوداً
+        # إضافة جدول الاستعلامات إذا لم يكن موجوداً
         c.execute('''CREATE TABLE IF NOT EXISTS packages
                      (id INTEGER PRIMARY KEY, product_id INTEGER, name TEXT, price REAL, 
                       is_active BOOLEAN DEFAULT 1,
@@ -1707,7 +1707,7 @@ def admin_panel():
         users = c.fetchall()
 
         try:
-            # استرجاع الباقات مع أسماء المنتجات
+            # استرجاع الاستعلامات مع أسماء المنتجات
             c.execute('''
                 SELECT p.id, p.name, p.price, p.product_id, pr.name as product_name, p.is_active 
                 FROM packages p
@@ -1937,7 +1937,7 @@ def add_package():
         return redirect(url_for('admin_panel'))
     except Exception as e:
         print(f"Error in add_package: {str(e)}")
-        return "حدث خطأ في إضافة الباقة", 500
+        return "حدث خطأ في إضافة الاستعلام", 500
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
