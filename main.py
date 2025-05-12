@@ -2541,7 +2541,8 @@ def change_order_status():
             notification_message = f"""<b>✅ تم قبول طلبك!</b>
 <b>رقم الطلب:</b> {order_id}
 <b>الشركة:</b> {product_name}
-<b>المبلغ:</b> {amount} ليرة سوري"""
+<b>المبلغ:</b> {amount} ليرة سوري
+<b>رد الخدمة:</b> {note}"""
         elif new_status == "rejected":
             notification_message = f"""❌ تم رفض طلبك وإعادة المبلغ لرصيدك
 رقم الطلب: {order_id}
