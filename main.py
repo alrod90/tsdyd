@@ -293,6 +293,9 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("رصيدي", callback_data='balance'),
              InlineKeyboardButton("طلباتي", callback_data='my_orders')]
+             keyboard.append([
+        InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')
+    ])
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("حسابك معطل حاليا يرجى التواصل مع الدعم الفني لتفعيله.\nيمكنك في الوقت الحالي مشاهدة رصيدك وطلباتك", reply_markup=reply_markup)
@@ -512,7 +515,9 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("رصيدي", callback_data='balance'),
             InlineKeyboardButton("طلباتي", callback_data='my_orders')
         ])
-
+        keyboard.append([
+        InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')
+    ])
         conn.close()
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر من القائمة:", reply_markup=reply_markup)
