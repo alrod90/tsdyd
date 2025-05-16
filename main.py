@@ -159,7 +159,7 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     if not orders:
-        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("لا يوجد لديك طلبات.", reply_markup=reply_markup)
         return
@@ -179,7 +179,7 @@ async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = []
         if order[3] == "pending":
             keyboard.append([InlineKeyboardButton("إلغاء الطلب", callback_data=f'cancel_order_{order[0]}')])
-        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]) #added back button
+        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]) #added back button
 
         reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
         await update.message.reply_text(message, reply_markup=reply_markup)
@@ -209,7 +209,7 @@ async def admin_panel_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 InlineKeyboardButton("المستخدمين", callback_data='users_menu'),
                 InlineKeyboardButton("الأرصدة", callback_data='balance_menu')
             ],
-            [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]
+            [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
@@ -324,7 +324,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup
             )
         else:
-            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]] #added back button
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.message.edit_text(f"لا توجد شركات متوفرة في قسم {category_name}", reply_markup=reply_markup) # Changed from منتجات to شركات
 
@@ -335,7 +335,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = c.fetchone()
         balance = result[0] if result else 0
         conn.close()
-        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(f"""رصيدك الحالي: {balance} ليرة سوري
 معرف التيليجرام الخاص بك هو: {update.effective_user.id}
@@ -477,7 +477,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("المستخدمين", callback_data='users_menu'),
                 InlineKeyboardButton("الأرصدة", callback_data='balance_menu')
             ],
-            [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]
+            [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("مرحباً بك في لوحة التحكم:", reply_markup=reply_markup)
@@ -524,7 +524,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = c.fetchone()
         balance = result[0] if result else 0
         conn.close()
-        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text(f"رصيدك الحالي: {balance} ليرة سوري", reply_markup=reply_markup)
         return
@@ -550,12 +550,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await query.message.edit_text(f"الشركات المتوفرة في قسم {category[0]}:", reply_markup=reply_markup)
             else:
-                keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+                keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await query.message.edit_text("اختر من القائمة:", reply_markup=reply_markup)
         except Exception as e:
             print(f"Error in back_to_main: {str(e)}")
-            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.message.edit_text("حدث خطأ، الرجاء المحاولة مرة أخرى", reply_markup=reply_markup)
         finally:
@@ -620,7 +620,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data=f'select_mega_{mega[0]}_{product_id}'
             )])
         keyboard.append([InlineKeyboardButton("رجوع للمنتج", callback_data=f'buy_{product_id}')])
-        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')])
+        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر الاستعلام المناسب:", reply_markup=reply_markup)
@@ -642,7 +642,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data=f'select_speed_{speed[0]}_{product_id}'
             )])
         keyboard.append([InlineKeyboardButton("رجوع للمنتج", callback_data=f'buy_{product_id}')])
-        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')])
+        keyboard.append([InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر السرعة المناسبة:", reply_markup=reply_markup)
@@ -847,7 +847,7 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         amount = float(update.message.text)
         if 'product_id' not in context.user_data:
-            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text("حدث خطأ في معرف المنتج، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
             return ConversationHandler.END
@@ -870,7 +870,7 @@ async def handle_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
 
         if not product:
-            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+            keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text("المنتج غير متوفر، الرجاء بدء العملية من جديد", reply_markup=reply_markup)
             return ConversationHandler.END
@@ -1027,14 +1027,14 @@ async def handle_search_order_number(update: Update, context: ContextTypes.DEFAU
             else:
                 keyboard = [
                     [InlineKeyboardButton("التأكد من البيانات", callback_data='search_order_number')],
-                    [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]
+                    [InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await update.message.reply_text("لم يتم العثور على الطلب. هل تريد إدخال رقم طلب آخر؟", reply_markup=reply_markup)
         finally:
             conn.close()
     except ValueError:
-        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]] #added back button
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("الرجاء إدخال رقم صحيح", reply_markup=reply_markup)
     return ConversationHandler.END
@@ -1077,7 +1077,7 @@ async def handle_cancel_reason(update: Update, context: ContextTypes.DEFAULT_TYP
 
         await update.message.reply_text("تم إلغاء الطلب بنجاح وتمت إعادة المبلغ إلى رصيدك.")
     else:
-        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]] #added back button
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("عذراً، لم يتم العثور على الطلب.", reply_markup=reply_markup)
 
@@ -1127,7 +1127,7 @@ async def handle_search_customer_info(update: Update, context: ContextTypes.DEFA
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(message, reply_markup=reply_markup)
     else:
-        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]] #added back button
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]] #added back button
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("لم يتم العثور على طلبات مطابقة", reply_markup=reply_markup)
     return ConversationHandler.END
@@ -1283,7 +1283,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
     await query.answer()
 
     if query.data == 'cancel_purchase':
-        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+        keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("تم إلغاء العملية.", reply_markup=reply_markup)
         return ConversationHandler.END
@@ -1362,7 +1362,7 @@ async def handle_purchase_confirmation(update: Update, context: ContextTypes.DEF
 المبلغ: {amount} ليرة سوري
 بيانات الزبون: {customer_info}
 """
-    keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='main_menu')]]
+    keyboard = [[InlineKeyboardButton("رجوع للقائمة الرئيسية", callback_data='back')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.edit_text(confirmation_message, reply_markup=reply_markup)
     if query.data == 'back':
