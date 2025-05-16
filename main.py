@@ -512,16 +512,15 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("رصيدي", callback_data='balance'),
             InlineKeyboardButton("طلباتي", callback_data='my_orders')
         ])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("اختر من القائمة:", reply_markup=reply_markup)
-reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        conn.close()
+        reply_markup = InlineKeyboardMarkup(keyboard)
     # جلب رسالة الترحيب من قاعدة البيانات
     conn = sqlite3.connect('store.db')
     c = conn.cursor()
     c.execute('SELECT message FROM welcome_message WHERE id = 1')
-    welcome_message = c.fetchone()[0]        
-        conn.close()
-        
+    welcome_message = c.fetchone()[0]
+
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
