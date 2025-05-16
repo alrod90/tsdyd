@@ -518,10 +518,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([
         InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')
     ])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    # جلب رسالة الترحيب من قاعدة البيانات
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT message FROM welcome_message WHERE id = 1')
+    welcome_message = c.fetchone()[0]
         conn.close()
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.edit_text("اختر من القائمة:", reply_markup=reply_markup)
-
+        
     elif query.data == 'balance':
         conn = sqlite3.connect('store.db')
         c = conn.cursor()
