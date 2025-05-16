@@ -507,16 +507,23 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 keyboard.append(row)
                 row = []
 
-        # إضافة أزرار الرصيد والطلبات
-        keyboard.append([
-            InlineKeyboardButton("رصيدي", callback_data='balance'),
-            InlineKeyboardButton("طلباتي", callback_data='my_orders')
-        ])
-           # جلب رسالة الترحيب
-        c.execute('SELECT message FROM welcome_message WHERE id = 1')
-        welcome_message = c.fetchone()[0]
-  
-        conn.close()
+    # إضافة أزرار الرصيد والطلبات
+    keyboard.append([
+        InlineKeyboardButton("رصيدي", callback_data='balance'),
+        InlineKeyboardButton("طلباتي", callback_data='my_orders')
+    ])
+    keyboard.append([
+        InlineKeyboardButton("التواصل مع الدعم الفني", url='https://t.me/nourrod')
+    ])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    # جلب رسالة الترحيب من قاعدة البيانات
+    conn = sqlite3.connect('store.db')
+    c = conn.cursor()
+    c.execute('SELECT message FROM welcome_message WHERE id = 1')
+    welcome_message = c.fetchone()[0]
+    conn.close()
+    
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.edit_text("اختر من القائمة:", reply_markup=reply_markup)
 
