@@ -869,7 +869,7 @@
         <button onclick="toggleTable(this)" class="toggle-btn">إظهار/إخفاء الجدول</button>
         <table class="hidden-table">
             <tr>
-                <th>الرقم</th>
+                <th>المحل</th>
                 <th>معرف تيليجرام</th>
                 <th>الرصيد (ل.س)</th>
             </tr>
@@ -883,7 +883,7 @@
                         تعديل
                     </button>
                     <form action="/toggle_user" method="post" style="display: inline;">
-                        <input type="hidden" name="user_id" value="{{ user[1] }}">
+                        <input type="hidden" name="user_store_name" value="{{ user[1] }}">
                         <button type="submit" style="background-color: {{ '#ff4444' if user[3] else '#4CAF50' }}">
                             {{ 'تعطيل' if user[3] else 'تفعيل' }}
                         </button>
