@@ -616,7 +616,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = []
         for mega in megas:
             keyboard.append([InlineKeyboardButton(
-                f"{mega[1]} - {mega[2]} ل.س",
+                f"{mega[1]}",
                 callback_data=f'select_mega_{mega[0]}_{product_id}'
             )])
         keyboard.append([InlineKeyboardButton("رجوع للمنتج", callback_data=f'buy_{product_id}')])
