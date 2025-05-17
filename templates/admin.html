@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
     <title>لوحة تحكم المتجر</title>
@@ -888,6 +888,9 @@
                             {{ 'تعطيل' if user[3] else 'تفعيل' }}
                         </button>
                     </form>
+                    <button onclick="editStoreName('{{ user[1] }}', '{{ user[4] }}')" style="background-color: #03A9F4; margin-left: 5px;">
+    تعديل اسم المحل
+</button>
                 </td>
             </tr>
             {% endfor %}
@@ -1222,6 +1225,30 @@
             }
         }
         return true;
+        function editStoreName(userId, currentName) {
+    var newName = prompt('أدخل اسم المحل:', currentName);
+    if (newName !== null && newName.trim() !== '') {
+        var formData = new FormData();
+        formData.append('user_id', userId);
+        formData.append('store_name', newName);
+
+        fetch('/update_store_name', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                throw new Error('فشل في تحديث اسم المحل');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('حدث خطأ أثناء تحديث اسم المحل');
+        });
+    }
+}
     }
     function editStoreName(userId, currentName) {
         var newName = prompt('أدخل اسم المحل:', currentName);
